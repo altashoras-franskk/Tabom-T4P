@@ -249,7 +249,7 @@ export const SYSTEM_PHASE_HINT: Record<SystemPhase, string> = {
   Expansão:      'Loops de reforço dominantes. Crescimento, diversificação.',
   Estruturação:  'Auto-organização emergindo. Padrões se consolidam.',
   Seleção:       'Pressão seletiva alta. Loops de balanço freiam o crescimento.',
-  Reorganização: 'Perturbação → crise → nova ordem. Motor de emergência (Morin).',
+  Reorganização: 'Perturbação → crise → nova ordem. Motor de emergência e renovação.',
 };
 
 export function phaseFromLabel(label: PhaseLabel): SystemPhase {

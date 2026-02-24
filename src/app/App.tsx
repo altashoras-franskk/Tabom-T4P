@@ -3661,9 +3661,25 @@ const App: React.FC = () => {
             agentCount={microStateRef.current.count}
             vitalRates={complexitySnap.vitalRates}
             moduleTelemetry={complexitySnap.moduleTelemetry}
+            microConfig={{ ...microConfigRef.current }}
+            fieldConfig={{ ...fieldConfigRef.current }}
+            life={lifeRef.current}
+            targetParticleCount={targetParticleCountUI}
+            onMicroChange={(patch) => {
+              Object.assign(microConfigRef.current, patch);
+            }}
+            onFieldChange={(patch) => {
+              Object.assign(fieldConfigRef.current, patch);
+            }}
+            onLifeChange={(patch) => {
+              setLife(prev => applyLifeDial({ ...prev, ...patch }));
+            }}
+            onTargetParticleCountChange={(v) => {
+              targetParticleCountRef.current = v;
+              setTargetParticleCountUI(v);
+            }}
             onConfigChange={(patch) => {
               Object.assign(complexityLensRef.current.feedback.config, patch);
-              // Reflect change immediately in snapshot
               setComplexitySnap(prev => ({
                 ...prev,
                 feedback: {
