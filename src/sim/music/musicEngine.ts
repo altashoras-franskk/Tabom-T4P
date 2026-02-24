@@ -4,11 +4,35 @@ import {
   VoiceRole, MusicPreset, RoleConfig, PhysicsParams,
   quantizeToScale, consonanceScore, ROLE_MATRIX, ROLE_HUES,
   EmergentEvent, QuantumChannel, GravityRail, QuantumTunnel, QuantumSequencer,
-  GateType, HarmonicString, defaultUserMatrix,
+  GateType, HarmonicString, defaultUserMatrix, Cage, FxZone, FxZoneEffect,
 } from './musicTypes';
 
 const rng  = () => Math.random();
 const rng2 = () => (Math.random() - 0.5) * 2;
+
+// ── Deterministic-but-variable RNG for preset scenes ──────────────────────────
+function fnv1a32(str: string): number {
+  // 32-bit FNV-1a
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const r2 = (r: () => number) => (r() - 0.5) * 2;
+const rIn = (r: () => number, a: number, b: number) => a + r() * (b - a);
 
 // ── Line segment intersection ─────────────────────────────────────────────────
 function segsCross(
@@ -47,20 +71,21 @@ function buildRoleList(preset: MusicPreset): VoiceRole[] {
 export function makeQuantum(
   id: number, preset: MusicPreset, role: VoiceRole,
   x?: number, y?: number,
+  r: () => number = rng,
 ): MusicQuantum {
   const rcfg = preset.roles[role];
   const pr   = rcfg?.pitchRange ?? [48,84];
   const pitch = quantizeToScale(
-    Math.round(pr[0] + rng() * (pr[1]-pr[0])),
+    Math.round(pr[0] + r() * (pr[1]-pr[0])),
     preset.root, preset.scale,
   );
-  const wx = x ?? rng2()*0.82;
-  const wy = y ?? rng2()*0.82;
+  const wx = x ?? r2(r)*0.82;
+  const wy = y ?? r2(r)*0.82;
   return {
-    id, role, x:wx, y:wy, vx:rng2()*.028, vy:rng2()*.028,
-    prevX:wx, prevY:wy, phase:rng(), pitch,
-    brightness:.3+rng()*.5, charge:.2+rng()*.5,
-    hue: ROLE_HUES[role], cooldown:rng()*1.2,
+    id, role, x:wx, y:wy, vx:r2(r)*.028, vy:r2(r)*.028,
+    prevX:wx, prevY:wy, phase:r(), pitch,
+    brightness:.3+r()*.5, charge:.2+r()*.5,
+    hue: ROLE_HUES[role], cooldown:r()*1.2,
     trailX:[], trailY:[],
     age:0, dischargeTimer:0, recentlyFired:0,
     selected:false, mutations:0, phaseLocked:-1, roleLockTimer:0,
@@ -69,41 +94,303 @@ export function makeQuantum(
 }
 
 // ── Build gates ───────────────────────────────────────────────────────────────
-function buildGates(preset: MusicPreset): GateLine[] {
+function buildGates(preset: MusicPreset, r: () => number): GateLine[] {
   const gates: GateLine[] = [];
-  const cols = [preset.primary, preset.secondary, preset.accent, '#fff'];
-  for (let i=0;i<preset.gateCount;i++) {
-    const a  = (i+.5)/preset.gateCount * Math.PI*2;
-    const cx = Math.cos(a*1.3)*.35, cy = Math.sin(a*.9)*.35;
-    const dx = Math.cos(a+Math.PI/2)*.45, dy = Math.sin(a+Math.PI/2)*.45;
-    gates.push({ x1:cx-dx,y1:cy-dy, x2:cx+dx,y2:cy+dy,
-      cooldown:0, color:cols[i%cols.length] });
+  const n = preset.gateCount ?? 0;
+  if (n <= 0) return gates;
+  const tags = new Set((preset.tags ?? []).map(String));
+  const wantsBarriers = tags.has('Experimental') || tags.has('Dark') || preset.intensity >= 4;
+  const pool: GateType[] = wantsBarriers
+    ? ['gate','gate','mirror','mirror','absorber','membrane','membrane']
+    : ['gate','gate','gate','mirror'];
+  const colsMap: Record<GateType, string[]> = {
+    gate:     [preset.primary, preset.secondary, preset.accent, '#fff'],
+    mirror:   ['#c8e8ff','#d8f0ff','#a8d8ef'],
+    absorber: ['#dd3333','#cc1111','#ff4444'],
+    membrane: ['#dd66ff','#cc44ff','#aa22ee'],
+  };
+  for (let i = 0; i < n; i++) {
+    const type = pool[Math.floor(r() * pool.length)];
+    const cx = r2(r) * 0.62;
+    const cy = r2(r) * 0.62;
+    const ang = r() * Math.PI;
+    const len = 0.10 + r() * 0.55;
+    gates.push({
+      x1: cx - Math.cos(ang) * len,
+      y1: cy - Math.sin(ang) * len,
+      x2: cx + Math.cos(ang) * len,
+      y2: cy + Math.sin(ang) * len,
+      cooldown: 0,
+      color: colsMap[type][i % colsMap[type].length],
+      type,
+    });
   }
   return gates;
 }
 
 // ── Build attractors ──────────────────────────────────────────────────────────
-function buildAttractors(preset: MusicPreset) {
-  const atts: ReturnType<typeof buildAttractors> = [];
-  if (preset.attractorCount<=0) return atts as any[];
-  atts.push({ x:0,y:0, strength:.12, vortexStr:0, radius:.9, type:'attractor' as const });
-  for (let i=1;i<preset.attractorCount;i++) {
-    const a=(i/preset.attractorCount)*Math.PI*2;
-    atts.push({ x:Math.cos(a)*.4, y:Math.sin(a)*.4, strength:-.06, vortexStr:0, radius:.3, type:'repulsor' as const });
+function buildAttractors(preset: MusicPreset, r: () => number) {
+  const atts: any[] = [];
+  const n = preset.attractorCount ?? 0;
+  if (n <= 0) return atts;
+  const tags = new Set((preset.tags ?? []).map(String));
+  const rhythmic = tags.has('Techno') || tags.has('Club') || tags.has('Groove') || tags.has('Breakbeat') || preset.bpm >= 118;
+  const pool: Array<'attractor'|'repulsor'|'vortex'|'metro'> = rhythmic
+    ? ['metro','attractor','attractor','vortex','repulsor']
+    : ['attractor','attractor','vortex','repulsor'];
+
+  // Anchor the composition with a gentle center field
+  atts.push({ x: 0, y: 0, strength: 0.06 + r() * 0.10, vortexStr: 0, radius: 0.65 + r() * 0.35, type: 'attractor' as const });
+
+  for (let i = 1; i < n; i++) {
+    const type = pool[Math.floor(r() * pool.length)];
+    const x = r2(r) * 0.78;
+    const y = r2(r) * 0.78;
+    const base = 0.04 + r() * 0.20;
+    const radius = 0.18 + r() * 0.65;
+    if (type === 'vortex') {
+      atts.push({ x, y, strength: 0, vortexStr: base * (0.55 + r() * 0.45), radius, type: 'vortex' as const });
+    } else if (type === 'repulsor') {
+      atts.push({ x, y, strength: -base, vortexStr: 0, radius, type: 'repulsor' as const });
+    } else if (type === 'metro') {
+      atts.push({ x, y, strength: base * (0.8 + r() * 0.6), vortexStr: 0, radius, type: 'metro' as const });
+    } else {
+      atts.push({ x, y, strength: base, vortexStr: 0, radius, type: 'attractor' as const });
+    }
   }
-  return atts;
+  return atts as any[];
+}
+
+function initialSpawn(preset: MusicPreset, idx: number, total: number, r: () => number): [number, number] | null {
+  const style = preset.motionStyle;
+  if (total <= 0) return null;
+  switch (style) {
+    case 'orbit': {
+      const a = (idx / total) * Math.PI * 2 + r2(r) * 0.35;
+      const rad = 0.35 + r() * 0.18;
+      return [Math.cos(a) * rad, Math.sin(a) * rad];
+    }
+    case 'lattice': {
+      const side = Math.max(3, Math.round(Math.sqrt(total)));
+      const gx = (idx % side) / (side - 1) * 2 - 1;
+      const gy = Math.floor(idx / side) / (side - 1) * 2 - 1;
+      return [gx * 0.72 + r2(r) * 0.03, gy * 0.72 + r2(r) * 0.03];
+    }
+    case 'meditation':
+    case 'drift': {
+      return [r2(r) * 0.22, r2(r) * 0.22];
+    }
+    case 'migration':
+    case 'exodus': {
+      // Start from a "frontier" edge
+      const side = Math.floor(r() * 4);
+      const t = r2(r) * 0.78;
+      if (side === 0) return [-0.92, t];
+      if (side === 1) return [0.92, t];
+      if (side === 2) return [t, -0.92];
+      return [t, 0.92];
+    }
+    case 'ballistic': {
+      return [r2(r) * 0.85, 0.85 + r() * 0.25];
+    }
+    default:
+      return null;
+  }
+}
+
+function seedExtraStructures(state: MusicState, preset: MusicPreset, r: () => number): void {
+  if (preset.id === 'blank-canvas') return;
+  if (preset.quantaCount <= 0) return;
+
+  const tags = new Set((preset.tags ?? []).map(String));
+  const rhythmic = tags.has('Techno') || tags.has('Club') || tags.has('Groove') || tags.has('Breakbeat') || tags.has('Rave') || preset.bpm >= 118;
+  const experimental = tags.has('Experimental') || tags.has('Space') || preset.name.toLowerCase().includes('quantum');
+  const stringy = tags.has('Strings') || tags.has('Orchestral') || tags.has('Choral');
+  const minimalist = tags.has('Minimalist') || preset.id === 'solo-particle' || preset.quantaCount <= 2;
+
+  // Channels (flow fields) — best with drift/flow/migration
+  if (!minimalist && (preset.motionStyle === 'flow' || preset.motionStyle === 'drift' || preset.motionStyle === 'migration' || preset.motionStyle === 'exodus') && r() < 0.85) {
+    const pts: QuantumChannel['pts'] = [];
+    const cx = r2(r) * 0.55;
+    const cy = r2(r) * 0.55;
+    const ang = r() * Math.PI * 2;
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    const steps = 6 + Math.floor(r() * 10);
+    for (let i = 0; i < steps; i++) {
+      const t = i / Math.max(1, steps - 1);
+      const px = cx + dx * (t - 0.5) * 1.1 + r2(r) * 0.06;
+      const py = cy + dy * (t - 0.5) * 1.1 + r2(r) * 0.06;
+      pts.push([clamp(px, -0.95, 0.95), clamp(py, -0.95, 0.95), dx, dy]);
+    }
+    state.channels.push({
+      id: Math.floor(r() * 100000),
+      pts,
+      strength: 0.45 + r() * 0.45,
+      radius: 0.10 + r() * 0.10,
+      color: preset.secondary,
+    });
+  }
+
+  // Rails (magnetic bars)
+  const railN = minimalist ? 0 : rhythmic ? 2 : 1;
+  for (let i = 0; i < railN; i++) {
+    const cx = r2(r) * 0.55;
+    const cy = r2(r) * 0.55;
+    const ang = r() * Math.PI;
+    const len = 0.18 + r() * 0.55;
+    state.rails.push({
+      x1: cx - Math.cos(ang) * len,
+      y1: cy - Math.sin(ang) * len,
+      x2: cx + Math.cos(ang) * len,
+      y2: cy + Math.sin(ang) * len,
+      strength: 0.25 + r() * 0.55,
+      color: preset.accent,
+    });
+  }
+
+  // Tunnels (portals)
+  if (experimental && r() < 0.85) {
+    const nTun = 1 + (rhythmic ? 1 : 0) + (r() < 0.35 ? 1 : 0);
+    for (let i = 0; i < nTun; i++) {
+      const ax = r2(r) * 0.85, ay = r2(r) * 0.85;
+      const bx = r2(r) * 0.85, by = r2(r) * 0.85;
+      state.tunnels.push({
+        id: Math.floor(r() * 100000),
+        ax, ay, bx, by,
+        radius: 0.05 + r() * 0.06,
+        color: i % 2 === 0 ? preset.primary : preset.accent,
+        cd: 0,
+      });
+    }
+  }
+
+  // Cages
+  if ((stringy || rhythmic) && r() < 0.55) {
+    const isCircle = r() < 0.35;
+    const cx = r2(r) * 0.35;
+    const cy = r2(r) * 0.35;
+    const w = 0.55 + r() * 0.55;
+    const h = 0.45 + r() * 0.55;
+    const rr = 0.28 + r() * 0.30;
+    const cage: Cage = isCircle ? {
+      id: Math.floor(r() * 100000),
+      shape: 'circle',
+      x: cx, y: cy, w, h, r: rr,
+      elasticity: 0.75 + r() * 0.20,
+      color: '#00ffcc',
+    } : {
+      id: Math.floor(r() * 100000),
+      shape: 'rect',
+      x: cx, y: cy, w, h, r: Math.max(w, h) / 2,
+      elasticity: 0.75 + r() * 0.20,
+      color: '#00ffcc',
+    };
+    state.cages.push(cage);
+  }
+
+  // Harmonic strings
+  const strN = stringy ? 2 + Math.floor(r() * 2) : (!minimalist && r() < 0.25 ? 1 : 0);
+  for (let i = 0; i < strN; i++) {
+    const cx = r2(r) * 0.65;
+    const cy = r2(r) * 0.65;
+    const ang = r() * Math.PI;
+    const len = 0.18 + r() * 0.70;
+    state.strings.push({
+      id: Math.floor(r() * 100000),
+      x1: cx - Math.cos(ang) * len,
+      y1: cy - Math.sin(ang) * len,
+      x2: cx + Math.cos(ang) * len,
+      y2: cy + Math.sin(ang) * len,
+      tension: r(),
+      vibAmp: 0, vibPhase: 0,
+      decay: 0.55 + r() * 0.55,
+      color: '#ffd700',
+      lastHit: 99,
+    } as HarmonicString);
+  }
+
+  // FX Zones — always at least 1 unless blank/minimal
+  const fxCount = preset.intensity >= 4 ? 3 : preset.intensity >= 2 ? 2 : 1;
+  const fxPool: FxZoneEffect[] = rhythmic
+    ? ['pulse_beat','compress_zone','excite_zone','glitch','scatter_zone','harmonize_zone']
+    : tags.has('Ambient') || tags.has('Meditative')
+      ? ['slow','tremolo','warp','harmonize_zone','freeze_zone']
+      : ['vortex_zone','density_wave','phase_lock','harmonize_zone','transpose','scatter_zone'];
+
+  for (let i = 0; i < fxCount; i++) {
+    const eff = fxPool[Math.floor(r() * fxPool.length)];
+    const cx = r2(r) * 0.65;
+    const cy = r2(r) * 0.65;
+    const w = 0.20 + r() * 0.40;
+    const h = 0.18 + r() * 0.35;
+    const pts: FxZone['pts'] = [
+      [clamp(cx - w, -0.95, 0.95), clamp(cy - h, -0.95, 0.95)],
+      [clamp(cx + w, -0.95, 0.95), clamp(cy - h, -0.95, 0.95)],
+      [clamp(cx + w, -0.95, 0.95), clamp(cy + h, -0.95, 0.95)],
+      [clamp(cx - w, -0.95, 0.95), clamp(cy + h, -0.95, 0.95)],
+    ];
+    const zone: FxZone = {
+      id: Math.floor(r() * 100000),
+      pts,
+      effect: eff,
+      strength: 0.35 + r() * 0.60,
+      param: r(),
+      color: preset.accent,
+    };
+    state.fxZones.push(zone);
+  }
+
+  // Sequencer — only for rhythmic presets, but keep UI-friendly defaults
+  if (rhythmic && r() < 0.85) {
+    const stepCount = r() < 0.55 ? 16 : 8;
+    const tempoMult = r() < 0.5 ? 1 : 2;
+    state.sequencer = {
+      ...state.sequencer,
+      active: true,
+      x: r2(r) * 0.75,
+      y: r2(r) * 0.75,
+      ringR: 0.18 + r() * 0.34,
+      tempoMult,
+      steps: Array.from({ length: stepCount }, (_, si) => ({
+        armed: r() < (0.25 + preset.intensity * 0.08) || (si % 4 === 0),
+        pitchOff: Math.floor((r() - 0.5) * 10),
+        vel: 0.35 + r() * 0.65,
+        role: null,
+      })),
+      stepCd: new Array(stepCount).fill(0),
+    };
+  }
 }
 
 // ── Create state ──────────────────────────────────────────────────────────────
-export function createMusicState(preset: MusicPreset): MusicState {
+export function createMusicState(preset: MusicPreset, opts?: { variation?: number }): MusicState {
+  const variation = opts?.variation ?? Math.random();
+  const seed = (fnv1a32(preset.id) ^ Math.floor(clamp(variation, 0, 1) * 0xffffffff)) >>> 0;
+  const r = mulberry32(seed);
+
   const roles = buildRoleList(preset);
   const quanta: MusicQuantum[] = [];
   for (let i=0;i<preset.quantaCount;i++) {
-    quanta.push(makeQuantum(i, preset, roles[i%roles.length]));
+    const p0 = initialSpawn(preset, i, preset.quantaCount, r);
+    const q = p0
+      ? makeQuantum(i, preset, roles[i%roles.length], p0[0], p0[1], r)
+      : makeQuantum(i, preset, roles[i%roles.length], undefined, undefined, r);
+
+    // Gentle velocity shaping per motion style (keeps presets feeling distinct)
+    const ms = preset.motionStyle;
+    const velScale =
+      (ms === 'meditation') ? 0.18 :
+      (ms === 'drift')      ? 0.35 :
+      (ms === 'orbit')      ? 0.65 :
+      (ms === 'lattice')    ? 0.55 :
+      (ms === 'ballistic')  ? 0.85 :
+      (preset.intensity <= 1 ? 0.45 : preset.intensity >= 4 ? 1.10 : 0.75);
+    q.vx *= velScale; q.vy *= velScale;
+    quanta.push(q);
   }
-  return {
+  const state: MusicState = {
     quanta, count:preset.quantaCount,
-    gates:buildGates(preset), attractors:buildAttractors(preset) as any,
+    gates:buildGates(preset, r), attractors:buildAttractors(preset, r) as any,
     ripples:[], emergent:[],
     channels:[], rails:[], tunnels:[],
     cages:[], strings:[], fxZones:[],
@@ -120,6 +407,8 @@ export function createMusicState(preset: MusicPreset): MusicState {
     beatPhase:0, barPhase:0, lastBeatTime:0,
     syncIntensity:0, roleEnergy:{},
   };
+  seedExtraStructures(state, preset, r);
+  return state;
 }
 
 // ── Spawn ripple ─────────────────────────────────────────────────────────────

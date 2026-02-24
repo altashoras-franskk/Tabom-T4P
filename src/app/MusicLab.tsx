@@ -295,6 +295,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [phys,        setPhys]       = useState<PhysicsParams>({ ...DEFAULT_PHYSICS, motionStyle: INIT_PRESET.motionStyle ?? 'drift' });
   const [behaviorId,  setBehaviorId] = useState<string>('');
   const [quantaCount, setQuantaCount]= useState(INIT_PRESET.quantaCount);
+  const [pitchMapMode,setPitchMapMode]= useState<'preset'|'canvas'>('preset');
   // ── 3D Visualization (Patch 01.3) ──────────────────────────────────────────
   const [view3D,      setView3D]     = useState(false);
   const [camera3D,    setCamera3D]   = useState<'3d-orbital'|'3d-fpp'|'3d-top'|'3d-side'>('3d-orbital');
@@ -424,6 +425,104 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
     (presetRef.current as any).eventRate = v;
   }, []);
 
+  // ── Preset-scene variation helpers ─────────────────────────────────────────
+  const fnv1a32 = useCallback((str: string): number => {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+  }, []);
+  const mulberry32 = useCallback((seed: number) => {
+    let a = seed >>> 0;
+    return () => {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }, []);
+  const clamp = useCallback((v: number, a: number, b: number) => Math.max(a, Math.min(b, v)), []);
+
+  const pickBehaviorForPreset = useCallback((p: MusicPreset): string => {
+    if (BEHAVIOR_BY_ID[p.motionStyle as any]) return p.motionStyle as any;
+    const map: Record<string, string> = {
+      swarm: 'murmuration',
+      orbit: 'revolution',
+      flow: 'migration',
+      drift: 'meditation',
+      spiral: 'revolution',
+      lattice: 'school',
+      ballistic: 'chaos',
+    };
+    return map[p.motionStyle] ?? 'murmuration';
+  }, []);
+
+  const makePhysicsForPreset = useCallback((p: MusicPreset, variation: number): { phys: PhysicsParams; behaviorId: string } => {
+    const seed = (fnv1a32(p.id) ^ Math.floor(clamp(variation, 0, 1) * 0xffffffff)) >>> 0;
+    const r = mulberry32(seed);
+    const baseId = pickBehaviorForPreset(p);
+    const base = BEHAVIOR_BY_ID[baseId] ?? BEHAVIOR_PRESETS[0];
+
+    let out: PhysicsParams = applyBehaviorToPhysics(base, { ...DEFAULT_PHYSICS });
+    out.entainment = p.entainment;
+
+    const t = clamp((p.intensity ?? 2) / 5, 0, 1);
+    const j = () => (r() - 0.5) * 2;
+    out.damping     = clamp((out.damping ?? DEFAULT_PHYSICS.damping) - t * 0.012 + j() * 0.004, 0.90, 0.999);
+    out.maxSpeed    = clamp((out.maxSpeed ?? DEFAULT_PHYSICS.maxSpeed) * (0.78 + t * 0.65) + j() * 0.06, 0.02, 0.90);
+    out.turbulence  = clamp((out.turbulence ?? DEFAULT_PHYSICS.turbulence) + t * 0.14 + j() * 0.12, 0, 1);
+    out.cohesion    = clamp((out.cohesion ?? DEFAULT_PHYSICS.cohesion) * (0.75 + t * 0.55) + j() * 0.35, 0, 3);
+    out.separation  = clamp((out.separation ?? DEFAULT_PHYSICS.separation) * (0.75 + t * 0.60) + j() * 0.35, 0, 3);
+    out.alignment   = clamp((out.alignment ?? DEFAULT_PHYSICS.alignment) * (0.70 + t * 0.90) + j() * 0.25, 0, 2);
+    out.zoneRadius  = clamp((out.zoneRadius ?? DEFAULT_PHYSICS.zoneRadius) + j() * 0.08, 0.03, 0.50);
+    out.vortexForce = clamp((out.vortexForce ?? DEFAULT_PHYSICS.vortexForce) + (p.motionStyle === 'orbit' ? 0.10 : 0) + j() * 0.06, 0, 0.40);
+    out.burstRate   = clamp((out.burstRate ?? DEFAULT_PHYSICS.burstRate) + t * 0.22 + j() * 0.18, 0, 1);
+
+    if (p.motionStyle === 'migration' || p.motionStyle === 'exodus' || base.motionStyle === 'migration' || base.motionStyle === 'exodus') {
+      const ang = r() * Math.PI * 2;
+      out.migrationX = Math.cos(ang);
+      out.migrationY = Math.sin(ang);
+    }
+
+    out.bounceWalls = false;
+    out.physicsOnly = false;
+    out.restitution = out.restitution ?? 0.82;
+    out.motionStyle = base.motionStyle;
+    return { phys: out, behaviorId: base.id };
+  }, [applyBehaviorToPhysics, clamp, fnv1a32, mulberry32, pickBehaviorForPreset]);
+
+  const seedParticleTimbresForPreset = useCallback((p: MusicPreset, variation: number) => {
+    const st = stateRef.current;
+    if (!st || st.count <= 0) return;
+    const seed = (fnv1a32(p.id + '_tmb') ^ Math.floor(clamp(variation, 0, 1) * 0xffffffff)) >>> 0;
+    const r = mulberry32(seed);
+    const tags = new Set((p.tags ?? []).map(String));
+    const ambient = tags.has('Ambient') || tags.has('Meditative') || tags.has('Drone');
+    const club    = tags.has('Techno') || tags.has('Club') || tags.has('Rave') || tags.has('Breakbeat') || tags.has('Groove');
+    const classical= tags.has('Classical') || tags.has('Orchestral') || tags.has('Strings') || tags.has('Choral');
+
+    const pools: Record<VoiceRole, number[]> = {
+      KICK:    club ? [2,2,2] : [2,2],
+      BASS:    club ? [0,0,1,0] : ambient ? [0,0,0] : [0,0,1],
+      PERC:    club ? [9,10,11,9,10] : [9,10,11],
+      PAD:     ambient ? [6,6,7,8,6] : classical ? [6,8,7,6] : [6,6,8,7],
+      LEAD:    ambient ? [3,8,5,3] : club ? [4,4,5,1] : classical ? [3,5,8] : [4,5,3,8],
+      ARP:     club ? [3,11,5,3] : [3,8,5],
+      STRINGS: classical ? [6,8,7,6] : [6,7,8],
+      CHOIR:   ambient || classical ? [7,7,6,8] : [7,6,8],
+    };
+
+    const probBase = ambient ? 0.22 : club ? 0.42 : 0.30;
+    for (const q of st.quanta) {
+      if (r() > probBase) { q.timbreIdx = -1; continue; }
+      const pool = pools[q.role] ?? [6,8,5];
+      q.timbreIdx = pool[Math.floor(r() * pool.length)] ?? -1;
+    }
+  }, [clamp, fnv1a32, mulberry32]);
+
   // Per-role random timbre
   const randomizeRole = useCallback((role: VoiceRole) => {
     const idx = Math.floor(Math.random() * TIMBRE_TEMPLATES.length);
@@ -441,24 +540,105 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
     forceRender(n=>n+1);
   }, []);
 
+  // ── Live Pad: quantize selection to a scale degree ─────────────────────────
+  const padQuantizeDegree = useCallback((intervalSemis: number) => {
+    const st = stateRef.current;
+    if (!st) return;
+    const p = presetRef.current;
+
+    const selected = st.quanta.filter(q => q.selected);
+    const targets: typeof selected = selected.length
+      ? selected
+      : (() => {
+        // If nothing selected: quantize nearest to cursor (small radius)
+        const wx = cursorRef.current.wx, wy = cursorRef.current.wy;
+        let best: any = null, bestD = 0.14;
+        for (const q of st.quanta) {
+          const d = Math.hypot(q.x - wx, q.y - wy);
+          if (d < bestD) { bestD = d; best = q; }
+        }
+        return best ? [best] : [];
+      })();
+    if (!targets.length) return;
+
+    const targetPc = (p.root + intervalSemis) % 12;
+
+    const nearestPitchInRange = (cur: number, pc: number, minP: number, maxP: number): number => {
+      let best = clamp(cur, minP, maxP);
+      let bestD = 1e9;
+      for (let m = Math.floor(minP); m <= Math.floor(maxP); m++) {
+        if ((m % 12 + 12) % 12 !== pc) continue;
+        const d = Math.abs(m - cur);
+        if (d < bestD) { bestD = d; best = m; }
+      }
+      return best;
+    };
+
+    for (const q of targets) {
+      const base = p.roles[q.role] ?? ROLE_DEFAULTS[q.role];
+      const over = roleOverRef.current[q.role];
+      const cfg  = over ? ({ ...base, ...over } as RoleConfig) : base;
+      const [minP, maxP] = cfg.pitchRange ?? [48, 84];
+      q.pitch = nearestPitchInRange(q.pitch, targetPc, minP, maxP);
+    }
+
+    // Audition the hit (uses the currently edited role)
+    if (audioEngine.ready) {
+      const base = p.roles[editRole] ?? ROLE_DEFAULTS[editRole];
+      const over = roleOverRef.current[editRole];
+      const cfg  = over ? ({ ...base, ...over } as RoleConfig) : base;
+      const [minP, maxP] = cfg.pitchRange ?? [48, 84];
+      const midi = nearestPitchInRange((minP + maxP) / 2, targetPc, minP, maxP);
+      audioEngine.fire({
+        pitch: midi,
+        velocity: 0.55,
+        role: editRole,
+        x: 0,
+        y: 0,
+        duration: Math.max(0.05, cfg.envelope.attack + cfg.envelope.decay + cfg.envelope.sustain * 1.5),
+        timbre: 0.6,
+      }, cfg);
+    }
+
+    forceRender(n => n + 1);
+  }, [clamp, editRole]);
+
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    stateRef.current = createMusicState(INIT_PRESET);
+    const variation = Math.random();
+    stateRef.current = createMusicState(INIT_PRESET, { variation });
     stateRef.current.bpm = INIT_PRESET.bpm;
-  }, []);
+    seedParticleTimbresForPreset(INIT_PRESET, variation);
+    const { phys: initPhys, behaviorId: bId } = makePhysicsForPreset(INIT_PRESET, variation);
+    physRef.current = initPhys;
+    setPhys(initPhys);
+    setBehaviorId(bId);
+    setSeqActive(stateRef.current.sequencer.active);
+    setSeqSteps(stateRef.current.sequencer.steps.length);
+    setSeqTempoMult(stateRef.current.sequencer.tempoMult);
+  }, [makePhysicsForPreset, seedParticleTimbresForPreset]);
 
   // ── Apply preset ──────────────────────────────────────────────────────────
   const applyPreset = useCallback((id: string, opts?: { keepCinematic?: boolean }) => {
     const p = getPreset(id); if (!p) return;
+    const variation = Math.random();
     presetRef.current  = p;
-    stateRef.current   = createMusicState(p);
+    stateRef.current   = createMusicState(p, { variation });
     stateRef.current.bpm = p.bpm;
     roleOverRef.current  = {};
     setPresetId(id); setBpm(p.bpm); setLens(p.lens);
     // ── Never override the user's HUD visibility from a preset ──────────────
     // Removed: setCinematic(p.cinematic) — caused HUD to vanish on preset switch
     setQuantaCount(p.quantaCount);
-    setPhys(prev => ({ ...prev, entainment: p.entainment, motionStyle: p.motionStyle ?? prev.motionStyle }));
+    seedParticleTimbresForPreset(p, variation);
+    const { phys: newPhys, behaviorId: bId } = makePhysicsForPreset(p, variation);
+    physRef.current = newPhys;
+    setPhys(newPhys);
+    setBehaviorId(bId);
+    // Sync sequencer UI to seeded scene
+    setSeqActive(stateRef.current.sequencer.active);
+    setSeqSteps(stateRef.current.sequencer.steps.length);
+    setSeqTempoMult(stateRef.current.sequencer.tempoMult);
     // Sync live harmonic states
     setLiveRoot(p.root);
     setLiveScale(p.scale);
@@ -470,7 +650,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       audioEngine.setMasterGain(p.masterGain * masterVol);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fxAmount, masterVol]);
+  }, [fxAmount, makePhysicsForPreset, masterVol, seedParticleTimbresForPreset]);
 
   // ── Sync BPM ──────────────────────────────────────────────────────────────
   useEffect(() => { if (stateRef.current) stateRef.current.bpm = bpm; }, [bpm]);
@@ -522,11 +702,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const fxRef         = useRef(0.5);
   const masterVolRef  = useRef(1.0);
   const showVelRef    = useRef(false);
+  const pitchMapModeRef = useRef<'preset'|'canvas'>('preset');
   useEffect(() => { lensRef.current      = lens;       }, [lens]);
   useEffect(() => { cinematicRef.current = cinematic;  }, [cinematic]);
   useEffect(() => { fxRef.current        = fxAmount;   }, [fxAmount]);
   useEffect(() => { masterVolRef.current = masterVol;  }, [masterVol]);
   useEffect(() => { showVelRef.current   = showVel;    }, [showVel]);
+  useEffect(() => { pitchMapModeRef.current = pitchMapMode; }, [pitchMapMode]);
 
   useEffect(() => {
     if (!active) { cancelAnimationFrame(rafRef.current); return; }
@@ -551,6 +733,25 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
           effectiveRoles[role] = over ? { ...base, ...over } as RoleConfig : base;
         }
         const effectivePreset = { ...preset, roles: effectiveRoles };
+
+        // ── Pitch mapping modes ────────────────────────────────────────────
+        if (pitchMapModeRef.current === 'canvas') {
+          const iv = SCALE_INTERVALS[effectivePreset.scale];
+          const degN = Math.max(1, iv.length);
+          for (const q of state.quanta) {
+            const cfg = effectiveRoles[q.role] ?? preset.roles[q.role] ?? ROLE_DEFAULTS[q.role];
+            const [minP, maxP] = cfg.pitchRange ?? [48, 84];
+            const x01 = clamp((q.x + 1) / 2, 0, 1);
+            const y01 = clamp((1 - (q.y + 1) / 2), 0, 1); // top = high
+            const deg = Math.floor(x01 * degN) % degN;
+            const pc = (effectivePreset.root + iv[deg]) % 12;
+            const octMin = Math.floor((minP - pc) / 12);
+            const octMax = Math.floor((maxP - pc) / 12);
+            const oct = Math.round(octMin + (octMax - octMin) * y01);
+            const target = clamp(pc + oct * 12, minP, maxP);
+            q.pitch = quantizeToScale(target, effectivePreset.root, effectivePreset.scale);
+          }
+        }
 
         stepMusic(state, effectivePreset, physRef.current, dt, (ev: NoteEvent, cfg: RoleConfig) => {
           let finalCfg = cfg; // overrides already baked into effectivePreset
@@ -2434,8 +2635,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   ].map(m=>(
                     <button key={m.label} onClick={m.fn}
                       className="text-left text-[7px] px-1.5 py-1 hover:bg-white/5 transition-all"
-                      style={{borderRadius:0}}
-                      style={{color:m.color+'aa'}}>
+                      style={{borderRadius:0, color:m.color+'aa'}}>
                       {m.label}
                     </button>
                   ))}
@@ -2752,6 +2952,48 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     </div>
                     <div className="mt-0.5 text-[5px] font-mono text-white/18 text-center leading-snug">
                       {liveHarmonyMode==='consonant'?'Só acorda notas consonantes':liveHarmonyMode==='dissonant'?'Prioriza dissonâncias':'Toca qualquer intervalo'}
+                    </div>
+                  </div>
+                  <div className="border-t border-dashed border-white/[0.06] pt-2">
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>MAPEAMENTO</div>
+                    <div className="flex gap-1">
+                      <button onClick={() => setPitchMapMode('preset')}
+                        className={`flex-1 text-[5.5px] uppercase py-1.5 transition-all
+                          ${pitchMapMode==='preset'?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
+                            :'border border-dashed border-white/[0.04] text-white/25 hover:border-white/12 hover:text-white/50'}`}
+                        style={{background:'transparent'}}>
+                        Preset
+                      </button>
+                      <button onClick={() => setPitchMapMode('canvas')}
+                        className={`flex-1 text-[5.5px] uppercase py-1.5 transition-all
+                          ${pitchMapMode==='canvas'?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
+                            :'border border-dashed border-white/[0.04] text-white/25 hover:border-white/12 hover:text-white/50'}`}
+                        style={{background:'transparent'}}>
+                        Canvas
+                      </button>
+                    </div>
+                    <div className="mt-0.5 text-[5px] font-mono text-white/18 text-center leading-snug">
+                      {pitchMapMode==='preset'
+                        ? 'Pitch vive nos quanta (tool zones ainda modulam)'
+                        : 'X → grau da escala · Y → oitava (respeita pitchRange da role)'}
+                    </div>
+                  </div>
+                  <div className="border-t border-dashed border-white/[0.06] pt-2">
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>LIVE PAD — QUANTIZE</div>
+                    <div className="grid grid-cols-6 gap-0.5">
+                      {SCALE_INTERVALS[liveScale].map((iv,idx) => {
+                        const nn = NOTE_NAMES[(liveRoot + iv) % 12];
+                        return (
+                          <button key={`${iv}_${idx}`} onClick={() => padQuantizeDegree(iv)}
+                            className="text-[6px] py-1.5 transition-all text-center bg-white/[0.04] border border-white/[0.08] text-white/55 hover:bg-white/10 hover:text-white/75"
+                            style={{borderRadius:0}}>
+                            {nn}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-1 text-[5px] font-mono text-white/18 text-center leading-snug">
+                      Aplica na seleção (ou no quanta mais perto do cursor) sem mudar a raiz global.
                     </div>
                   </div>
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
