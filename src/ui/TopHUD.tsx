@@ -1,6 +1,6 @@
 import { Play, Pause, RotateCcw, Undo2, BookOpen, Trophy, FileText, BookText, Eye, EyeOff, Layers, Box, LayoutGrid } from 'lucide-react';
 
-export type LabId = 'complexityLife' | 'sociogenesis' | 'psycheLab' | 'musicLab' | 'alchemyLab' | 'metaArtLab' | 'rhizomeLab' | 'asimovTheater' | 'languageLab' | 'treeOfLife' | 'physicsSandbox';
+export type LabId = 'complexityLife' | 'sociogenesis' | 'psycheLab' | 'musicLab' | 'alchemyLab' | 'metaArtLab' | 'rhizomeLab' | 'asimovTheater' | 'languageLab' | 'treeOfLife' | 'physicsSandbox' | 'milPlatos';
 
 interface TopHUDProps {
   running: boolean;
@@ -68,6 +68,7 @@ const LAB_ACCENTS: Record<LabId, string> = {
   languageLab:    '#c8bfaa',
   asimovTheater:  '#7c6fcd',
   physicsSandbox: '#22d3ee',
+  milPlatos:      '#6366f1',
 };
 
 // Lab symbols (alchemical)
@@ -83,6 +84,7 @@ const LAB_SYMBOLS: Record<LabId, string> = {
   languageLab:    '\u25EF',
   asimovTheater:  '\u229A',
   physicsSandbox: '\u2B21',
+  milPlatos:      '\u22C6',
 };
 
 export const TopHUD: React.FC<TopHUDProps> = ({

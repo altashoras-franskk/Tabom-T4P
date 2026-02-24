@@ -2,7 +2,9 @@
 import {
   MusicState, MusicLens, MusicPreset,
   ROLE_COLORS, VoiceRole, consonanceScore, ToolCursor, CanvasPalette, PaletteMode, DEFAULT_PALETTE,
+  MusicAesthetic,
 } from '../sim/music/musicTypes';
+import { DEFAULT_MUSIC_AESTHETIC } from '../sim/music/musicAesthetics';
 
 const ROLES: VoiceRole[] = ['KICK','BASS','PERC','PAD','LEAD','ARP','STRINGS','CHOIR'];
 
@@ -21,6 +23,40 @@ function getGrain(): HTMLCanvasElement {
   }
   c.putImageData(id,0,0);
   return grainCvs;
+}
+
+// ── Offscreen layers (lightweight stack) ──────────────────────────────────────
+type LayerId = 'trail' | 'scene';
+const layerCanvases: Partial<Record<LayerId, HTMLCanvasElement>> = {};
+
+function getLayerCanvas(id: LayerId, wPx: number, hPx: number): HTMLCanvasElement {
+  let cvs = layerCanvases[id];
+  if (!cvs) {
+    cvs = document.createElement('canvas');
+    layerCanvases[id] = cvs;
+  }
+  if (cvs.width !== wPx || cvs.height !== hPx) {
+    cvs.width = wPx;
+    cvs.height = hPx;
+    const ctx = cvs.getContext('2d');
+    if (ctx) ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // On resize, clear persistent trail
+    if (id === 'trail') {
+      const c = cvs.getContext('2d');
+      if (c) c.clearRect(0, 0, wPx, hPx);
+    }
+  }
+  return cvs;
+}
+
+function blendToGCO(blend: string | undefined): GlobalCompositeOperation {
+  switch (blend) {
+    case 'screen':   return 'screen';
+    case 'lighter':  return 'lighter';
+    case 'multiply': return 'multiply';
+    case 'overlay':  return 'overlay';
+    default:         return 'source-over';
+  }
 }
 
 // ── World → screen ────────────────────────────────────────────────────────────
@@ -465,31 +501,86 @@ export function renderMusic(
   palette: CanvasPalette = DEFAULT_PALETTE,
   drawingCage?: { x1:number;y1:number;x2:number;y2:number }|null,
   zonePreviewPts?: [number,number][]|null,
+  aesthetic: MusicAesthetic = DEFAULT_MUSIC_AESTHETIC,
 ): void {
   const dpr = Math.min(window.devicePixelRatio||1, 1.5);
   const W   = canvas.clientWidth, H=canvas.clientHeight;
-  if (canvas.width!==Math.round(W*dpr)||canvas.height!==Math.round(H*dpr)) {
-    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+  const wPx = Math.round(W * dpr);
+  const hPx = Math.round(H * dpr);
+  if (canvas.width !== wPx || canvas.height !== hPx) {
+    canvas.width = wPx; canvas.height = hPx;
   }
-  const c = canvas.getContext('2d')!;
-  c.setTransform(dpr,0,0,dpr,0,0);
+
+  const main = canvas.getContext('2d')!;
+  main.setTransform(dpr,0,0,dpr,0,0);
 
   // ── 1. Background ─────────────────────────────────────────────────────────
-  c.fillStyle = palette.bgColor;
-  c.fillRect(0,0,W,H);
+  main.fillStyle = palette.bgColor;
+  main.fillRect(0,0,W,H);
 
   const [pr,pg,pb]=hexToRgb(preset.primary);
-  const radGrad=c.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*.62);
-  radGrad.addColorStop(0,  `rgba(${pr},${pg},${pb},${beatPulse?.050:.026})`);
-  radGrad.addColorStop(.5, `rgba(${pr},${pg},${pb},.012)`);
-  radGrad.addColorStop(1,  'rgba(0,0,0,0)');
-  c.fillStyle=radGrad; c.fillRect(0,0,W,H);
+  if (aesthetic.canvas.bgStyle === 'radial') {
+    const radGrad=main.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*.62);
+    radGrad.addColorStop(0,  `rgba(${pr},${pg},${pb},${beatPulse?.050:.026})`);
+    radGrad.addColorStop(.5, `rgba(${pr},${pg},${pb},.012)`);
+    radGrad.addColorStop(1,  'rgba(0,0,0,0)');
+    main.fillStyle=radGrad; main.fillRect(0,0,W,H);
+  }
 
-  c.save();
-  c.globalAlpha=.05;
-  const pat=c.createPattern(getGrain(),'repeat');
-  if (pat){c.fillStyle=pat;c.fillRect(0,0,W,H);}
-  c.restore();
+  // Grain
+  const grainA = 0.01 + (aesthetic.canvas.grain ?? 0.5) * 0.09;
+  if (grainA > 0.001) {
+    main.save();
+    main.globalAlpha = grainA;
+    const pat=main.createPattern(getGrain(),'repeat');
+    if (pat){main.fillStyle=pat;main.fillRect(0,0,W,H);}
+    main.restore();
+  }
+
+  // ── 2. Trail layer (persistent) ───────────────────────────────────────────
+  const trailCanvas = getLayerCanvas('trail', wPx, hPx);
+  const trail = trailCanvas.getContext('2d')!;
+  trail.setTransform(dpr,0,0,dpr,0,0);
+  if (aesthetic.trails.enabled) {
+    // Fade memory curve (Meta-Arte style)
+    const mem = Math.max(0, Math.min(1, aesthetic.trails.persistence ?? 0.55));
+    const baseDecay = 0.35 + Math.pow(mem, 0.55) * 0.645; // 0.35..0.995
+    trail.save();
+    trail.globalCompositeOperation = 'destination-in';
+    trail.globalAlpha = baseDecay;
+    trail.fillStyle = 'rgba(0,0,0,1)';
+    trail.fillRect(0,0,W,H);
+    trail.restore();
+
+    // Draw streaks in world-space
+    trail.save();
+    trail.translate(W / 2 + panX, H / 2 + panY);
+    trail.scale(zoom, zoom);
+    trail.translate(-W / 2, -H / 2);
+    trail.globalCompositeOperation = blendToGCO(aesthetic.trails.blend);
+    trail.lineCap = 'round';
+    const blurPx = (aesthetic.trails.blur ?? 0) * 3.0;
+    if (blurPx > 0.01) trail.shadowBlur = blurPx;
+    for (const q of state.quanta) {
+      const dx = q.x - q.prevX, dy = q.y - q.prevY;
+      if (dx*dx + dy*dy < 1e-8) continue;
+      const sx=wx2s(q.prevX,W), sy=wy2s(q.prevY,H);
+      const ex=wx2s(q.x,W),    ey=wy2s(q.y,H);
+      const col=qColor(q,lens,1,palette.mode,palette.roleColorOverrides);
+      trail.strokeStyle = col;
+      trail.shadowColor = col;
+      trail.globalAlpha = 0.05 + q.charge * 0.16;
+      trail.lineWidth = (0.25 + q.charge * 1.15) * (aesthetic.trails.width ?? 1.0);
+      trail.beginPath(); trail.moveTo(sx,sy); trail.lineTo(ex,ey); trail.stroke();
+    }
+    trail.restore();
+  }
+
+  // ── 3. Scene layer (cleared every frame) ──────────────────────────────────
+  const sceneCanvas = getLayerCanvas('scene', wPx, hPx);
+  const c = sceneCanvas.getContext('2d')!;
+  c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,W,H);
 
   // ── Apply world zoom/pan transform ────────────────────────────────────────
   c.save();
@@ -783,8 +874,8 @@ export function renderMusic(
   }
   c.restore();
 
-  // ── 7. Trails ─────────────────────────────────────────────────────────────
-  if (preset.trailLen>0) {
+  // ── 7. Trails (moved to persistent trail layer) ───────────────────────────
+  if (false) {
     c.save();
     for (const q of state.quanta) {
       if (q.trailX.length<2) continue;
@@ -1022,16 +1113,49 @@ export function renderMusic(
     c.restore();
   }
 
-  // ── Restore world zoom/pan (spectral strip + cinematic are screen-space) ──
+  // ── Restore world zoom/pan (UI is screen-space) ───────────────────────────
   c.restore();
 
+  // ── Composite layers onto main canvas (pixel space) ───────────────────────
+  main.setTransform(1,0,0,1,0,0);
+  if (aesthetic.trails.enabled) main.drawImage(trailCanvas, 0, 0);
+  main.drawImage(sceneCanvas, 0, 0);
+
+  // Bloom / post from trails (cheap)
+  const bloom = Math.max(0, Math.min(1, aesthetic.post.bloom ?? 0));
+  if (bloom > 0.01 && aesthetic.trails.enabled) {
+    main.save();
+    main.globalCompositeOperation = 'screen';
+    main.globalAlpha = 0.10 + bloom * 0.55;
+    main.filter = `blur(${Math.round(2 + bloom * 12)}px)`;
+    main.drawImage(trailCanvas, 0, 0);
+    main.filter = 'none';
+    main.restore();
+  }
+
+  // Vignette
+  const vig = Math.max(0, Math.min(1, aesthetic.canvas.vignette ?? 0));
+  if (vig > 0.01) {
+    main.save();
+    // draw vignette in CSS-space
+    main.setTransform(dpr,0,0,dpr,0,0);
+    const g = main.createRadialGradient(W/2,H/2,Math.min(W,H)*0.12,W/2,H/2,Math.max(W,H)*0.78);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(0.6, `rgba(0,0,0,${0.05 + vig * 0.22})`);
+    g.addColorStop(1, `rgba(0,0,0,${0.18 + vig * 0.60})`);
+    main.fillStyle = g;
+    main.fillRect(0,0,W,H);
+    main.restore();
+  }
+
   // ── 11. Spectral strip ────────────────────────────────────────────────────
+  main.setTransform(dpr,0,0,dpr,0,0);
   const stripH=40, stripY=H-stripH, barW=W/ROLES.length;
-  c.save();
-  c.globalAlpha=.60; c.fillStyle='#080c14';
-  c.fillRect(0,stripY,W,stripH);
-  c.globalAlpha=.25; c.strokeStyle='rgba(255,255,255,.1)'; c.lineWidth=1;
-  c.beginPath();c.moveTo(0,stripY);c.lineTo(W,stripY);c.stroke();
+  main.save();
+  main.globalAlpha=.60; main.fillStyle='#080c14';
+  main.fillRect(0,stripY,W,stripH);
+  main.globalAlpha=.25; main.strokeStyle='rgba(255,255,255,.1)'; main.lineWidth=1;
+  main.beginPath();main.moveTo(0,stripY);main.lineTo(W,stripY);main.stroke();
 
   for (let ri=0;ri<ROLES.length;ri++) {
     const role=ROLES[ri];
@@ -1039,29 +1163,29 @@ export function renderMusic(
     const bx=ri*barW;
     const bh=Math.max(2,e*(stripH-10));
     const col=ROLE_COLORS[role];
-    c.globalAlpha=e*.38;
-    c.fillStyle=col;
-    c.fillRect(bx+barW*.12,stripY+(stripH-bh)-4,barW*.76,bh+4);
-    c.globalAlpha=.6+e*.38;
-    c.fillStyle=col;
-    c.fillRect(bx+barW*.3,stripY+(stripH-bh),barW*.4,bh);
-    c.globalAlpha=.3+e*.35;
-    c.fillStyle=col;
-    c.font='7px monospace'; c.textAlign='center'; c.textBaseline='bottom';
-    c.fillText(role,bx+barW*.5,H-2);
+    main.globalAlpha=e*.38;
+    main.fillStyle=col;
+    main.fillRect(bx+barW*.12,stripY+(stripH-bh)-4,barW*.76,bh+4);
+    main.globalAlpha=.6+e*.38;
+    main.fillStyle=col;
+    main.fillRect(bx+barW*.3,stripY+(stripH-bh),barW*.4,bh);
+    main.globalAlpha=.3+e*.35;
+    main.fillStyle=col;
+    main.font='7px monospace'; main.textAlign='center'; main.textBaseline='bottom';
+    main.fillText(role,bx+barW*.5,H-2);
   }
-  c.restore();
+  main.restore();
 
   // ── 12. Cinematic overlay ─────────────────────────────────────────────────
   if (cinematic) {
-    c.save();
-    c.textAlign='center'; c.textBaseline='top';
-    c.fillStyle=preset.primary+'44';
-    c.font=`${Math.max(11,W*.016)}px monospace`;
-    c.fillText(preset.name.toUpperCase(),W/2,22);
-    c.font=`${Math.max(8,W*.010)}px monospace`;
-    c.fillStyle=preset.accent+'aa';
-    c.fillText(preset.vibe,W/2,42);
-    c.restore();
+    main.save();
+    main.textAlign='center'; main.textBaseline='top';
+    main.fillStyle=preset.primary+'44';
+    main.font=`${Math.max(11,W*.016)}px monospace`;
+    main.fillText(preset.name.toUpperCase(),W/2,22);
+    main.font=`${Math.max(8,W*.010)}px monospace`;
+    main.fillStyle=preset.accent+'aa';
+    main.fillText(preset.vibe,W/2,42);
+    main.restore();
   }
 }

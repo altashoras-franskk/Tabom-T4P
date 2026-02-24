@@ -2,6 +2,9 @@
 // Symbols as Laws · 20 presets · dropdown HUD · agent inspector · auto-emergence
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+
+const MONO = "'IBM Plex Mono', monospace";
+const DOTO = "'Doto', monospace";
 import { Play, Pause, RotateCcw, ArrowLeft, ChevronDown, X } from 'lucide-react';
 import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
@@ -76,11 +79,13 @@ function Dropdown({ label, icon, children, align = 'left' }: {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all text-xs font-medium">
-        {icon} {label} <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        style={{ fontFamily: MONO }}
+        className="flex items-center gap-1.5 px-2.5 py-1 border border-white/[0.08] bg-white/[0.03] text-white/60 hover:text-white/90 hover:border-white/20 transition-all text-[10px] tracking-wide">
+        {icon} {label} <ChevronDown size={9} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className={`absolute top-full mt-1.5 z-50 min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden ${align === 'right' ? 'right-0' : 'left-0'}`}
+        <div className={`absolute top-full mt-1 z-50 min-w-[200px] overflow-hidden ${align === 'right' ? 'right-0' : 'left-0'}`}
+          style={{ background: 'rgba(4,6,10,0.98)', border: '1px solid rgba(255,255,255,0.08)' }}
           onClick={() => setOpen(false)}>
           {children}
         </div>
@@ -94,12 +99,14 @@ function DropItem({ icon, label, sub, active, onClick, color }: {
 }) {
   return (
     <button onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-zinc-800 transition-colors"
-      style={{ background: active ? 'rgba(255,255,255,0.06)' : '' }}>
-      {icon && <span className="text-sm shrink-0">{icon}</span>}
+      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors"
+      style={{ fontFamily: MONO, background: active ? 'rgba(255,255,255,0.05)' : '' }}
+      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
+      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = ''; }}>
+      {icon && <span className="text-[11px] shrink-0">{icon}</span>}
       <div className="flex-1 min-w-0">
-        <div className="text-xs font-medium" style={{ color: active ? (color || '#fff') : '#d4d4d8' }}>{label}</div>
-        {sub && <div className="text-[10px] text-zinc-500 truncate">{sub}</div>}
+        <div className="text-[10px]" style={{ color: active ? (color || 'rgba(255,255,255,0.90)') : 'rgba(255,255,255,0.55)' }}>{label}</div>
+        {sub && <div className="text-[9px] truncate" style={{ color: 'rgba(255,255,255,0.25)' }}>{sub}</div>}
       </div>
       {active && <div className="w-1 h-1 rounded-full shrink-0" style={{ background: color || '#a78bfa' }} />}
     </button>
@@ -108,7 +115,8 @@ function DropItem({ icon, label, sub, active, onClick, color }: {
 
 function DropSep({ label }: { label: string }) {
   return (
-    <div className="px-3 py-1 text-[9px] uppercase tracking-widest text-zinc-600 border-t border-zinc-800 mt-1 pt-2">
+    <div className="px-3 py-1 text-[8px] uppercase tracking-[0.15em] mt-1 pt-2"
+      style={{ color: 'rgba(255,255,255,0.20)', borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
       {label}
     </div>
   );
@@ -117,12 +125,12 @@ function DropSep({ label }: { label: string }) {
 // ── PsychBar (horizontal mini bar) ──────────────────────────────────────────
 function PsychBar({ label, v, c }: { label: string; v: number; c: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-zinc-500 text-[10px] w-14 shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(v * 100).toFixed(0)}%`, background: c }} />
+    <div className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+      <span className="text-[9px] w-14 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
+      <div className="flex-1 h-px rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+        <div className="h-full transition-all duration-300" style={{ width: `${(v * 100).toFixed(0)}%`, background: c }} />
       </div>
-      <span className="text-[10px] font-mono text-zinc-400 w-7 text-right shrink-0">{(v * 100).toFixed(0)}</span>
+      <span className="text-[9px] w-7 text-right shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }}>{(v * 100).toFixed(0)}</span>
     </div>
   );
 }
@@ -132,16 +140,19 @@ function Section({ title, badge, open, onToggle, children }: {
   title: string; badge?: string | number; open: boolean; onToggle: () => void; children: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-zinc-800">
+    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
       <button onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2.5 text-zinc-300 hover:text-white hover:bg-zinc-800/40 transition-colors">
-        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
+        className="w-full flex items-center justify-between px-3 py-2 transition-colors"
+        style={{ fontFamily: MONO }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}>
+        <span className="flex items-center gap-2 text-[9px] uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.45)' }}>
           {title}
           {badge !== undefined && (
-            <span className="text-[9px] px-1.5 py-px rounded bg-zinc-800 text-zinc-400 font-normal">{badge}</span>
+            <span className="text-[8px] px-1 py-px" style={{ color: 'rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.06)' }}>{badge}</span>
           )}
         </span>
-        <ChevronDown size={12} className={`text-zinc-600 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} style={{ color: 'rgba(255,255,255,0.20)' }} />
       </button>
       {open && <div className="px-3 pb-3 space-y-2">{children}</div>}
     </div>
@@ -535,7 +546,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   const handleRecStop = useCallback(() => recorderRef.current?.stop(), []);
 
   return (
-    <div className="fixed inset-0 z-20 bg-zinc-950 flex flex-col overflow-hidden select-none" style={{ fontFamily: 'system-ui, sans-serif' }}>
+    <div className="fixed inset-0 z-20 flex flex-col overflow-hidden select-none" style={{ background: '#000', fontFamily: MONO }}>
 
       {/* ── Exception banner ───────────────────────────────────────────────── */}
       {wsUI.exceptionActive && (
@@ -547,17 +558,20 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
       )}
 
       {/* ── Top bar ────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-3 h-11 border-b border-zinc-800 bg-zinc-950 shrink-0">
+      <div className="flex items-center gap-2 px-3 h-10 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.95)' }}>
 
         {onLeave && (
           <button onClick={onLeave}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all text-xs">
-            <ArrowLeft size={11} /> Exit
+            className="flex items-center gap-1.5 px-2.5 py-1 border transition-all text-[10px]"
+            style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)', fontFamily: MONO }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.80)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.20)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.45)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}>
+            <ArrowLeft size={10} /> Exit
           </button>
         )}
 
-        <span className="text-zinc-600 text-xs hidden md:block">MetaLifeLab · Sociogenesis</span>
-        <div className="w-px h-5 bg-zinc-800" />
+        <span className="text-[10px] hidden md:block" style={{ color: 'rgba(255,255,255,0.20)', fontFamily: DOTO, letterSpacing: '0.08em' }}>SOCIOGENESIS</span>
+        <div className="w-px h-4" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
         {/* Sim dropdown */}
         <Dropdown label={paused ? 'Paused' : 'Running'} icon={paused ? <Pause size={11} /> : <Play size={11} />}>
@@ -566,13 +580,14 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               onClick={() => { const n = !paused; setPaused(n); pausedRef.current = n; }} />
             <DropItem icon="↺" label="Reset Scenario"
               onClick={() => resetWorld(scenario, autoSymbols)} />
-            <div className="px-3 py-2 border-t border-zinc-800 mt-1">
-              <div className="text-[10px] text-zinc-500 mb-1.5">macroTick interval</div>
+            <div className="px-3 py-2 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+              <div className="text-[9px] mb-1.5" style={{ color: 'rgba(255,255,255,0.30)' }}>macroTick interval</div>
               <div className="flex items-center gap-2">
                 <input type="range" min={0.5} max={2.5} step={0.1} defaultValue={1.0}
                   onChange={e => patchCfg({ macroTickSec: parseFloat(e.target.value) })}
-                  className="flex-1 h-px bg-zinc-700 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300" />
-                <span className="text-[10px] text-zinc-400">1.0s</span>
+                  className="flex-1 h-px appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white/60"
+                  style={{ background: 'rgba(255,255,255,0.10)' }} />
+                <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.40)' }}>1.0s</span>
               </div>
             </div>
           </div>
@@ -610,10 +625,10 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         <div className="flex-1" />
 
         {/* Phase chip */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-md border"
-          style={{ borderColor: phaseColor + '40', background: phaseColor + '12' }}>
-          <span>{PHASE_ICONS[phase]}</span>
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: phaseColor }}>{phase}</span>
+        <div className="flex items-center gap-2 px-2.5 py-0.5 border"
+          style={{ borderColor: phaseColor + '35', background: phaseColor + '0e', fontFamily: MONO }}>
+          <span className="text-[10px]">{PHASE_ICONS[phase]}</span>
+          <span className="text-[9px] uppercase tracking-[0.12em]" style={{ color: phaseColor }}>{phase}</span>
         </div>
 
         {/* Recording button */}
@@ -650,9 +665,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           {/* Group legend — bottom right */}
           <div className="absolute bottom-5 right-5 flex flex-col items-end gap-1 pointer-events-none">
             {Array.from({ length: cfgRef.current.groupCount }).map((_, g) => (
-              <div key={g} className="flex items-center gap-2">
-                <span className="text-zinc-500 text-xs">G{g}</span>
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: GROUP_COLORS[g] }} />
+              <div key={g} className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+                <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.30)' }}>G{g}</span>
+                <div className="w-2 h-2 rounded-full" style={{ background: GROUP_COLORS[g] }} />
               </div>
             ))}
           </div>
@@ -660,10 +675,11 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           {/* Tool hint */}
           {tool !== 'select' && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 pointer-events-none">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-300 text-xs">
+              <div className="flex items-center gap-2 px-3 py-1 border text-[10px]"
+                style={{ borderColor: 'rgba(56,189,248,0.25)', background: 'rgba(56,189,248,0.08)', color: 'rgba(186,230,253,0.85)', fontFamily: MONO }}>
                 <span>{TOOLS.find(t2 => t2.id === tool)?.icon}</span>
                 <span>{TOOLS.find(t2 => t2.id === tool)?.label}</span>
-                <span className="text-sky-500/60">· click to place · Esc to cancel</span>
+                <span style={{ color: 'rgba(56,189,248,0.45)' }}>· click to place · Esc to cancel</span>
               </div>
             </div>
           )}
@@ -696,7 +712,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         </div>
 
         {/* ── Right panel ──────────────────────────────────────────────────── */}
-        <div className="w-64 shrink-0 border-l border-zinc-800 bg-zinc-950 flex flex-col overflow-y-auto">
+        <div className="w-64 shrink-0 flex flex-col overflow-y-auto" style={{ borderLeft: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.92)' }}>
 
           {/* TOOLS */}
           <Section title="Tools" open={showTools} onToggle={() => setShowTools(v => !v)}>
@@ -705,24 +721,24 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 <button key={t2.id}
                   onClick={() => { setTool(t2.id); toolRef.current = t2.id; }}
                   title={t2.desc}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs transition-all"
+                  className="flex items-center gap-1.5 px-2 py-1.5 border text-[10px] transition-all"
                   style={tool === t2.id
-                    ? { borderColor: t2.color + '60', background: t2.color + '14', color: t2.color }
-                    : { borderColor: '#3f3f46', background: 'transparent', color: '#a1a1aa' }}>
-                  <span className="text-sm">{t2.icon}</span>
+                    ? { borderColor: t2.color + '55', background: t2.color + '12', color: t2.color, fontFamily: MONO }
+                    : { borderColor: 'rgba(255,255,255,0.07)', background: 'transparent', color: 'rgba(255,255,255,0.40)', fontFamily: MONO }}>
+                  <span className="text-[11px]">{t2.icon}</span>
                   <span className="truncate">{t2.label}</span>
                 </button>
               ))}
             </div>
             {/* Active tool description */}
-            <div className="text-[10px] text-zinc-500 leading-relaxed mt-1 px-0.5">
+            <div className="text-[9px] leading-relaxed mt-1 px-0.5" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}>
               {TOOLS.find(t2 => t2.id === tool)?.desc ?? ''}
             </div>
             {/* Auto-symbols toggle */}
-            <div className="flex items-center justify-between pt-2 border-t border-zinc-800 mt-1">
+            <div className="flex items-center justify-between pt-2 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
-                <div className="text-xs text-zinc-300 font-medium">Auto-Emergence</div>
-                <div className="text-[9px] text-zinc-600">Engine places symbols autonomously</div>
+                <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.60)', fontFamily: MONO }}>Auto-Emergence</div>
+                <div className="text-[9px]" style={{ color: 'rgba(255,255,255,0.22)', fontFamily: MONO }}>Engine places symbols autonomously</div>
               </div>
               <button onClick={() => setAutoSymbols(v => !v)}
                 className="w-8 h-4 rounded-full transition-all relative shrink-0"
@@ -753,13 +769,15 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           {inspectorIdx >= 0 && inspectorSnap && (
             <Section title={`Agent #${inspectorIdx}`} badge={inspectorRole} open={showInspect} onToggle={() => setShowInspect(v => !v)}>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-4 h-4 rounded-full shrink-0"
+                <div className="w-3.5 h-3.5 rounded-full shrink-0"
                   style={{ background: GROUP_COLORS[inspectorSnap.groupId % GROUP_COLORS.length] }} />
-                <span className="text-xs text-zinc-300 font-medium">Group {inspectorSnap.groupId}</span>
-                <span className="text-[9px] text-zinc-500 ml-auto capitalize">{inspectorRole}</span>
+                <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.65)', fontFamily: MONO }}>Group {inspectorSnap.groupId}</span>
+                <span className="text-[9px] ml-auto capitalize" style={{ color: 'rgba(255,255,255,0.30)', fontFamily: MONO }}>{inspectorRole}</span>
                 <button onClick={() => { setInspectorIdx(-1); setInspectorSnap(null); inspectorIdxRef.current = -1; }}
-                  className="text-zinc-600 hover:text-zinc-400 ml-1">
-                  <X size={10} />
+                  className="ml-1 transition-colors" style={{ color: 'rgba(255,255,255,0.20)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.20)'; }}>
+                  <X size={9} />
                 </button>
               </div>
               <div className="space-y-1.5">
@@ -770,15 +788,15 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 <PsychBar label="Wealth"    v={inspectorSnap.wealth}   c="#fbbf24" />
                 <PsychBar label="Fatigue"   v={inspectorSnap.fatigue}  c="#94a3b8" />
               </div>
-              <div className="mt-2 pt-2 border-t border-zinc-800">
-                <div className="text-[10px] text-zinc-500 mb-1">Ideology (order ↔ freedom)</div>
-                <div className="relative h-1.5 bg-zinc-800 rounded-full">
-                  <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white transition-all"
+              <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+                <div className="text-[9px] mb-1" style={{ color: 'rgba(255,255,255,0.30)' }}>Ideology (order ↔ freedom)</div>
+                <div className="relative h-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/70 transition-all"
                     style={{ left: `calc(${((inspectorSnap.ideology + 1) / 2 * 100).toFixed(0)}% - 4px)` }} />
-                  <div className="absolute inset-y-0 left-0 w-1/2 bg-blue-600/30 rounded-l-full" />
-                  <div className="absolute inset-y-0 right-0 w-1/2 bg-red-600/30 rounded-r-full" />
+                  <div className="absolute inset-y-0 left-0 w-1/2" style={{ background: 'rgba(37,99,235,0.25)' }} />
+                  <div className="absolute inset-y-0 right-0 w-1/2" style={{ background: 'rgba(220,38,38,0.25)' }} />
                 </div>
-                <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
+                <div className="flex justify-between text-[8px] mt-0.5" style={{ color: 'rgba(255,255,255,0.22)' }}>
                   <span>Order</span><span>{inspectorSnap.ideology.toFixed(2)}</span><span>Freedom</span>
                 </div>
               </div>
@@ -788,7 +806,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           {/* SYMBOLS */}
           <Section title="Symbols" badge={symTotal} open={showSymbols} onToggle={() => setShowSymbols(v => !v)}>
             {symTotal === 0 && (
-              <div className="text-[10px] text-zinc-600 text-center py-2">
+              <div className="text-[9px] text-center py-2" style={{ color: 'rgba(255,255,255,0.20)', fontFamily: MONO }}>
                 No symbols placed.<br />Select a tool and click the canvas.
               </div>
             )}
@@ -818,7 +836,10 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             ))}
             {symTotal > 0 && (
               <button onClick={() => { symbolsRef.current = createStudySymbols(); resetFields(fieldsRef.current); setSymbolsVer(v => v + 1); }}
-                className="w-full text-[10px] text-red-400/50 hover:text-red-400/80 border border-red-400/15 hover:border-red-400/30 rounded-md py-1 mt-1 transition-all">
+                className="w-full text-[9px] py-1 mt-1 transition-all"
+                style={{ color: 'rgba(239,68,68,0.50)', border: '1px solid rgba(239,68,68,0.15)', fontFamily: MONO }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(239,68,68,0.80)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.30)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(239,68,68,0.50)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.15)'; }}>
                 Clear all symbols
               </button>
             )}
@@ -835,22 +856,22 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             </div>
 
             {/* Economy */}
-            <div className="border-t border-zinc-800 pt-2 mb-3">
-              <div className="text-[9px] uppercase tracking-widest text-zinc-600 mb-1.5">Economy</div>
+            <div className="pt-2 mb-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+              <div className="text-[8px] uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>Economy</div>
               <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-zinc-500">Mean Wealth</span>
-                  <span className="text-yellow-400 font-mono">{(wsUI.meanWealth * 100).toFixed(0)}%</span>
+                <div className="flex justify-between text-[10px]">
+                  <span style={{ color: 'rgba(255,255,255,0.35)' }}>Mean Wealth</span>
+                  <span style={{ color: '#fbbf24' }}>{(wsUI.meanWealth * 100).toFixed(0)}%</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-zinc-500">Gini Index</span>
-                  <span className={`font-mono ${wsUI.gini > 0.55 ? 'text-red-400' : wsUI.gini > 0.35 ? 'text-yellow-400' : 'text-green-400'}`}>
+                <div className="flex justify-between text-[10px]">
+                  <span style={{ color: 'rgba(255,255,255,0.35)' }}>Gini Index</span>
+                  <span style={{ color: wsUI.gini > 0.55 ? '#f87171' : wsUI.gini > 0.35 ? '#fbbf24' : '#4ade80' }}>
                     {wsUI.gini.toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-zinc-500">Violations/min</span>
-                  <span className={`font-mono ${wsUI.violationsWindow > 2 ? 'text-red-400' : 'text-zinc-400'}`}>
+                <div className="flex justify-between text-[10px]">
+                  <span style={{ color: 'rgba(255,255,255,0.35)' }}>Violations/min</span>
+                  <span style={{ color: wsUI.violationsWindow > 2 ? '#f87171' : 'rgba(255,255,255,0.45)' }}>
                     {wsUI.violationsWindow}
                   </span>
                 </div>
@@ -859,13 +880,13 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
             {/* Chronicle */}
             {eventsUI.length > 0 && (
-              <div className="border-t border-zinc-800 pt-2">
-                <div className="text-[9px] uppercase tracking-widest text-zinc-600 mb-1.5">Chronicle</div>
+              <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+                <div className="text-[8px] uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>Chronicle</div>
                 <div className="space-y-1">
                   {eventsUI.slice(0, 12).map((ev, i) => (
                     <div key={i} className="flex gap-1.5 items-baseline">
-                      <span className="text-xs shrink-0">{ev.icon}</span>
-                      <span className="text-[10px] leading-tight" style={{ color: ev.color }}>{ev.message}</span>
+                      <span className="text-[10px] shrink-0">{ev.icon}</span>
+                      <span className="text-[9px] leading-tight" style={{ color: ev.color }}>{ev.message}</span>
                     </div>
                   ))}
                 </div>
@@ -874,14 +895,14 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           </Section>
 
           {/* Role + Field legend */}
-          <div className="px-3 py-3 border-t border-zinc-800 mt-auto">
+          <div className="px-3 py-3 mt-auto" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
               <LegRow sym="◯◯" label="Leader"    c="#fbbf24" />
               <LegRow sym="▲"  label="Aggressor" c="#ef4444" />
               <LegRow sym="⊙"  label="Guardian"  c="#fbd38d" />
               <LegRow sym="·"  label="Mediator"  c="#94a3b8" />
             </div>
-            <div className="mt-2 pt-2 border-t border-zinc-800 grid grid-cols-3 gap-1">
+            <div className="mt-2 pt-2 grid grid-cols-3 gap-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               <FieldLeg c="#34d399" label="N" title="Norma" />
               <FieldLeg c="#a78bfa" label="L" title="Legit." />
               <FieldLeg c="#fbbf24" label="R" title="Recurso" />
@@ -897,12 +918,12 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
 function MetricBar({ label, v, c }: { label: string; v: number; c: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-zinc-400 text-xs w-20 shrink-0">{label}</span>
-      <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(v * 100).toFixed(0)}%`, background: c }} />
+    <div className="flex items-center gap-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+      <span className="text-[10px] w-20 shrink-0" style={{ color: 'rgba(255,255,255,0.40)' }}>{label}</span>
+      <div className="flex-1 h-px overflow-hidden" style={{ background: 'rgba(255,255,255,0.10)' }}>
+        <div className="h-full transition-all duration-500" style={{ width: `${(v * 100).toFixed(0)}%`, background: c }} />
       </div>
-      <span className="text-[10px] font-mono w-5 text-right" style={{ color: c }}>{(v * 100).toFixed(0)}</span>
+      <span className="text-[10px] w-5 text-right" style={{ color: c }}>{(v * 100).toFixed(0)}</span>
     </div>
   );
 }
@@ -913,12 +934,13 @@ function SliderRow({ label, v, min, max, step, onChange }: {
   const [val, setVal] = useState(v);
   useEffect(() => { setVal(v); }, [v]);
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-zinc-500 text-[10px] w-14 shrink-0">{label}</span>
+    <div className="flex items-center gap-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+      <span className="text-[9px] w-14 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
       <input type="range" min={min} max={max} step={step} value={val}
         onChange={e => { const n = parseFloat(e.target.value); setVal(n); onChange(n); }}
-        className="flex-1 h-px bg-zinc-700 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300" />
-      <span className="text-[10px] font-mono text-zinc-400 w-6 text-right shrink-0">
+        className="flex-1 h-px appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white/60"
+        style={{ background: 'rgba(255,255,255,0.10)' }} />
+      <span className="text-[9px] w-6 text-right shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }}>
         {step >= 1 ? Math.round(val) : val.toFixed(2)}
       </span>
     </div>
@@ -929,13 +951,15 @@ function SymRow({ icon, label, sub, color, onRemove }: {
   icon: string; label: string; sub: string; color: string; onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 py-0.5">
-      <span style={{ color }} className="text-sm shrink-0">{icon}</span>
+    <div className="flex items-center gap-2 py-0.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+      <span style={{ color }} className="text-[11px] shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] text-zinc-300">{label}</div>
-        <div className="text-[9px] text-zinc-600">{sub}</div>
+        <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.60)' }}>{label}</div>
+        <div className="text-[8px]" style={{ color: 'rgba(255,255,255,0.22)' }}>{sub}</div>
       </div>
-      <button onClick={onRemove} className="text-zinc-600 hover:text-red-400 transition-colors">
+      <button onClick={onRemove} className="transition-colors" style={{ color: 'rgba(255,255,255,0.20)' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(239,68,68,0.70)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.20)'; }}>
         <X size={9} />
       </button>
     </div>
@@ -944,20 +968,20 @@ function SymRow({ icon, label, sub, color, onRemove }: {
 
 function LegRow({ sym, label, c }: { sym: string; label: string; c: string }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-xs w-4 text-center shrink-0" style={{ color: c }}>{sym}</span>
-      <span className="text-[10px] text-zinc-500">{label}</span>
+    <div className="flex items-center gap-1.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+      <span className="text-[10px] w-4 text-center shrink-0" style={{ color: c }}>{sym}</span>
+      <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
     </div>
   );
 }
 
 function FieldLeg({ c, label, title }: { c: string; label: string; title: string }) {
   return (
-    <div className="flex items-center gap-1">
-      <div className="w-2 h-2 rounded-sm shrink-0" style={{ background: c, opacity: 0.75 }} />
+    <div className="flex items-center gap-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+      <div className="w-1.5 h-1.5 shrink-0" style={{ background: c, opacity: 0.75 }} />
       <div>
-        <div className="text-[9px] font-semibold" style={{ color: c }}>{label}</div>
-        <div className="text-[8px] text-zinc-600">{title}</div>
+        <div className="text-[9px]" style={{ color: c }}>{label}</div>
+        <div className="text-[8px]" style={{ color: 'rgba(255,255,255,0.22)' }}>{title}</div>
       </div>
     </div>
   );
@@ -965,9 +989,9 @@ function FieldLeg({ c, label, title }: { c: string; label: string; title: string
 
 function FChip({ c, label }: { c: string; label: string }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <div className="w-2.5 h-2.5 rounded-sm" style={{ background: c, opacity: 0.7 }} />
-      <span className="text-[10px]" style={{ color: c, opacity: 0.75 }}>{label}</span>
+    <div className="flex items-center gap-1.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+      <div className="w-2 h-2 shrink-0" style={{ background: c, opacity: 0.65 }} />
+      <span className="text-[9px]" style={{ color: c, opacity: 0.75 }}>{label}</span>
     </div>
   );
 }

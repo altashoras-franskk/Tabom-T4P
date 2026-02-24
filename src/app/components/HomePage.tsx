@@ -25,6 +25,7 @@ const LABS: LabEntry[] = [
   { id: 'languageLab', num: '09.', symbol: '\u{1F714}', name: 'Recursive Language', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
   { id: 'asimovTheater', num: '10.', symbol: '\u{1F733}', name: 'Psico-history Theater', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
   { id: 'physicsSandbox', num: '11.', symbol: '\u{1F719}', name: 'Physics Sandbox', tag: '', tagColor: '#141414', statusLabel: '', description: 'EM BREVE', enabled: false },
+  { id: 'milPlatos', num: '12.', symbol: '\u22C6', name: 'Mil Platôs', tag: '', tagColor: '#1a1a2e', statusLabel: '', description: 'EM BREVE', enabled: false },
 ];
 
 const heroPaths = [

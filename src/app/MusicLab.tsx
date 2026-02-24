@@ -10,13 +10,15 @@ import {
   VoiceRole, NoteEvent, RoleConfig, PhysicsParams,
   DEFAULT_PHYSICS, ROLE_COLORS, ROLE_HUES, ToolCursor, GateType,
   SCALE_INTERVALS, quantizeToScale, Scale,
-  FxZoneEffect, defaultUserMatrix, CanvasPalette, PaletteMode, DEFAULT_PALETTE,
+  FxZoneEffect, defaultUserMatrix, CanvasPalette, PaletteMode, DEFAULT_PALETTE, MusicAesthetic,
 } from '../sim/music/musicTypes';
 import { createMusicState, stepMusic, makeQuantum, spawnRipple } from '../sim/music/musicEngine';
 import { MUSIC_PRESETS, getPreset } from '../sim/music/musicPresets';
 import { audioEngine } from '../audio/audioEngine';
 import { BEHAVIOR_PRESETS, BEHAVIOR_BY_ID, applyBehaviorToPhysics } from '../sim/music/behaviorPresets';
 import { renderMusic } from '../render/musicRenderer';
+import { DEFAULT_MUSIC_AESTHETIC, getMusicVisualPreset, MUSIC_VISUAL_PRESETS } from '../sim/music/musicAesthetics';
+import { captureMusicSnapshotV1, saveMusicSnapshotToStorage } from '../bridge/musicMetaArtBridge';
 import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
 
@@ -289,7 +291,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [hasSnapshot, setHasSnapshot] = useState(false);
   const [leftOpen,    setLeftOpen]   = useState(true);
   const [rightOpen,   setRightOpen]  = useState(false);
-  const [rightTab,    setRightTab]   = useState<'timbre'|'harmony'|'physics'|'matrix'|'palette'>('harmony');
+  const [rightTab,    setRightTab]   = useState<'timbre'|'harmony'|'physics'|'matrix'|'palette'|'aesthetic'>('harmony');
   const [editRole,    setEditRole]   = useState<VoiceRole>('PAD');
   const [showVel,     setShowVel]    = useState(false);
   const [phys,        setPhys]       = useState<PhysicsParams>({ ...DEFAULT_PHYSICS, motionStyle: INIT_PRESET.motionStyle ?? 'drift' });
@@ -340,6 +342,11 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [palette, setPalette] = useState<CanvasPalette>({ ...DEFAULT_PALETTE });
   const paletteRef = useRef<CanvasPalette>({ ...DEFAULT_PALETTE });
   useEffect(() => { paletteRef.current = palette; }, [palette]);
+  const [visualPresetId, setVisualPresetId] = useState<string>('meta-lite');
+  const [aesthetic, setAesthetic] = useState<MusicAesthetic>({ ...DEFAULT_MUSIC_AESTHETIC });
+  const aestheticRef = useRef<MusicAesthetic>({ ...DEFAULT_MUSIC_AESTHETIC });
+  useEffect(() => { aestheticRef.current = aesthetic; }, [aesthetic]);
+  const [lastCoverExport, setLastCoverExport] = useState<number>(0);
   const cageDrawingRef   = useRef<{x1:number;y1:number;x2:number;y2:number}|null>(null);
   const isCageDrawRef    = useRef(false);
   const stringDrawRef    = useRef<{x1:number;y1:number;x2:number;y2:number}|null>(null);
@@ -710,6 +717,44 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   useEffect(() => { showVelRef.current   = showVel;    }, [showVel]);
   useEffect(() => { pitchMapModeRef.current = pitchMapMode; }, [pitchMapMode]);
 
+  const applyVisualPreset = useCallback((id: string) => {
+    const vp = getMusicVisualPreset(id);
+    if (!vp) return;
+    setVisualPresetId(id);
+    if (vp.palette) {
+      setPalette(prev => ({ ...prev, ...vp.palette, roleColorOverrides: { ...prev.roleColorOverrides, ...(vp.palette!.roleColorOverrides ?? {}) } }));
+    }
+    if (vp.aesthetic) {
+      setAesthetic(prev => ({
+        ...prev,
+        ...vp.aesthetic,
+        canvas:      { ...prev.canvas,      ...(vp.aesthetic!.canvas ?? {}) },
+        quanta:      { ...prev.quanta,      ...(vp.aesthetic!.quanta ?? {}) },
+        trails:      { ...prev.trails,      ...(vp.aesthetic!.trails ?? {}) },
+        connections: { ...prev.connections, ...(vp.aesthetic!.connections ?? {}) },
+        tools:       { ...prev.tools,       ...(vp.aesthetic!.tools ?? {}) },
+        post:        { ...prev.post,        ...(vp.aesthetic!.post ?? {}) },
+        overlays:    { ...prev.overlays,    ...(vp.aesthetic!.overlays ?? {}) },
+        threeD:      { ...prev.threeD,      ...(vp.aesthetic!.threeD ?? {}) },
+      }));
+    }
+  }, []);
+
+  const exportSnapshotToMetaArt = useCallback(() => {
+    const st = stateRef.current;
+    if (!st) return;
+    const snap = captureMusicSnapshotV1({
+      state: st,
+      preset: presetRef.current,
+      palette: paletteRef.current,
+      aesthetic: aestheticRef.current,
+      phys: physRef.current,
+      roleOverrides: roleOverRef.current,
+    });
+    saveMusicSnapshotToStorage(snap);
+    setLastCoverExport(Date.now());
+  }, []);
+
   useEffect(() => {
     if (!active) { cancelAnimationFrame(rafRef.current); return; }
     const loop = (now: number) => {
@@ -820,6 +865,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         paletteRef.current,
         cageDrawingRef.current,
         zonePointsRef.current.length > 2 ? zonePointsRef.current : null,
+        aestheticRef.current,
       );
 
       // ── Compose-mode velocity drag overlay ─────────────────────────────
@@ -2746,6 +2792,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   {id:'physics', label:'Physics', icon:<Settings size={7} className="inline mr-0.5"/>},
                   {id:'matrix',  label:'Matrix',  icon:<span style={{fontSize:7,marginRight:2}}>⊞</span>},
                   {id:'palette', label:'Palette', icon:<span style={{fontSize:7,marginRight:2}}>◈</span>},
+                  {id:'aesthetic', label:'Look',  icon:<span style={{fontSize:7,marginRight:2}}>✦</span>},
                 ] as const).map(tab=>(
                   <button key={tab.id} onClick={()=>setRightTab(tab.id)}
                     className="flex-1 py-1.5 transition-all min-w-[38px]"
@@ -3532,6 +3579,81 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                         }}
                         className="flex-1 bg-white/[0.03] border border-dashed border-white/[0.06] text-[5px] px-1 py-0.5 text-white/50"
                         style={{borderRadius:0}}/>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── AESTHETIC TAB ───────────────────────────────────────────── */}
+              {rightTab === 'aesthetic' && (
+                <div className="p-2 flex flex-col gap-3">
+                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>AESTHETIC</div>
+
+                  {/* Visual presets */}
+                  <div>
+                    <div className="text-[5.5px] uppercase text-white/18 tracking-[0.14em] mb-1.5">VISUAL PRESETS</div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {MUSIC_VISUAL_PRESETS.map(vp => {
+                        const active = visualPresetId === vp.id;
+                        return (
+                          <button key={vp.id}
+                            onClick={() => applyVisualPreset(vp.id)}
+                            className="p-2 border transition-all text-left"
+                            style={{
+                              borderRadius: 0,
+                              borderColor: active ? `${ACCENT}66` : 'rgba(255,255,255,0.06)',
+                              background: active ? `${ACCENT}10` : 'rgba(255,255,255,0.02)',
+                            }}>
+                            <div className="text-[7px] uppercase tracking-widest"
+                              style={{ color: active ? ACCENT : 'rgba(255,255,255,0.45)' }}>
+                              {vp.name}
+                            </div>
+                            <div className="text-[5.5px] font-mono leading-snug mt-0.5"
+                              style={{ color: 'rgba(255,255,255,0.22)' }}>
+                              {vp.description}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Macro knobs */}
+                  <div className="border-t border-dashed border-white/[0.06] pt-2 flex flex-col gap-2.5">
+                    <S label="Grain" value={aesthetic.canvas.grain} min={0} max={1} step={0.01}
+                      display={v=>`${Math.round(v*100)}%`} color="#88ccff"
+                      onChange={v=>setAesthetic(p=>({...p,canvas:{...p.canvas,grain:v}}))}/>
+                    <S label="Vignette" value={aesthetic.canvas.vignette} min={0} max={1} step={0.01}
+                      display={v=>`${Math.round(v*100)}%`} color="#88aaff"
+                      onChange={v=>setAesthetic(p=>({...p,canvas:{...p.canvas,vignette:v}}))}/>
+                    <S label="Glow" value={aesthetic.quanta.glow} min={0} max={1} step={0.01}
+                      display={v=>`${Math.round(v*100)}%`} color="#ff88cc"
+                      onChange={v=>setAesthetic(p=>({...p,quanta:{...p.quanta,glow:v}}))}/>
+                    <S label="Trail Memory" value={aesthetic.trails.persistence} min={0} max={1} step={0.01}
+                      display={v=>`${Math.round(v*100)}%`} color="#cc88ff"
+                      onChange={v=>setAesthetic(p=>({...p,trails:{...p.trails,persistence:v}}))}/>
+                    <S label="Connections" value={aesthetic.connections.alpha} min={0} max={1} step={0.01}
+                      display={v=>`${Math.round(v*100)}%`} color="#00d4ff"
+                      onChange={v=>setAesthetic(p=>({...p,connections:{...p.connections,alpha:v}}))}/>
+                    <S label="Tools Intensity" value={aesthetic.tools.intensity} min={0} max={1.5} step={0.01}
+                      display={v=>v.toFixed(2)} color="#ffcc44"
+                      onChange={v=>setAesthetic(p=>({...p,tools:{...p.tools,intensity:v}}))}/>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[5.5px] uppercase tracking-[0.14em] text-white/18">3D overlays</span>
+                      <button
+                        onClick={()=>setAesthetic(p=>({...p,threeD:{...p.threeD,overlays:!p.threeD.overlays}}))}
+                        className="text-[6px] uppercase px-2 py-1 border transition-all"
+                        style={{
+                          borderRadius:0,
+                          borderColor: aesthetic.threeD.overlays ? `${ACCENT}55` : 'rgba(255,255,255,0.06)',
+                          background: aesthetic.threeD.overlays ? `${ACCENT}12` : 'transparent',
+                          color: aesthetic.threeD.overlays ? ACCENT : 'rgba(255,255,255,0.28)',
+                        }}>
+                        {aesthetic.threeD.overlays ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+                    <div className="text-[5px] font-mono text-white/18 leading-snug text-center">
+                      (em breve) estes knobs vão controlar camadas do canvas/3D — base já pronta.
                     </div>
                   </div>
                 </div>

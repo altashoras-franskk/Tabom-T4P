@@ -48,12 +48,12 @@ function SectionHeader({
       onClick={onToggle}
       style={{
         display: 'flex', alignItems: 'center', gap: 4,
-        fontFamily: DOTO, fontSize: 7.5, letterSpacing: '0.10em', textTransform: 'uppercase',
+        fontFamily: DOTO, fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase',
         color: accent ?? DIM,
         marginBottom: open ? 7 : 0, cursor: 'pointer', userSelect: 'none',
       }}
     >
-      {open ? <ChevronDown size={7} /> : <ChevronRight size={7} />}
+      {open ? <ChevronDown size={8} /> : <ChevronRight size={8} />}
       {label}
     </div>
   );
@@ -66,8 +66,8 @@ function MetricBar({ label, value, color, hint }: {
   return (
     <div style={{ marginBottom: 4 }} title={hint}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1.5 }}>
-        <span style={{ fontFamily: MONO, fontSize: 7.5, color: DIM, letterSpacing: '0.05em' }}>{label}</span>
-        <span style={{ fontFamily: MONO, fontSize: 7.5, color: color + 'bb' }}>{pct}%</span>
+        <span style={{ fontFamily: MONO, fontSize: 9, color: DIM, letterSpacing: '0.05em' }}>{label}</span>
+        <span style={{ fontFamily: MONO, fontSize: 9, color: color + 'bb' }}>{pct}%</span>
       </div>
       <div style={{ height: 2, background: 'rgba(255,255,255,0.04)' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg,${color}55,${color}aa)`, transition: 'width 0.3s' }} />
@@ -82,11 +82,11 @@ function ForceBar({ label, value, color, hint }: {
   const pct = Math.round(value * 100);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }} title={hint}>
-      <span style={{ fontFamily: MONO, fontSize: 7.5, color: DIM2, width: 70, flexShrink: 0, letterSpacing: '0.03em' }}>{label}</span>
+      <span style={{ fontFamily: MONO, fontSize: 9, color: DIM2, width: 78, flexShrink: 0, letterSpacing: '0.03em' }}>{label}</span>
       <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.04)' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg,${color}55,${color}aa)`, transition: 'width 0.25s' }} />
       </div>
-      <span style={{ fontFamily: MONO, fontSize: 7, color: color + '99', width: 18, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
+      <span style={{ fontFamily: MONO, fontSize: 9, color: color + '99', width: 22, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
     </div>
   );
 }
@@ -101,11 +101,11 @@ function CtrlSlider({
   return (
     <div style={{ marginBottom: 7 }} title={hint}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, alignItems: 'center' }}>
-        <span style={{ fontFamily: MONO, fontSize: 7.5, color: DIM2, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
-          {icon && <span style={{ fontSize: 9 }}>{icon}</span>}
+        <span style={{ fontFamily: MONO, fontSize: 9, color: DIM2, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+          {icon && <span style={{ fontSize: 10 }}>{icon}</span>}
           {label}
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 8, color: `${TEAL}99` }}>
+        <span style={{ fontFamily: MONO, fontSize: 9, color: `${TEAL}99` }}>
           {display ?? value.toFixed(2)}
         </span>
       </div>
@@ -123,10 +123,10 @@ function TelRow({ label, value, unit, color }: {
 }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3.5 }}>
-      <span style={{ fontFamily: MONO, fontSize: 7.5, color: DIM }}>{label}</span>
-      <span style={{ fontFamily: MONO, fontSize: 8, color: color ?? DIM2 }}>
+      <span style={{ fontFamily: MONO, fontSize: 9, color: DIM }}>{label}</span>
+      <span style={{ fontFamily: MONO, fontSize: 9.5, color: color ?? DIM2 }}>
         {typeof value === 'number' ? value.toFixed(1) : value}
-        {unit && <span style={{ color: DIM, fontSize: 6.5, marginLeft: 2 }}>{unit}</span>}
+        {unit && <span style={{ color: DIM, fontSize: 8, marginLeft: 2 }}>{unit}</span>}
       </span>
     </div>
   );
@@ -230,7 +230,7 @@ export function ComplexityPanel({
           }}>
             Sistema Complexo
           </div>
-          <div style={{ fontFamily: MONO, fontSize: 6.5, color: 'rgba(255,255,255,0.16)', letterSpacing: '0.04em' }}>
+          <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.16)', letterSpacing: '0.04em' }}>
             Retroação · Emergência · Autopoiese
           </div>
         </div>
@@ -238,7 +238,7 @@ export function ComplexityPanel({
         {/* Phase pill */}
         {cfg.enabled && (
           <div title={phaseHint} style={{
-            fontFamily: MONO, fontSize: 7, padding: '1px 5px',
+            fontFamily: MONO, fontSize: 8.5, padding: '1px 5px',
             background: `${phaseColor}0c`, color: phaseColor,
             border: `1px dashed ${phaseColor}30`, letterSpacing: '0.04em',
           }}>
@@ -260,7 +260,7 @@ export function ComplexityPanel({
               <button
                 onClick={() => onConfigChange({ enabled: !cfg.enabled })}
                 style={{
-                  fontFamily: MONO, fontSize: 8, padding: '3px 8px', cursor: 'pointer',
+                  fontFamily: MONO, fontSize: 9, padding: '3px 8px', cursor: 'pointer',
                   background: cfg.enabled ? `${TEAL}0c` : 'transparent',
                   border: `1px dashed ${cfg.enabled ? `${TEAL}40` : 'rgba(255,255,255,0.08)'}`,
                   color: cfg.enabled ? `${TEAL}cc` : 'rgba(255,255,255,0.30)',
@@ -274,7 +274,7 @@ export function ComplexityPanel({
                   onClick={onResetMemory}
                   title="Limpa memória e reinicia fase"
                   style={{
-                    fontFamily: MONO, fontSize: 8, padding: '3px 6px', cursor: 'pointer',
+                    fontFamily: MONO, fontSize: 9, padding: '3px 6px', cursor: 'pointer',
                     background: 'transparent', border: '1px dashed rgba(255,255,255,0.06)',
                     color: DIM, letterSpacing: '0.05em',
                   }}
@@ -286,7 +286,7 @@ export function ComplexityPanel({
               {/* Health + emergence pills */}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
                 <div title="Saúde sistêmica" style={{
-                  fontFamily: MONO, fontSize: 7, padding: '2px 4px',
+                  fontFamily: MONO, fontSize: 8.5, padding: '2px 4px',
                   background: `rgba(${systemHealth > 0.6 ? '80,255,130' : systemHealth > 0.35 ? '255,200,80' : '255,80,80'},0.06)`,
                   border: `1px dashed rgba(${systemHealth > 0.6 ? '80,255,130' : systemHealth > 0.35 ? '255,200,80' : '255,80,80'},0.25)`,
                   color: systemHealth > 0.6 ? '#60ff90' : systemHealth > 0.35 ? '#ffc840' : '#ff6050',
@@ -294,7 +294,7 @@ export function ComplexityPanel({
                   ♥ {Math.round(systemHealth * 100)}%
                 </div>
                 <div title="Índice de emergência" style={{
-                  fontFamily: MONO, fontSize: 7, padding: '2px 4px',
+                  fontFamily: MONO, fontSize: 8.5, padding: '2px 4px',
                   background: `${TEAL}06`, border: `1px dashed ${TEAL}20`, color: `${TEAL}bb`,
                 }}>
                   ◈ {Math.round(emergenceIndex * 100)}%
@@ -306,11 +306,11 @@ export function ComplexityPanel({
             {cfg.enabled && (
               <div style={{ marginTop: 7 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontFamily: MONO, fontSize: 6.5, color: DIM, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fase</span>
+                  <span style={{ fontFamily: MONO, fontSize: 8, color: DIM, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fase</span>
                   <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.04)' }}>
                     <div style={{ height: '100%', width: `${(feedback.phase % 1) * 100}%`, background: `linear-gradient(90deg,${phaseColor}55,${phaseColor}aa)`, transition: 'width 0.3s' }} />
                   </div>
-                  <span style={{ fontFamily: MONO, fontSize: 7, color: phaseColor, padding: '1px 4px', background: `${phaseColor}0c`, border: `1px dashed ${phaseColor}22` }}>
+                  <span style={{ fontFamily: MONO, fontSize: 8.5, color: phaseColor, padding: '1px 4px', background: `${phaseColor}0c`, border: `1px dashed ${phaseColor}22` }}>
                     {phaseSigil} {systemPhase}
                   </span>
                 </div>
@@ -339,13 +339,13 @@ export function ComplexityPanel({
                   />
                 </div>
                 <div>
-                  <div style={{ fontFamily: DOTO, fontSize: 6.5, color: 'rgba(255,255,255,0.14)', marginBottom: 3, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
+                  <div style={{ fontFamily: DOTO, fontSize: 8, color: 'rgba(255,255,255,0.14)', marginBottom: 3, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
                     Módulos (ms/frame)
                   </div>
                   {top3.map(({ id, ms }) => (
                     <div key={id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2.5 }}>
-                      <span style={{ fontFamily: MONO, fontSize: 7, color: DIM }}>{id}</span>
-                      <span style={{ fontFamily: MONO, fontSize: 7.5, color: ms > 5 ? '#ff7060' : ms > 2 ? '#ffc840' : `${TEAL}99` }}>
+                      <span style={{ fontFamily: MONO, fontSize: 9, color: DIM }}>{id}</span>
+                      <span style={{ fontFamily: MONO, fontSize: 9, color: ms > 5 ? '#ff7060' : ms > 2 ? '#ffc840' : `${TEAL}99` }}>
                         {ms.toFixed(2)} ms
                       </span>
                     </div>
@@ -372,7 +372,7 @@ export function ComplexityPanel({
                 {/* Forces compact */}
                 <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '6px 0' }} />
                 <div style={{ marginBottom: 0 }}>
-                  <div style={{ fontFamily: DOTO, fontSize: 6.5, color: DIM, marginBottom: 5, letterSpacing: '0.09em', textTransform: 'uppercase' }}>Forças Ativas</div>
+                  <div style={{ fontFamily: DOTO, fontSize: 8, color: DIM, marginBottom: 5, letterSpacing: '0.09em', textTransform: 'uppercase' }}>Forças Ativas</div>
                   <ForceBar label="Perturbação" value={forces.perturbacao} color="#e0c860" hint="Desordem criativa. Injeta imprevisibilidade — motor de emergência." />
                   <ForceBar label="Auto-Org" value={forces.autoOrganizacao} color="#6090e0" hint="Consolida estruturas espontâneas. Padrão sem controle externo." />
                   <ForceBar label="Amplificação" value={forces.amplificacao} color="#50e080" hint="Loop de reforço R. Crescimento se auto-alimenta." />
@@ -393,7 +393,7 @@ export function ComplexityPanel({
                     ] as { k: string; v: number }[]).map(({ k, v }) => {
                       const col = Math.abs(v) < 0.01 ? 'rgba(255,255,255,0.14)' : v >= 0 ? '#70e080' : '#e07070';
                       return (
-                        <div key={k} style={{ fontFamily: MONO, fontSize: 6.5, padding: '1px 3px', background: `${col}0c`, border: `1px dashed ${col}22`, color: col }}>
+                        <div key={k} style={{ fontFamily: MONO, fontSize: 8, padding: '1px 3px', background: `${col}0c`, border: `1px dashed ${col}22`, color: col }}>
                           {k} {v >= 0 && Math.abs(v) > 0.001 ? '+' : ''}{(v * 100).toFixed(1)}%
                         </div>
                       );

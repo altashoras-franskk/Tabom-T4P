@@ -402,3 +402,63 @@ export interface CanvasPalette {
 export const DEFAULT_PALETTE: CanvasPalette = {
   mode: 'role', bgColor: '#050810', accent: '#00d4ff', roleColorOverrides: {},
 };
+
+// ── Music Lab Aesthetics (Meta-Arte-lite) ─────────────────────────────────────
+export type BlendMode2D = 'source-over' | 'screen' | 'lighter' | 'multiply' | 'overlay';
+export type MusicParticleShape2D = 'circle' | 'square' | 'diamond' | 'triangle' | 'spark';
+export type MusicBackgroundStyle = 'solid' | 'radial';
+export type MusicTrailStyle2D = 'line' | 'streak';
+
+export interface MusicAesthetic {
+  canvas: {
+    bgStyle:   MusicBackgroundStyle;
+    grain:    number; // 0..1
+    vignette: number; // 0..1
+  };
+  quanta: {
+    shape:    MusicParticleShape2D;
+    baseSize: number; // 0.5..2
+    glow:     number; // 0..1
+    outline:  number; // 0..1
+  };
+  trails: {
+    enabled:     boolean;
+    style:       MusicTrailStyle2D;
+    persistence: number; // 0..1
+    width:       number; // 0.3..3
+    blur:        number; // 0..1
+    blend:       BlendMode2D;
+  };
+  connections: {
+    enabled: boolean;
+    width:   number; // 0.2..2
+    alpha:   number; // 0..1
+    blend:   BlendMode2D;
+  };
+  tools: {
+    intensity: number; // 0..1.5
+    labels:    boolean;
+  };
+  post: {
+    bloom:  number; // 0..1
+    chroma: number; // 0..1
+  };
+  overlays: {
+    showAnnotations: boolean;
+    showHitFlashes: boolean;
+  };
+  threeD: {
+    fog:      number; // 0..1
+    exposure: number; // ~0.7..2
+    emissive: number; // 0..1
+    overlays: boolean;
+  };
+}
+
+export interface MusicVisualPreset {
+  id:          string;
+  name:        string;
+  description: string;
+  palette?:    Partial<CanvasPalette>;
+  aesthetic?:  Partial<MusicAesthetic>;
+}

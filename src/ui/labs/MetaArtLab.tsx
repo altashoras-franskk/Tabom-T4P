@@ -30,6 +30,7 @@ import { generateThumbnail, mutateDNA } from '../../sim/metaart/metaArtMutations
 import { exportPNG, exportDNA } from '../../sim/metaart/metaArtExport';
 import { createQuantaWithPattern, SPAWN_PATTERN_LABELS } from '../../sim/metaart/metaArtSpawnPatterns';
 import { computeMetrics } from '../../sim/metaart/metaArtCurator';
+import { loadMusicSnapshotFromStorage, musicSnapshotToMetaArtConfig } from '../../bridge/musicMetaArtBridge';
 import { LeftSidebar } from '../metaart/LeftSidebar';
 import { LayerPanel } from '../metaart/LayerPanel';
 import { DNAPanel } from '../metaart/DNAPanel';
@@ -1283,6 +1284,42 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     }
   }, [initSim]);
 
+  // ── Import a “cover” snapshot from MusicLab ────────────────────────────────
+  const handleImportFromMusicLab = useCallback(() => {
+    const snap = loadMusicSnapshotFromStorage();
+    if (!snap) {
+      setGrimoire(prev => addGrimoireEntry(prev, 'Nenhum snapshot do MusicLab encontrado', 'observation'));
+      setRightPanel('dna');
+      return;
+    }
+    const cfg = musicSnapshotToMetaArtConfig(snap);
+
+    // Apply overlays
+    setOverlays(cfg.overlays);
+
+    // Apply Geo params (merge with defaults for forward-compat)
+    const nextGeo = { ...createDefaultGeoParams(), ...cfg.geo };
+    syncDerivedParams(nextGeo);
+    geoParamsRef.current = nextGeo;
+    setGeoParams(nextGeo);
+    // Dispose 3D renderer if switching away from 3D
+    if (nextGeo.mode !== '3d' && renderer3DRef.current) {
+      renderer3DRef.current.detachHandlers();
+      renderer3DRef.current.dispose();
+      renderer3DRef.current = null;
+    }
+
+    // Apply DNA and reinit
+    setDNA(cfg.dna);
+    initSim(cfg.dna, cfg.seed);
+    setRightPanel('dna');
+    setGrimoire(prev => addGrimoireEntry(
+      prev,
+      `Importado do MusicLab: ${snap.preset.name} · ${snap.preset.bpm}bpm · ${snap.preset.root} ${snap.preset.scale}`,
+      'milestone',
+    ));
+  }, [initSim]);
+
   const handleMutate = useCallback((variants: DNA[]) => {
     const list = variants.length > 0 ? variants : mutateDNA(dnaRef.current, 0.28, 8);
     const cards = list.map((d, i) => ({
@@ -1803,6 +1840,14 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           </button>
 
           <Divider />
+
+          {/* Import from MusicLab */}
+          <button
+            onClick={handleImportFromMusicLab}
+            title="Importar snapshot do MusicLab (gera capa)"
+            style={{ ...topBtnSty, color: 'rgba(55,178,218,0.65)' }}>
+            <Box size={12} strokeWidth={1.5} />
+          </button>
 
           {/* Snapshot */}
           <button onClick={handleCaptureSnapshot} title="Snapshot" style={topBtnSty}>
