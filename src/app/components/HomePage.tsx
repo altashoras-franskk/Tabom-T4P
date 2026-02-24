@@ -106,13 +106,13 @@ type LK = { at: number; x: number; y: number; s: number; o: number; cr: number; 
 
 const LOGO_KEYS: LK[] = [
   { at: 0.00, x: 50, y: 28, s: 1.0,  o: 1,    cr: 0,   sr: 0,    tr: 0,   cp: 0, dec: 0 },
-  { at: 0.18, x: 50, y: 28, s: 1.0,  o: 1,    cr: 0,   sr: 0,    tr: 0,   cp: 0, dec: 0 },
-  { at: 0.32, x: 34, y: 44, s: 0.82, o: 0.60, cr: 16,  sr: -18,  tr: 12,  cp: 0, dec: 0 },
-  { at: 0.42, x: 34, y: 44, s: 0.82, o: 0.55, cr: 28,  sr: -24,  tr: 18,  cp: 0, dec: 0 },
-  { at: 0.50, x: 50, y: 50, s: 0.36, o: 0.55, cr: 0,   sr: 0,    tr: 0,   cp: 1, dec: 0 },
-  { at: 0.58, x: 50, y: 50, s: 0.36, o: 0.55, cr: 0,   sr: 0,    tr: 0,   cp: 1, dec: 0 },
-  { at: 0.66, x: 50, y: 48, s: 0.40, o: 0.45, cr: 45,  sr: -60,  tr: 90,  cp: 1, dec: 1 },
-  { at: 0.74, x: 50, y: 45, s: 0.55, o: 0,    cr: 90,  sr: -120, tr: 180, cp: 1, dec: 1 },
+  { at: 0.12, x: 50, y: 28, s: 1.0,  o: 1,    cr: 0,   sr: 0,    tr: 0,   cp: 0, dec: 0 },
+  { at: 0.22, x: 38, y: 40, s: 0.82, o: 0.60, cr: 14,  sr: -16,  tr: 10,  cp: 0, dec: 0 },
+  { at: 0.30, x: 38, y: 40, s: 0.78, o: 0.50, cr: 24,  sr: -22,  tr: 16,  cp: 0.4, dec: 0 },
+  { at: 0.38, x: 50, y: 48, s: 0.36, o: 0.50, cr: 0,   sr: 0,    tr: 0,   cp: 1, dec: 0 },
+  { at: 0.44, x: 50, y: 48, s: 0.38, o: 0.40, cr: 0,   sr: 0,    tr: 0,   cp: 1, dec: 0.3 },
+  { at: 0.52, x: 50, y: 46, s: 0.45, o: 0.18, cr: 40,  sr: -55,  tr: 80,  cp: 1, dec: 0.8 },
+  { at: 0.58, x: 50, y: 44, s: 0.55, o: 0,    cr: 80,  sr: -110, tr: 160, cp: 1, dec: 1 },
 ];
 
 function lerpKeys(p: number): LK {
@@ -123,71 +123,121 @@ function lerpKeys(p: number): LK {
     const a = K[i], b = K[i + 1];
     if (p >= a.at && p <= b.at) {
       const t = (p - a.at) / (b.at - a.at);
-      const e = t * t * (3 - 2 * t); // smoothstep
+      const e = t * t * (3 - 2 * t);
       const m = (k: keyof LK) => (a[k] as number) + ((b[k] as number) - (a[k] as number)) * e;
-      return { at: p, x: m('x'), y: m('y'), s: m('s'), o: m('o'), cr: m('cr'), sr: m('sr'), tr: m('tr'), cp: m('cp') };
+      return { at: p, x: m('x'), y: m('y'), s: m('s'), o: m('o'), cr: m('cr'), sr: m('sr'), tr: m('tr'), cp: m('cp'), dec: m('dec') };
     }
   }
   return K[K.length - 1];
 }
 
 function ScrollLogo({ scrollTarget }: { scrollTarget: { current: number } }) {
-  const [sp, setSp] = useState(0);
-  const lerped = useRef(0);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
+  const lerpedScroll = useRef(0);
+  const startTime = useRef(0);
 
   useEffect(() => {
     let raf: number;
-    const tick = () => {
-      lerped.current += (scrollTarget.current - lerped.current) * 0.04;
-      setSp(lerped.current);
+    startTime.current = performance.now();
+
+    const tick = (now: number) => {
+      lerpedScroll.current += (scrollTarget.current - lerpedScroll.current) * 0.09;
+      const f = lerpKeys(lerpedScroll.current);
+
+      if (!outerRef.current || !wrapRef.current || !svgRef.current) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+
+      if (f.o < 0.005) {
+        outerRef.current.style.display = 'none';
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      outerRef.current.style.display = '';
+      outerRef.current.style.opacity = String(f.o);
+
+      wrapRef.current.style.left = `${f.x}%`;
+      wrapRef.current.style.top = `${f.y}%`;
+      wrapRef.current.style.transform = `translate(-50%,-50%) scale(${f.s})`;
+
+      const t = (now - startTime.current) / 1000;
+      const d = f.dec;
+
+      const spd = 1 + d * 3;
+
+      // Continuous rotation — alive from the start, intensifies on deconstruction
+      const cRot = f.cr + Math.sin(t * 0.3 * spd) * (12 + d * 35) + t * 4 * spd;
+      const sRot = f.sr + Math.cos(t * 0.22 * spd) * (10 + d * 30) - t * 3 * spd;
+      const tRot = f.tr + Math.sin(t * 0.28 * spd + 1.2) * (14 + d * 45) + t * 3.5 * spd;
+      const iRot = Math.sin(t * 0.18 * spd + 2.4) * (8 + d * 22) - t * 2.5 * spd;
+
+      // Gentle breathing float (always), expanding drift on deconstruction
+      const breathe = 1.5;
+      const driftAmp = d * d;
+      const cTx = Math.sin(t * 0.23 + 0.5) * (breathe + driftAmp * 20) - driftAmp * 12;
+      const cTy = Math.cos(t * 0.19 + 1.0) * (breathe * 0.8 + driftAmp * 14) - driftAmp * 10;
+      const sTx = Math.cos(t * 0.26 + 2.0) * (breathe + driftAmp * 18) + driftAmp * 14;
+      const sTy = Math.sin(t * 0.21 + 0.3) * (breathe * 0.7 + driftAmp * 16) + driftAmp * 8;
+      const tTx = Math.sin(t * 0.30 + 3.0) * (breathe * 1.2 + driftAmp * 20) + driftAmp * 6;
+      const tTy = Math.cos(t * 0.17 + 1.5) * (breathe + driftAmp * 22) + driftAmp * 16;
+      const iTx = Math.cos(t * 0.24 + 0.8) * (breathe * 0.9 + driftAmp * 15) - driftAmp * 8;
+      const iTy = Math.sin(t * 0.20 + 2.5) * (breathe * 0.6 + driftAmp * 18) - driftAmp * 14;
+
+      const sw = 0.55 + f.cp * 0.55;
+      const cc = mixHex('#888888', '#37B2DA', f.cp);
+      const sc = mixHex('#888888', '#FF0084', f.cp);
+      const tc = mixHex('#888888', '#FFD500', f.cp);
+      const ic = mixHex('#888888', '#14801A', f.cp);
+
+      const svg = svgRef.current;
+      const gs = svg.querySelectorAll<SVGGElement>(':scope > g');
+
+      gs[0].setAttribute('transform', `rotate(${cRot} 50 50) translate(${cTx} ${cTy})`);
+      const c1 = gs[0].firstElementChild as SVGElement;
+      c1.setAttribute('stroke', cc);
+      c1.setAttribute('stroke-width', String(sw));
+      c1.style.opacity = String(1 - d * 0.35);
+
+      gs[1].setAttribute('transform', `rotate(${sRot} 50 50) translate(${sTx} ${sTy})`);
+      const r1 = gs[1].firstElementChild as SVGElement;
+      r1.setAttribute('stroke', sc);
+      r1.setAttribute('stroke-width', String(sw));
+      r1.style.opacity = String(1 - d * 0.35);
+
+      gs[2].setAttribute('transform', `rotate(${tRot} 50 50) translate(${tTx} ${tTy})`);
+      const p1 = gs[2].firstElementChild as SVGElement;
+      p1.setAttribute('stroke', tc);
+      p1.setAttribute('stroke-width', String(sw));
+      p1.style.opacity = String(1 - d * 0.35);
+
+      gs[3].setAttribute('transform', `rotate(${iRot} 50 50) translate(${iTx} ${iTy})`);
+      const c2 = gs[3].firstElementChild as SVGElement;
+      c2.setAttribute('stroke', ic);
+      c2.setAttribute('stroke-width', String(sw));
+      c2.style.opacity = String(1 - d * 0.45);
+
       raf = requestAnimationFrame(tick);
     };
+
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [scrollTarget]);
 
-  const f = lerpKeys(sp);
-  if (f.o < 0.01) return null;
-
-  const cc = mixHex('#888888', '#37B2DA', f.cp);
-  const sc = mixHex('#888888', '#FF0084', f.cp);
-  const tc = mixHex('#888888', '#FFD500', f.cp);
-  const ic = mixHex('#888888', '#14801A', f.cp);
-  const sw = 0.55 + f.cp * 0.55;
-
-  const d = f.dec;
-  const circleOff = d * 18;
-  const squareOff = d * -14;
-  const triOff    = d * 22;
-  const innerOff  = d * -10;
-
   return (
-    <div className="fixed inset-0 z-[1] pointer-events-none" style={{ opacity: f.o }}>
+    <div ref={outerRef} className="fixed inset-0 z-[1] pointer-events-none">
       <div
+        ref={wrapRef}
         className="absolute"
-        style={{
-          left: `${f.x}%`, top: `${f.y}%`,
-          transform: `translate(-50%,-50%) scale(${f.s})`,
-          width: 400, height: 400,
-        }}
+        style={{ width: 400, height: 400, left: '50%', top: '28%', transform: 'translate(-50%,-50%)' }}
       >
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-          <g transform={`rotate(${f.cr} 50 50) translate(${-circleOff} ${-circleOff * 0.6})`}>
-            <circle cx="50" cy="50" r="46" fill="none" stroke={cc} strokeWidth={sw}
-              style={{ opacity: 1 - d * 0.3 }} />
-          </g>
-          <g transform={`rotate(${f.sr} 50 50) translate(${squareOff} ${squareOff * 0.8})`}>
-            <rect x="17.5" y="17.5" width="65" height="65" fill="none" stroke={sc} strokeWidth={sw}
-              style={{ opacity: 1 - d * 0.3 }} />
-          </g>
-          <g transform={`rotate(${f.tr} 50 50) translate(${triOff * 0.5} ${triOff})`}>
-            <path d="M50 26.2 L82.5 82.5 L17.5 82.5 Z" fill="none" stroke={tc} strokeWidth={sw}
-              style={{ opacity: 1 - d * 0.3 }} />
-          </g>
-          <g transform={`translate(${innerOff} ${innerOff * 1.2})`}>
-            <circle cx="50" cy="63.7" r="18.8" fill="none" stroke={ic} strokeWidth={sw}
-              style={{ opacity: 1 - d * 0.4 }} />
-          </g>
+        <svg ref={svgRef} viewBox="0 0 100 100" className="w-full h-full">
+          <g><circle cx="50" cy="50" r="46" fill="none" stroke="#888" strokeWidth="0.55" /></g>
+          <g><rect x="17.5" y="17.5" width="65" height="65" fill="none" stroke="#888" strokeWidth="0.55" /></g>
+          <g><path d="M50 26.2 L82.5 82.5 L17.5 82.5 Z" fill="none" stroke="#888" strokeWidth="0.55" /></g>
+          <g><circle cx="50" cy="63.7" r="18.8" fill="none" stroke="#888" strokeWidth="0.55" /></g>
         </svg>
       </div>
     </div>
