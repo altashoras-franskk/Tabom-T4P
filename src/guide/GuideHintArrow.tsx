@@ -1,12 +1,12 @@
-// Guide Hint Arrow - Points to guide button after preset selection
-
 import React, { useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
 
 interface GuideHintArrowProps {
   targetSelector: string;
   show: boolean;
 }
+
+const MONO = "'IBM Plex Mono', monospace";
+const ACCENT = '#ffd400';
 
 export const GuideHintArrow: React.FC<GuideHintArrowProps> = ({ targetSelector, show }) => {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -23,7 +23,7 @@ export const GuideHintArrow: React.FC<GuideHintArrowProps> = ({ targetSelector, 
         const rect = element.getBoundingClientRect();
         setPosition({
           x: rect.left + rect.width / 2,
-          y: rect.top - 40, // Above the button
+          y: rect.top - 32,
         });
       }
     };
@@ -37,19 +37,27 @@ export const GuideHintArrow: React.FC<GuideHintArrowProps> = ({ targetSelector, 
 
   return (
     <div
-      className="fixed z-[90] pointer-events-none"
       style={{
-        left: position.x,
-        top: position.y,
+        position: 'fixed', zIndex: 90, pointerEvents: 'none',
+        left: position.x, top: position.y,
         transform: 'translateX(-50%)',
       }}
     >
-      {/* Arrow */}
-      <div className="flex flex-col items-center animate-bounce">
-        <div className="text-yellow-400 text-xs font-medium mb-1 whitespace-nowrap bg-black/5 backdrop-blur-sm px-2 py-1 rounded">
-          Clique aqui para começar
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        animation: 'pulse 2s ease-in-out infinite',
+      }}>
+        <div style={{
+          fontFamily: MONO, fontSize: 8, color: `${ACCENT}90`,
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+          background: 'rgba(0,0,0,0.88)',
+          border: `1px dashed ${ACCENT}30`,
+          padding: '4px 10px', marginBottom: 4,
+          whiteSpace: 'nowrap',
+        }}>
+          Guia disponível
         </div>
-        <ChevronDown className="w-6 h-6 text-yellow-400 animate-pulse" />
+        <div style={{ color: `${ACCENT}60`, fontSize: 10 }}>▾</div>
       </div>
     </div>
   );

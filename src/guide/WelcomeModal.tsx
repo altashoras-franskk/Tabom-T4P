@@ -1,113 +1,164 @@
-// Welcome Modal - First-time guide prompt with algorithm explanation
-
-import React from 'react';
-import { Sparkles, Zap, Atom, Link2, Stars } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface WelcomeModalProps {
   onStart: () => void;
   onSkip: () => void;
 }
 
+const DOTO = "'Doto', monospace";
+const MONO = "'IBM Plex Mono', monospace";
+const ACCENT = '#ffd400';
+
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart, onSkip }) => {
+  const [hoverStart, setHoverStart] = useState(false);
+  const [hoverSkip, setHoverSkip] = useState(false);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-[600px] bg-black/90 backdrop-blur-xl border border-cyan-500/20 rounded-xl shadow-2xl overflow-hidden">
-        {/* Header with accent */}
-        <div className="h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500" />
-        
-        <div className="p-8">
-          {/* Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-cyan-400/80" />
-              </div>
-              <div className="absolute -top-1 -right-1">
-                <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" />
-              </div>
-            </div>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+    }}>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        style={{
+          width: 520, maxWidth: '92vw',
+          background: '#000',
+          border: '1px dashed rgba(255,255,255,0.08)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Accent line */}
+        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${ACCENT}40, transparent)` }} />
+
+        <div style={{ padding: '40px 36px 32px' }}>
+          {/* Symbol */}
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <span style={{ fontSize: 28, opacity: 0.3 }}>🝛</span>
           </div>
 
           {/* Title */}
-          <h2 className="text-white text-2xl font-light text-center mb-2">
-            Tools for Perception
+          <h2 style={{
+            fontFamily: DOTO, fontSize: 28, fontWeight: 300,
+            textAlign: 'center', color: 'white', letterSpacing: '0.04em',
+            textTransform: 'uppercase', marginBottom: 4,
+          }}>
+            Complexity Lab
           </h2>
-          <p className="text-cyan-400/70 text-sm text-center uppercase tracking-widest font-light mb-8">
-            Simulador de Vida Artificial
-          </p>
-          
-          {/* Quick Concept */}
-          <div className="mb-8 space-y-4">
-            <div className="bg-white/[0.02] rounded-lg p-5 border border-white/[0.06]">
-              <div className="flex items-start gap-3 mb-3">
-                <Zap className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-white/90 text-sm font-medium mb-1">O que você está vendo?</h3>
-                  <p className="text-white/60 text-xs leading-relaxed">
-                    Partículas que <strong className="text-cyan-400">interagem</strong> através de uma matriz de forças (atração/repulsão), 
-                    formando <strong className="text-purple-400">padrões emergentes</strong> como membranas, anéis, organismos e estruturas complexas.
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            {/* 3 key concepts */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-cyan-500/5 rounded-lg p-3 border border-cyan-500/20">
-                <div className="flex justify-center mb-1"><Atom className="w-5 h-5 text-cyan-400" /></div>
-                <div className="text-white/80 text-[10px] font-medium text-center mb-1">Partículas</div>
-                <div className="text-white/40 text-[9px] text-center leading-tight">
-                  Tipos diferentes com cores únicas
-                </div>
-              </div>
-              
-              <div className="bg-purple-500/5 rounded-lg p-3 border border-purple-500/20">
-                <div className="flex justify-center mb-1"><Link2 className="w-5 h-5 text-purple-400" /></div>
-                <div className="text-white/80 text-[10px] font-medium text-center mb-1">Matriz de Forças</div>
-                <div className="text-white/40 text-[9px] text-center leading-tight">
-                  Define como os tipos interagem
-                </div>
-              </div>
-              
-              <div className="bg-pink-500/5 rounded-lg p-3 border border-pink-500/20">
-                <div className="flex justify-center mb-1"><Stars className="w-5 h-5 text-pink-400" /></div>
-                <div className="text-white/80 text-[10px] font-medium text-center mb-1">Emergência</div>
-                <div className="text-white/40 text-[9px] text-center leading-tight">
-                  Padrões complexos surgem naturalmente
-                </div>
-              </div>
-            </div>
+          <p style={{
+            fontFamily: MONO, fontSize: 9, color: `${ACCENT}90`,
+            textAlign: 'center', letterSpacing: '0.4em', textTransform: 'uppercase',
+            marginBottom: 32,
+          }}>
+            VIDA ARTIFICIAL
+          </p>
+
+          {/* Core concept */}
+          <div style={{
+            borderTop: '1px dashed rgba(255,255,255,0.06)',
+            borderBottom: '1px dashed rgba(255,255,255,0.06)',
+            padding: '20px 0', marginBottom: 24,
+          }}>
+            <p style={{
+              fontFamily: MONO, fontSize: 11, color: 'rgba(255,255,255,0.55)',
+              lineHeight: 1.8, textTransform: 'uppercase', textAlign: 'center',
+              maxWidth: 420, margin: '0 auto',
+            }}>
+              Agentes com regras simples de atração e repulsão
+              geram padrões complexos emergentes — membranas,
+              colônias, organismos, caos.
+            </p>
           </div>
 
-          {/* Tutorial suggestion */}
-          <div className="space-y-3 mb-6 bg-cyan-500/5 rounded-lg p-4 border border-cyan-500/20">
-            <div className="text-cyan-400 text-xs font-medium text-center flex items-center justify-center gap-2">
-              <Sparkles className="w-3 h-3" />
-              Primeira vez aqui?
-            </div>
-            <div className="text-white/60 text-xs text-center leading-relaxed">
-              Um tour guiado de <strong className="text-white">60 segundos</strong> vai te mostrar 
-              os controles básicos e como explorar o sistema.
-            </div>
+          {/* Three pillars */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12,
+            marginBottom: 28,
+          }}>
+            {[
+              { symbol: '◯', label: 'Campo', desc: 'Ambiente invisível', color: ACCENT },
+              { symbol: '◆', label: 'Agentes', desc: 'Partículas com tipo', color: '#ff0084' },
+              { symbol: '⟷', label: 'Interação', desc: 'Matriz de forças', color: '#37b2da' },
+            ].map(p => (
+              <div key={p.label} style={{ textAlign: 'center', padding: '12px 0' }}>
+                <div style={{ fontSize: 16, color: p.color, opacity: 0.5, marginBottom: 6 }}>{p.symbol}</div>
+                <div style={{
+                  fontFamily: DOTO, fontSize: 11, color: 'rgba(255,255,255,0.6)',
+                  textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3,
+                }}>
+                  {p.label}
+                </div>
+                <div style={{
+                  fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.25)',
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                }}>
+                  {p.desc}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Guide suggestion */}
+          <div style={{
+            background: `${ACCENT}06`,
+            border: `1px dashed ${ACCENT}18`,
+            padding: '14px 16px', marginBottom: 24,
+          }}>
+            <p style={{
+              fontFamily: MONO, fontSize: 9, color: `${ACCENT}90`,
+              textAlign: 'center', letterSpacing: '0.12em', textTransform: 'uppercase',
+              marginBottom: 4,
+            }}>
+              Primeiro acesso?
+            </p>
+            <p style={{
+              fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.4)',
+              textAlign: 'center', lineHeight: 1.6, textTransform: 'uppercase',
+            }}>
+              Um guia rápido e discreto vai apontar os controles essenciais.
+            </p>
           </div>
 
           {/* Actions */}
-          <div className="space-y-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button
               onClick={onStart}
-              className="w-full py-3 px-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white text-sm font-medium uppercase tracking-wider rounded-lg transition-all shadow-lg shadow-cyan-500/20"
+              onMouseEnter={() => setHoverStart(true)}
+              onMouseLeave={() => setHoverStart(false)}
+              style={{
+                width: '100%', padding: '12px 0',
+                background: hoverStart ? `${ACCENT}15` : `${ACCENT}08`,
+                border: `1px dashed ${hoverStart ? `${ACCENT}50` : `${ACCENT}25`}`,
+                color: hoverStart ? ACCENT : `${ACCENT}c0`,
+                fontFamily: MONO, fontSize: 10,
+                letterSpacing: '0.2em', textTransform: 'uppercase',
+                cursor: 'pointer', transition: 'all 0.2s',
+              }}
             >
-              Iniciar Tour
+              Iniciar Guia
             </button>
             <button
               onClick={onSkip}
-              className="w-full py-2.5 px-4 text-white/40 hover:text-white/80 text-xs uppercase tracking-wider transition-all"
+              onMouseEnter={() => setHoverSkip(true)}
+              onMouseLeave={() => setHoverSkip(false)}
+              style={{
+                width: '100%', padding: '10px 0',
+                background: 'none', border: 'none',
+                color: hoverSkip ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
+                fontFamily: MONO, fontSize: 9,
+                letterSpacing: '0.15em', textTransform: 'uppercase',
+                cursor: 'pointer', transition: 'all 0.2s',
+              }}
             >
               Explorar sozinho
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

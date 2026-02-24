@@ -45,29 +45,38 @@ const T4P_DOTS = {
 function T4PAnimation({ onComplete }: { onComplete: () => void }) {
   const fired = useRef(false);
   useEffect(() => {
-    const t = setTimeout(() => { if (!fired.current) { fired.current = true; onComplete(); } }, 2500);
+    const t = setTimeout(() => { if (!fired.current) { fired.current = true; onComplete(); } }, 4200);
     return () => clearTimeout(t);
   }, [onComplete]);
 
   const dv = {
     hidden: { scale: 0, opacity: 0 },
-    visible: (i: number) => ({ scale: 1, opacity: 1, transition: { delay: i * 0.05, type: 'spring', stiffness: 300, damping: 15 } }),
-    exit: { scale: 0, opacity: 0, transition: { duration: 0.5 } },
+    visible: (i: number) => ({
+      scale: 1, opacity: 1,
+      transition: { delay: 0.3 + i * 0.07, type: 'spring', stiffness: 120, damping: 18, mass: 1.2 },
+    }),
+    exit: (i: number) => ({
+      scale: 0, opacity: 0,
+      y: -8 + Math.random() * -16,
+      x: (Math.random() - 0.5) * 20,
+      transition: { delay: i * 0.025, duration: 0.9, ease: [0.4, 0, 0.2, 1] },
+    }),
   };
 
   const rc = (dots: number[][], ox: number) => (
     <div className="relative" style={{ width: 60, height: 100 }}>
       {dots.map(([x, y], i) => (
         <motion.div key={`${ox}-${i}`} custom={i + ox * 5} variants={dv} initial="hidden" animate="visible" exit="exit"
-          className="absolute rounded-full bg-white border border-black"
-          style={{ width: 12, height: 12, left: x * 20, top: y * 20, boxShadow: '0 0 4px rgba(255,255,255,0.5)' }} />
+          className="absolute rounded-full bg-white"
+          style={{ width: 10, height: 10, left: x * 20 + 1, top: y * 20 + 1, boxShadow: '0 0 6px rgba(255,255,255,0.3)' }} />
       ))}
     </div>
   );
 
   return (
     <motion.div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
-      initial={{ opacity: 1 }} exit={{ opacity: 0, y: -50, transition: { duration: 0.8, ease: 'easeInOut' } }}>
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 1.2, ease: [0.4, 0, 0.2, 1] } }}>
       <div className="flex gap-8">{rc(T4P_DOTS.t, 0)}{rc(T4P_DOTS.four, 1)}{rc(T4P_DOTS.p, 2)}</div>
     </motion.div>
   );
@@ -93,16 +102,17 @@ function mixHex(a: string, b: string, t: number) {
 */
 
 // ── Scroll-driven Logo ────────────────────────────────────────────────────────
-type LK = { at: number; x: number; y: number; s: number; o: number; cr: number; sr: number; tr: number; cp: number };
+type LK = { at: number; x: number; y: number; s: number; o: number; cr: number; sr: number; tr: number; cp: number; dec: number };
 
 const LOGO_KEYS: LK[] = [
-  { at: 0.00, x: 50, y: 28, s: 1.0,  o: 1,    cr: 0,  sr: 0,   tr: 0,  cp: 0 },
-  { at: 0.18, x: 50, y: 28, s: 1.0,  o: 1,    cr: 0,  sr: 0,   tr: 0,  cp: 0 },
-  { at: 0.32, x: 34, y: 44, s: 0.82, o: 0.60, cr: 16, sr: -18, tr: 12, cp: 0 },
-  { at: 0.42, x: 34, y: 44, s: 0.82, o: 0.55, cr: 28, sr: -24, tr: 18, cp: 0 },
-  { at: 0.54, x: 50, y: 50, s: 0.36, o: 0.55, cr: 0,  sr: 0,   tr: 0,  cp: 1 },
-  { at: 0.64, x: 50, y: 50, s: 0.36, o: 0.55, cr: 0,  sr: 0,   tr: 0,  cp: 1 },
-  { at: 0.74, x: 50, y: 55, s: 0.15, o: 0,    cr: 0,  sr: 0,   tr: 0,  cp: 1 },
+  { at: 0.00, x: 50, y: 28, s: 1.0,  o: 1,    cr: 0,   sr: 0,    tr: 0,   cp: 0, dec: 0 },
+  { at: 0.18, x: 50, y: 28, s: 1.0,  o: 1,    cr: 0,   sr: 0,    tr: 0,   cp: 0, dec: 0 },
+  { at: 0.32, x: 34, y: 44, s: 0.82, o: 0.60, cr: 16,  sr: -18,  tr: 12,  cp: 0, dec: 0 },
+  { at: 0.42, x: 34, y: 44, s: 0.82, o: 0.55, cr: 28,  sr: -24,  tr: 18,  cp: 0, dec: 0 },
+  { at: 0.50, x: 50, y: 50, s: 0.36, o: 0.55, cr: 0,   sr: 0,    tr: 0,   cp: 1, dec: 0 },
+  { at: 0.58, x: 50, y: 50, s: 0.36, o: 0.55, cr: 0,   sr: 0,    tr: 0,   cp: 1, dec: 0 },
+  { at: 0.66, x: 50, y: 48, s: 0.40, o: 0.45, cr: 45,  sr: -60,  tr: 90,  cp: 1, dec: 1 },
+  { at: 0.74, x: 50, y: 45, s: 0.55, o: 0,    cr: 90,  sr: -120, tr: 180, cp: 1, dec: 1 },
 ];
 
 function lerpKeys(p: number): LK {
@@ -145,6 +155,12 @@ function ScrollLogo({ scrollTarget }: { scrollTarget: { current: number } }) {
   const ic = mixHex('#888888', '#14801A', f.cp);
   const sw = 0.55 + f.cp * 0.55;
 
+  const d = f.dec;
+  const circleOff = d * 18;
+  const squareOff = d * -14;
+  const triOff    = d * 22;
+  const innerOff  = d * -10;
+
   return (
     <div className="fixed inset-0 z-[1] pointer-events-none" style={{ opacity: f.o }}>
       <div
@@ -156,16 +172,22 @@ function ScrollLogo({ scrollTarget }: { scrollTarget: { current: number } }) {
         }}
       >
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <g transform={`rotate(${f.cr} 50 50)`}>
-            <circle cx="50" cy="50" r="46" fill="none" stroke={cc} strokeWidth={sw} />
+          <g transform={`rotate(${f.cr} 50 50) translate(${-circleOff} ${-circleOff * 0.6})`}>
+            <circle cx="50" cy="50" r="46" fill="none" stroke={cc} strokeWidth={sw}
+              style={{ opacity: 1 - d * 0.3 }} />
           </g>
-          <g transform={`rotate(${f.sr} 50 50)`}>
-            <rect x="17.5" y="17.5" width="65" height="65" fill="none" stroke={sc} strokeWidth={sw} />
+          <g transform={`rotate(${f.sr} 50 50) translate(${squareOff} ${squareOff * 0.8})`}>
+            <rect x="17.5" y="17.5" width="65" height="65" fill="none" stroke={sc} strokeWidth={sw}
+              style={{ opacity: 1 - d * 0.3 }} />
           </g>
-          <g transform={`rotate(${f.tr} 50 50)`}>
-            <path d="M50 26.2 L82.5 82.5 L17.5 82.5 Z" fill="none" stroke={tc} strokeWidth={sw} />
+          <g transform={`rotate(${f.tr} 50 50) translate(${triOff * 0.5} ${triOff})`}>
+            <path d="M50 26.2 L82.5 82.5 L17.5 82.5 Z" fill="none" stroke={tc} strokeWidth={sw}
+              style={{ opacity: 1 - d * 0.3 }} />
           </g>
-          <circle cx="50" cy="63.7" r="18.8" fill="none" stroke={ic} strokeWidth={sw} />
+          <g transform={`translate(${innerOff} ${innerOff * 1.2})`}>
+            <circle cx="50" cy="63.7" r="18.8" fill="none" stroke={ic} strokeWidth={sw}
+              style={{ opacity: 1 - d * 0.4 }} />
+          </g>
         </svg>
       </div>
     </div>
@@ -406,8 +428,8 @@ export function HomePage({ onEnterLab }: { onEnterLab: (id: LabId) => void }) {
       >
 
         {/* ═══ S1 — HERO ═══ */}
-        <section className="h-[100svh] snap-start flex flex-col items-center px-6">
-          <div style={{ height: '50vh' }} />
+        <section className="h-[100svh] snap-start flex flex-col items-center justify-center px-6">
+          <div style={{ flex: '1 1 0', minHeight: '12vh' }} />
 
           <motion.div className="w-[min(92vw,1040px)]"
             initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
@@ -426,6 +448,8 @@ export function HomePage({ onEnterLab }: { onEnterLab: (id: LabId) => void }) {
             initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.55, duration: 0.6 }}>
             <ToolsNav onClick={scrollToLabs} />
           </motion.div>
+
+          <div style={{ flex: '1.6 1 0', minHeight: '16vh' }} />
         </section>
 
         {/* ═══ S2 — EPISTEMOLÓGICO OPERACIONAL ═══ */}
