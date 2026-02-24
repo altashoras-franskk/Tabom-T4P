@@ -112,12 +112,21 @@ import { MEME_COLORS } from '../sim/sociogenesis/sociogenesisTypes';
 import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
 
-// OR CHOZER: Bottom-up feedback engine (Tree of Life v2)
+// OR CHOZER: Bottom-up feedback engine (kept for legacy / feature-flag fallback)
 import {
   createFeedbackState, stepFeedbackEngine, applyModulation, restoreParams,
   resetFeedbackMemory, FeedbackState,
 } from '../sim/micro/feedbackEngine';
 import { OrChozerPanel } from '../ui/OrChozerPanel';
+
+// COMPLEXITY LENS (PATCH 01): Morin + Meadows complexity theory framing
+import {
+  COMPLEXITY_LENS,
+  ComplexityLensState, createComplexityLensState, stepComplexityLens,
+  createVitalAccumulator, tickVitalRates, VitalAccumulator,
+  recordModuleMs,
+} from '../sim/complexity/complexityLens';
+import { ComplexityPanel } from '../ui/ComplexityPanel';
 
 // ECONOMY-LITE
 import {
@@ -292,6 +301,13 @@ const App: React.FC = () => {
   const [feedbackSnap, setFeedbackSnap] = useState<FeedbackState>(() => ({
     ...createFeedbackState(),
   }));
+
+  // COMPLEXITY LENS (PATCH 01): wraps feedbackEngine with Morin+Meadows framing + telemetry
+  const complexityLensRef = useRef<ComplexityLensState>(createComplexityLensState());
+  const vitalAccRef       = useRef<VitalAccumulator>(createVitalAccumulator());
+  const [complexitySnap, setComplexitySnap] = useState<ComplexityLensState>(
+    () => createComplexityLensState(),
+  );
   
   // PATCH 04.3: Archetypes + Mutation
   const archetypesRef = useRef<ArchetypeRegistry>(createRegistry());
@@ -1008,13 +1024,16 @@ const App: React.FC = () => {
         reconfigConfigRef.current.mutationRate = L.reconfigRate;
         reconfigConfigRef.current.mutationAmount = L.reconfigAmount;
         
-        // OR CHOZER: Apply feedback modulation (non-destructive save + restore)
-        const fbEnabled = feedbackStateRef.current.config.enabled;
+        // COMPLEXITY LENS / OR CHOZER: Apply feedback modulation (non-destructive save + restore)
+        // Uses shared FeedbackState via complexityLensRef.feedback
+        const lensState = complexityLensRef.current;
+        const fbEnabled = lensState.feedback.config.enabled;
         const savedParams = fbEnabled
-          ? applyModulation(microConfigRef.current, feedbackStateRef.current.modulation)
+          ? applyModulation(microConfigRef.current, lensState.feedback.modulation)
           : null;
 
-        // MICRO: Particle Life step (with optional recursive field)
+        // MICRO: Particle Life step (with optional recursive field) — timed for telemetry
+        const _t_pl0 = performance.now();
         if (recursiveFieldRef.current?.cfg?.enabled) {
           updateParticleLifeWithField(
             microStateRef.current,
@@ -1049,13 +1068,14 @@ const App: React.FC = () => {
             timeRef.current.tick
           );
         }
+        recordModuleMs(lensState.moduleTelemetry, 'particleLife', performance.now() - _t_pl0);
 
-        // OR CHOZER: Restore base params after simulation step
+        // Restore base params after simulation step
         if (fbEnabled && savedParams) {
           restoreParams(microConfigRef.current, savedParams);
         }
         
-        // H) Energy/reproduction system
+        // H) Energy/reproduction system — timed for telemetry
         if (microConfigRef.current.energyEnabled && microStateRef.current.count < 1500) {
           const e = energyConfigRef.current;
           e.enabled = true;
@@ -1067,6 +1087,7 @@ const App: React.FC = () => {
           e.mutationChance = 0.02 + L.mutationDial * 0.18;       // 0.02..0.20
           e.deathThreshold = 0.18 + (1 - L.mutationDial) * 0.12; // stable worlds die less
           
+          const _t_en0 = performance.now();
           const res = updateEnergy(
             microStateRef.current,
             matrixRef.current,
@@ -1074,16 +1095,21 @@ const App: React.FC = () => {
             rngRef.current,
             microStateRef.current.maxCount
           );
+          recordModuleMs(lensState.moduleTelemetry, 'energy', performance.now() - _t_en0);
           
-          // Track births/deaths for Life stats
-          if (res.births) {
-            lifeStatsRef.current.births += res.births;
-            populationAccumulator.current.births += res.births;
+          // Track births/deaths for Life stats AND vital rate accumulator
+          const births  = res.births  ?? 0;
+          const deaths  = res.deaths  ?? 0;
+          if (births) {
+            lifeStatsRef.current.births += births;
+            populationAccumulator.current.births += births;
           }
-          if (res.deaths) {
-            lifeStatsRef.current.deaths += res.deaths;
-            populationAccumulator.current.deaths += res.deaths;
+          if (deaths) {
+            lifeStatsRef.current.deaths += deaths;
+            populationAccumulator.current.deaths += deaths;
           }
+          // Feed vital rate accumulator (frameMs approximated per-step)
+          tickVitalRates(vitalAccRef.current, 1000 / 60, births, deaths, 0);
         }
       }
 
@@ -1113,10 +1139,16 @@ const App: React.FC = () => {
       // Update field layers with diffusion, decay, and delays
       // Use total simulated time this frame (stepCount * BASE_STEP)
       const simulatedDt = stepCount * BASE_STEP;
-      updateFieldLayers(FL, fieldLayersCfg, simulatedDt);
+      {
+        const _t_fl0 = performance.now();
+        updateFieldLayers(FL, fieldLayersCfg, simulatedDt);
+        recordModuleMs(complexityLensRef.current.moduleTelemetry, 'field', performance.now() - _t_fl0);
+      }
 
       // PATCH 04.3: Apply gene mutations (entropy-driven)
-      mutateGenes(
+      {
+        const _t_gn0 = performance.now();
+        mutateGenes(
         microStateRef.current,
         (x: number, y: number) => {
           const FL = fieldLayersRef.current;
@@ -1131,7 +1163,9 @@ const App: React.FC = () => {
         },
         simulatedDt,
         mutationCfg
-      );
+        );
+        recordModuleMs(complexityLensRef.current.moduleTelemetry, 'genes', performance.now() - _t_gn0);
+      }
 
       // PATCH 04.3: Attempt speciation every 15 seconds
       const t = timeRef.current.elapsed;
@@ -1281,30 +1315,46 @@ const App: React.FC = () => {
         }
       }
 
-      // OR CHOZER: Step feedback engine once per RAF frame
-      stepFeedbackEngine(
-        feedbackStateRef.current,
+      // COMPLEXITY LENS (PATCH 01): step replaces stepFeedbackEngine
+      // complexityLensRef.feedback is the shared FeedbackState
+      stepComplexityLens(
+        complexityLensRef.current,
         microStateRef.current,
         microConfigRef.current,
         1 / Math.max(1, timeRef.current.fps || 60),
       );
+      // Keep legacy feedbackStateRef in sync (for any legacy code referencing it)
+      feedbackStateRef.current = complexityLensRef.current.feedback;
 
       // Update loop metrics every 20 frames for UI
       loopUpdateCounterRef.current++;
       if (loopUpdateCounterRef.current >= 20) {
         loopUpdateCounterRef.current = 0;
-        // OR CHOZER: Sync feedback snapshot for React UI
+        // Sync complexity lens snapshot for React UI
+        const cl = complexityLensRef.current;
+        setComplexitySnap({
+          feedback:       cl.feedback,
+          metrics:        { ...cl.metrics },
+          forces:         { ...cl.forces },
+          systemPhase:    cl.systemPhase,
+          modulation:     { ...cl.modulation },
+          moduleTelemetry: cl.moduleTelemetry,
+          vitalRates:     { ...vitalAccRef.current.lastRates },
+          systemHealth:   cl.systemHealth,
+          emergenceIndex: cl.emergenceIndex,
+        });
+        // Also keep legacy feedbackSnap alive in case OrChozer panel is still used
         setFeedbackSnap({
-          config:        { ...feedbackStateRef.current.config },
-          metrics:       { ...feedbackStateRef.current.metrics },
-          activations:   { ...feedbackStateRef.current.activations },
-          modulation:    { ...feedbackStateRef.current.modulation },
-          metricsHistory: feedbackStateRef.current.metricsHistory,
-          historyMaxLen: feedbackStateRef.current.historyMaxLen,
-          phase:         feedbackStateRef.current.phase,
-          phaseLabel:    feedbackStateRef.current.phaseLabel,
-          frameCounter:  feedbackStateRef.current.frameCounter,
-          runawayCounter: feedbackStateRef.current.runawayCounter,
+          config:        { ...cl.feedback.config },
+          metrics:       { ...cl.feedback.metrics },
+          activations:   { ...cl.feedback.activations },
+          modulation:    { ...cl.feedback.modulation },
+          metricsHistory: cl.feedback.metricsHistory,
+          historyMaxLen: cl.feedback.historyMaxLen,
+          phase:         cl.feedback.phase,
+          phaseLabel:    cl.feedback.phaseLabel,
+          frameCounter:  cl.feedback.frameCounter,
+          runawayCounter: cl.feedback.runawayCounter,
         });
         const m = computeLoopMetrics(FL);
         setLoops(m);
@@ -3603,16 +3653,49 @@ const App: React.FC = () => {
           />
         )}
 
-        {/* OR CHOZER: Bottom-up feedback panel — Complexity Life Lab */}
-        {activeLab === 'complexityLife' && (
+        {/* COMPLEXITY LENS (PATCH 01): Bottom-up feedback panel — Complexity Life Lab */}
+        {activeLab === 'complexityLife' && COMPLEXITY_LENS && (
+          <ComplexityPanel
+            lensState={complexitySnap}
+            fps={timeRef.current.fps ?? 60}
+            agentCount={microStateRef.current.count}
+            vitalRates={complexitySnap.vitalRates}
+            moduleTelemetry={complexitySnap.moduleTelemetry}
+            onConfigChange={(patch) => {
+              Object.assign(complexityLensRef.current.feedback.config, patch);
+              // Reflect change immediately in snapshot
+              setComplexitySnap(prev => ({
+                ...prev,
+                feedback: {
+                  ...prev.feedback,
+                  config: { ...complexityLensRef.current.feedback.config },
+                },
+              }));
+            }}
+            onResetMemory={() => {
+              resetFeedbackMemory(complexityLensRef.current.feedback);
+              setComplexitySnap(prev => ({
+                ...prev,
+                feedback: {
+                  ...prev.feedback,
+                  config:      { ...complexityLensRef.current.feedback.config },
+                  metrics:     { ...complexityLensRef.current.feedback.metrics },
+                  activations: { ...complexityLensRef.current.feedback.activations },
+                  modulation:  { ...complexityLensRef.current.feedback.modulation },
+                  phase:       complexityLensRef.current.feedback.phase,
+                  phaseLabel:  complexityLensRef.current.feedback.phaseLabel,
+                },
+              }));
+            }}
+          />
+        )}
+        {/* Legacy Or Chozer panel — shown only when COMPLEXITY_LENS is false */}
+        {activeLab === 'complexityLife' && !COMPLEXITY_LENS && (
           <OrChozerPanel
             feedbackState={feedbackSnap}
             onConfigChange={(patch) => {
               Object.assign(feedbackStateRef.current.config, patch);
-              setFeedbackSnap(prev => ({
-                ...prev,
-                config: { ...feedbackStateRef.current.config },
-              }));
+              setFeedbackSnap(prev => ({ ...prev, config: { ...feedbackStateRef.current.config } }));
             }}
             onResetMemory={() => {
               resetFeedbackMemory(feedbackStateRef.current);
