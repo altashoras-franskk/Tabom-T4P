@@ -194,19 +194,22 @@ export function ComplexityPanel({
   const bal = vitalRates.birthsPerSec - vitalRates.deathsPerSec;
 
   return (
-    <div style={{
-      position: 'absolute',
-      bottom: 72,           // clear above zoom indicator (which is bottom-4 ≈ 16px)
-      left: 8,
-      zIndex: 30,
-      width: 240,
-      maxHeight: 'calc(100vh - 160px)',
-      background: 'rgba(6,8,12,0.96)',
-      border: `1px dashed ${cfg.enabled ? `${TEAL}22` : 'rgba(255,255,255,0.06)'}`,
-      transition: 'border-color 0.3s',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
+    <div
+      data-ui-overlay="true"
+      style={{
+        position: 'absolute',
+        bottom: 72,           // clear above zoom indicator (which is bottom-4 ≈ 16px)
+        left: 8,
+        zIndex: 30,
+        width: 240,
+        maxHeight: 'calc(100vh - 160px)',
+        background: 'rgba(6,8,12,0.96)',
+        border: `1px dashed ${cfg.enabled ? `${TEAL}22` : 'rgba(255,255,255,0.06)'}`,
+        transition: 'border-color 0.3s',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
 
       {/* ── Header (fixed, always visible) ──────────────────────────────── */}
       <div

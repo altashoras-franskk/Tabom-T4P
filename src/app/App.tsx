@@ -609,6 +609,9 @@ const App: React.FC = () => {
     };
     const onWheel = (e: WheelEvent) => {
       if (activeLab !== 'complexityLife') return;
+      // Don't capture scroll on UI overlay panels — let them scroll natively
+      const target = e.target as HTMLElement;
+      if (target?.closest?.('[data-ui-overlay]')) return;
       e.preventDefault();
       const rect   = container.getBoundingClientRect();
       const mx     = e.clientX - rect.left - rect.width  / 2;
