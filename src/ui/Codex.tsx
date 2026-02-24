@@ -49,7 +49,7 @@ export const Codex: React.FC<CodexProps> = ({
       </div>
 
       {/* Capture Controls */}
-      <div className="border border-white/[0.02] rounded p-3 space-y-3 bg-black/5">
+      <div className="p-3 space-y-3" style={{ border: '1px dashed rgba(255,255,255,0.04)', background: 'rgba(0,0,0,0.05)' }}>
         <div className="flex items-center justify-between">
           <span className="text-white/60 text-[10px] uppercase tracking-wide font-light">
             Capture Mode
@@ -61,7 +61,7 @@ export const Codex: React.FC<CodexProps> = ({
               onChange={(e) => onCaptureModeChange(e.target.checked)}
               className="sr-only peer"
             />
-            <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/40 after:border-white/20 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500/30 peer-checked:after:bg-yellow-400"></div>
+            <div className="w-9 h-5 bg-white/10 peer-focus:outline-none peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/40 after:border-white/20 after:border after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500/30 peer-checked:after:bg-yellow-400"></div>
           </label>
         </div>
 
@@ -83,11 +83,11 @@ export const Codex: React.FC<CodexProps> = ({
                 step={5}
                 value={brushRadius}
                 onChange={(e) => onBrushRadiusChange(Number(e.target.value))}
-                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                className="w-full h-1.5 bg-white/10 appearance-none cursor-pointer accent-yellow-500"
               />
             </div>
 
-            <div className="text-white/40 text-[9px] leading-relaxed bg-yellow-500/5 border border-yellow-500/10 rounded p-2">
+            <div className="text-white/40 text-[9px] leading-relaxed p-2" style={{ background: 'rgba(255,212,0,0.03)', border: '1px dashed rgba(255,212,0,0.08)' }}>
               <div className="flex items-start gap-1.5">
                 <span className="text-yellow-400/80">⚡</span>
                 <div>
@@ -104,7 +104,7 @@ export const Codex: React.FC<CodexProps> = ({
 
       {/* Organisms Grid */}
       {organisms.length === 0 ? (
-        <div className="text-white/30 text-[10px] text-center py-8 space-y-2 border border-white/[0.06] rounded">
+        <div className="text-white/30 text-[10px] text-center py-8 space-y-2" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
           <p>No organisms captured yet</p>
           <p className="text-white/20 text-[9px]">
             Enable capture mode and click on canvas
@@ -116,7 +116,7 @@ export const Codex: React.FC<CodexProps> = ({
             <div
               key={organism.id}
               className={`
-                relative border rounded p-2 cursor-pointer transition-all
+                relative border p-2 cursor-pointer transition-all
                 ${selectedOrganism === organism.id
                   ? 'border-white/30 bg-white/[0.04]'
                   : 'border-white/10 hover:border-white/20'
@@ -125,7 +125,7 @@ export const Codex: React.FC<CodexProps> = ({
               onClick={() => setSelectedOrganism(organism.id)}
             >
               {/* Thumbnail */}
-              <div className="flex justify-center mb-2 bg-black/10 rounded overflow-hidden">
+              <div className="flex justify-center mb-2 bg-black/10 overflow-hidden">
                 {organism.thumbnail ? (
                   <img
                     src={organism.thumbnail}
@@ -154,7 +154,7 @@ export const Codex: React.FC<CodexProps> = ({
                       setNameInput('');
                     }
                   }}
-                  className="w-full bg-white/5 border border-white/20 rounded px-1 py-0.5 text-white text-[9px] font-mono focus:outline-none focus:border-white/40"
+                  className="w-full bg-white/5 px-1 py-0.5 text-white text-[9px] font-mono focus:outline-none" style={{ border: '1px dashed rgba(255,255,255,0.10)' }}
                   autoFocus
                 />
               ) : (
@@ -181,7 +181,7 @@ export const Codex: React.FC<CodexProps> = ({
                     e.stopPropagation();
                     onSpawnOrganism(organism.id);
                   }}
-                  className="flex-1 border border-white/10 hover:border-white/30 text-white/60 hover:text-white text-[8px] uppercase py-1 rounded transition-all"
+                  className="flex-1 text-white/60 hover:text-white text-[8px] uppercase py-1 transition-all" style={{ border: '1px dashed rgba(255,255,255,0.06)' }}
                 >
                   Summon
                 </button>
@@ -195,7 +195,7 @@ export const Codex: React.FC<CodexProps> = ({
                       }
                     }
                   }}
-                  className="border border-red-500/20 hover:border-red-500/40 text-red-400/60 hover:text-red-400 text-[8px] uppercase px-2 py-1 rounded transition-all"
+                  className="text-red-400/60 hover:text-red-400 text-[8px] uppercase px-2 py-1 transition-all" style={{ border: '1px dashed rgba(255,80,80,0.15)' }}
                 >
                   ✕
                 </button>

@@ -48,10 +48,10 @@ const TB: React.FC<{ on: boolean; label: string; color: string; onClick: () => v
 }) => (
   <button
     onClick={onClick}
-    className={`text-[8px] font-mono px-1.5 py-0.5 rounded border transition-all ${
-      on ? 'border-current' : 'border-transparent text-white/30 hover:text-white/55'
+    className={`text-[8px] font-mono px-1.5 py-0.5 transition-all ${
+      on ? '' : 'text-white/30 hover:text-white/50'
     }`}
-    style={on ? { color, borderColor: color + '66', background: color + '14' } : {}}
+    style={on ? { color, border: `1px dashed ${color}44`, background: color + '0c' } : { border: '1px dashed transparent' }}
   >
     {label}
   </button>
@@ -64,9 +64,8 @@ export const View3DControls: React.FC<Props> = ({ activeLab, config, onChange, o
   return (
     <div
       className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-auto
-        flex items-center gap-2.5 px-3 py-2 rounded-xl border border-white/10
-        backdrop-blur-sm"
-      style={{ background: 'rgba(7,5,20,0.85)', flexWrap: 'wrap', maxWidth: '90vw' }}
+        flex items-center gap-2.5 px-3 py-2"
+      style={{ background: 'rgba(0,0,0,0.94)', border: '1px dashed rgba(255,255,255,0.06)', flexWrap: 'wrap', maxWidth: '90vw' }}
     >
       {/* Z var */}
       <div className="flex items-center gap-1.5">
@@ -74,8 +73,8 @@ export const View3DControls: React.FC<Props> = ({ activeLab, config, onChange, o
         <select
           value={config.zVar}
           onChange={e => onChange({ zVar: e.target.value })}
-          className="bg-white/5 text-white/70 text-[9px] font-mono px-1.5 py-1 rounded
-            border border-white/10 focus:outline-none cursor-pointer"
+          className="text-white/70 text-[9px] font-mono px-1.5 py-1 focus:outline-none cursor-pointer"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.06)' }}
         >
           {zVars.map(v => (
             <option key={v.id} value={v.id} className="bg-[#07050e]">{v.label}</option>
@@ -94,7 +93,7 @@ export const View3DControls: React.FC<Props> = ({ activeLab, config, onChange, o
           onChange={e => onChange({ zScale: parseFloat(e.target.value) })}
           className="w-16 h-px bg-white/15 appearance-none cursor-pointer
             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
-            [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+            [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white/60
             [&::-webkit-slider-thumb]:bg-purple-300/80"
         />
         <span className="text-[9px] font-mono text-white/35 w-6">{config.zScale.toFixed(2)}</span>
@@ -111,7 +110,7 @@ export const View3DControls: React.FC<Props> = ({ activeLab, config, onChange, o
           onChange={e => onChange({ ptSize: parseFloat(e.target.value) })}
           className="w-12 h-px bg-white/15 appearance-none cursor-pointer
             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
-            [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+            [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white/60
             [&::-webkit-slider-thumb]:bg-cyan-300/80"
         />
         <span className="text-[9px] font-mono text-white/35 w-5">{(config.ptSize ?? 5.5).toFixed(1)}</span>
@@ -126,11 +125,11 @@ export const View3DControls: React.FC<Props> = ({ activeLab, config, onChange, o
           <button
             key={m}
             onClick={() => onChange({ mode: m })}
-            className={`text-[8px] px-2 py-0.5 rounded font-mono transition-all ${
-              config.mode === m
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-400/40'
-                : 'text-white/30 hover:text-white/60 border border-transparent'
-            }`}
+            className="text-[8px] px-2 py-0.5 font-mono transition-all"
+            style={config.mode === m
+              ? { background: 'rgba(139,92,246,0.10)', color: '#a78bfa', border: '1px dashed rgba(139,92,246,0.30)' }
+              : { color: 'rgba(255,255,255,0.25)', border: '1px dashed transparent' }
+            }
           >
             {m === 'particles' ? 'Pts' : m === 'terrain' ? 'Terreno' : 'Híbrido'}
           </button>
@@ -160,7 +159,7 @@ export const View3DControls: React.FC<Props> = ({ activeLab, config, onChange, o
               onChange={e => onChange({ trailLen: parseInt(e.target.value) })}
               className="w-12 h-px bg-white/15 appearance-none cursor-pointer
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
-                [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+                [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white/60
                 [&::-webkit-slider-thumb]:bg-purple-300/70"
             />
             <span className="text-[9px] font-mono text-white/35 w-4">{config.trailLen ?? 14}</span>
@@ -177,8 +176,8 @@ export const View3DControls: React.FC<Props> = ({ activeLab, config, onChange, o
             <select
               value={config.colorScheme3D ?? 'default'}
               onChange={e => onChange({ colorScheme3D: e.target.value as View3DConfig['colorScheme3D'] })}
-              className="bg-white/5 text-white/70 text-[9px] font-mono px-1.5 py-1 rounded
-                border border-white/10 focus:outline-none cursor-pointer"
+              className="text-white/70 text-[9px] font-mono px-1.5 py-1 focus:outline-none cursor-pointer"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.06)' }}
             >
               {COLOR_SCHEMES.map(s => (
                 <option key={s.id} value={s.id} className="bg-[#07050e]">{s.label}</option>
@@ -194,7 +193,7 @@ export const View3DControls: React.FC<Props> = ({ activeLab, config, onChange, o
       <button
         onClick={onReset}
         className="flex items-center gap-1 text-[8px] text-white/30 hover:text-white/60
-          transition-colors px-1 py-0.5 rounded"
+          transition-colors px-1 py-0.5"
         title="Resetar câmera"
       >
         <RotateCcw size={10} />

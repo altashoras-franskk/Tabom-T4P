@@ -93,7 +93,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
           <span className="text-white/40 text-[10px] uppercase tracking-wide">{label}</span>
           <span className="text-white/60 text-[10px] font-mono">{value.toFixed(2)}</span>
         </div>
-        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+        <div className="w-full h-1 bg-white/5 overflow-hidden">
           <div 
             className={`h-full ${color} transition-all duration-300`}
             style={{ width: `${percentage}%` }}
@@ -112,7 +112,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
   return (
     <div className="space-y-3">
       {/* FPS Section */}
-      <div className="bg-white/[0.02] rounded border border-white/[0.06] p-2.5">
+      <div className="bg-white/[0.02] p-2.5" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
         <div className="flex items-center gap-1.5 mb-2">
           <Activity size={12} className="text-white/50" strokeWidth={1.5} />
           <h3 className="text-white/70 text-[10px] uppercase tracking-wider">Taxa de Quadros</h3>
@@ -146,7 +146,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
             return (
               <div
                 key={i}
-                className={`flex-1 ${color} rounded-t transition-all`}
+                className={`flex-1 ${color} transition-all`}
                 style={{ height: `${height}%` }}
               />
             );
@@ -155,7 +155,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
       </div>
 
       {/* System Load */}
-      <div className="bg-white/[0.02] rounded border border-white/[0.06] p-2.5">
+      <div className="bg-white/[0.02] p-2.5" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
         <div className="flex items-center gap-1.5 mb-2">
           <Cpu size={12} className="text-white/50" strokeWidth={1.5} />
           <h3 className="text-white/70 text-[10px] uppercase tracking-wider">Carga do Sistema</h3>
@@ -199,7 +199,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
       </div>
 
       {/* Field Metrics */}
-      <div className="bg-white/[0.02] rounded border border-white/[0.06] p-2.5">
+      <div className="bg-white/[0.02] p-2.5" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
         <div className="flex items-center gap-1.5 mb-2">
           <Layers size={12} className="text-white/50" strokeWidth={1.5} />
           <h3 className="text-white/70 text-[10px] uppercase tracking-wider">Métricas de Campo</h3>
@@ -232,7 +232,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
       {/* Accumulated Stats - Session Summary */}
       {stats && (
         <>
-          <div className="bg-white/[0.02] rounded border border-white/[0.06] p-2.5">
+          <div className="bg-white/[0.02] p-2.5" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
             <div className="flex items-center gap-1.5 mb-2">
               <Activity size={12} className="text-yellow-400/70" strokeWidth={1.5} />
               <h3 className="text-white/70 text-[10px] uppercase tracking-wider">Eventos Emergentes</h3>
@@ -272,7 +272,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
             </div>
           </div>
 
-          <div className="bg-white/[0.02] rounded border border-white/[0.06] p-2.5">
+          <div className="bg-white/[0.02] p-2.5" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
             <div className="flex items-center gap-1.5 mb-2">
               <Zap size={12} className="text-orange-400/70" strokeWidth={1.5} />
               <h3 className="text-white/70 text-[10px] uppercase tracking-wider">Recordes da Sessão</h3>
@@ -306,7 +306,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
             </div>
           </div>
 
-          <div className="bg-white/[0.02] rounded border border-white/[0.06] p-2.5">
+          <div className="bg-white/[0.02] p-2.5" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
             <div className="flex items-center gap-1.5 mb-1.5">
               <Activity size={12} className="text-white/50" strokeWidth={1.5} />
               <h3 className="text-white/70 text-[10px] uppercase tracking-wider">Tempo de Simulação</h3>
@@ -325,7 +325,7 @@ export const PerformanceStats: React.FC<PerformanceStatsProps> = ({
 
       {/* Performance Tips */}
       {fps < 30 && (
-        <div className="bg-white/[0.02] border border-white/10 rounded p-2.5">
+        <div className="bg-white/[0.02] p-2.5" style={{ border: '1px dashed rgba(255,255,255,0.06)' }}>
           <div className="flex items-start gap-1.5">
             <Activity size={11} className="text-white/50 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
             <div className="space-y-0.5">

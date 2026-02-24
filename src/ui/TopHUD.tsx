@@ -1,4 +1,4 @@
-import { Play, Pause, RotateCcw, StepForward, Undo2, BookOpen, Trophy, FileText, BookText, Eye, EyeOff, Layers, Box, LayoutGrid, Atom, Network, Brain, Music2, FlaskConical, Paintbrush, GitBranch, Drama, Languages } from 'lucide-react';
+import { Play, Pause, RotateCcw, Undo2, BookOpen, Trophy, FileText, BookText, Eye, EyeOff, Layers, Box, LayoutGrid } from 'lucide-react';
 
 export type LabId = 'complexityLife' | 'sociogenesis' | 'psycheLab' | 'musicLab' | 'alchemyLab' | 'metaArtLab' | 'rhizomeLab' | 'asimovTheater' | 'languageLab' | 'treeOfLife' | 'physicsSandbox';
 
@@ -52,6 +52,7 @@ const FIELD_LAYERS = [
   { id: 'novelty',  label: 'E', title: 'Entropia', color: '#ffaa44' },
 ];
 
+const DOTO = "'Doto', monospace";
 const MONO = "'IBM Plex Mono', monospace";
 
 // Lab accent colors matching the homepage
@@ -145,7 +146,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
   return (
     <div className="fixed top-0 left-0 right-0 z-10 pointer-events-none" style={{ fontFamily: MONO }}>
       {/* ── Top bar: brand + lab tabs ────────────────────────────── */}
-      <div className="flex items-stretch pointer-events-auto" style={{ borderBottom: '1px dashed rgba(255,255,255,0.08)' }}>
+      <div className="flex items-stretch pointer-events-auto" style={{ borderBottom: '1px dashed rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.94)' }}>
         {/* Brand / Home button */}
         {onGoHome && (
           <button
@@ -153,16 +154,15 @@ export const TopHUD: React.FC<TopHUDProps> = ({
             title="Voltar para Labs"
             className="flex items-center gap-2 px-4 py-2 transition-all shrink-0"
             style={{
-              background: 'rgba(0,0,0,0.6)',
-              borderRight: '1px dashed rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.5)',
+              background: 'transparent',
+              borderRight: '1px dashed rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.40)',
+              fontFamily: DOTO,
               fontSize: '10px',
-              fontWeight: 200,
+              fontWeight: 400,
               letterSpacing: '1.5px',
               textTransform: 'uppercase',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.9)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
           >
             <LayoutGrid size={10} strokeWidth={1.5} />
             <span className="hidden sm:inline">TOOLS</span>
@@ -170,7 +170,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
         )}
 
         {/* Lab tabs — horizontal scroll */}
-        <div className="flex items-stretch overflow-x-auto flex-1" style={{ scrollbarWidth: 'none', background: 'rgba(0,0,0,0.4)' }}>
+        <div className="flex items-stretch overflow-x-auto flex-1" style={{ scrollbarWidth: 'none' }}>
           {LAB_TABS.map((tab) => {
             const isActive = activeLab === tab.id;
             const tabAccent = LAB_ACCENTS[tab.id] || '#fff';
@@ -180,25 +180,20 @@ export const TopHUD: React.FC<TopHUDProps> = ({
                 onClick={() => onLabChange(tab.id)}
                 className="flex items-center gap-1.5 px-3 py-2 transition-all whitespace-nowrap shrink-0 relative"
                 style={{
-                  color: isActive ? tabAccent : 'rgba(255,255,255,0.3)',
+                  color: isActive ? tabAccent : 'rgba(255,255,255,0.25)',
+                  fontFamily: MONO,
                   fontSize: '10px',
                   fontWeight: isActive ? 400 : 200,
                   letterSpacing: '0.5px',
                   textTransform: 'uppercase',
-                  background: isActive ? 'rgba(255,255,255,0.03)' : 'transparent',
-                  borderRight: '1px solid rgba(255,255,255,0.03)',
+                  background: isActive ? `${tabAccent}06` : 'transparent',
+                  borderRight: '1px dashed rgba(255,255,255,0.03)',
                 }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = `${tabAccent}99`; }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.3)'; }}
               >
                 <span style={{ fontSize: '13px', lineHeight: 1 }}>{LAB_SYMBOLS[tab.id]}</span>
                 <span className="hidden lg:inline">{tab.label}</span>
-                {/* Active indicator — bottom accent line */}
                 {isActive && (
-                  <div
-                    className="absolute bottom-0 left-2 right-2 h-px"
-                    style={{ background: `linear-gradient(90deg, transparent, ${tabAccent}, transparent)` }}
-                  />
+                  <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: tabAccent + '55' }} />
                 )}
               </button>
             );
@@ -212,9 +207,10 @@ export const TopHUD: React.FC<TopHUDProps> = ({
             title={viewMode === '3D' ? 'Voltar para 2D' : 'Modo 3D'}
             className="flex items-center gap-1 px-3 py-2 transition-all shrink-0"
             style={{
-              borderLeft: '1px dashed rgba(255,255,255,0.08)',
-              background: viewMode === '3D' ? 'rgba(139,92,246,0.08)' : 'rgba(0,0,0,0.4)',
-              color: viewMode === '3D' ? '#a78bfa' : 'rgba(255,255,255,0.3)',
+              borderLeft: '1px dashed rgba(255,255,255,0.06)',
+              background: viewMode === '3D' ? 'rgba(139,92,246,0.06)' : 'transparent',
+              color: viewMode === '3D' ? '#a78bfa' : 'rgba(255,255,255,0.25)',
+              fontFamily: MONO,
               fontSize: '9px',
               fontWeight: 300,
               letterSpacing: '1px',
@@ -231,24 +227,22 @@ export const TopHUD: React.FC<TopHUDProps> = ({
       {activeLab !== 'psycheLab' && activeLab !== 'musicLab' && activeLab !== 'alchemyLab' && activeLab !== 'metaArtLab' && activeLab !== 'rhizomeLab' && activeLab !== 'asimovTheater' && activeLab !== 'languageLab' && activeLab !== 'treeOfLife' && activeLab !== 'physicsSandbox' && (
       <div className="flex items-center justify-between px-3 py-1.5 gap-2 pointer-events-auto"
         style={{
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)',
-          borderBottom: '1px solid rgba(255,255,255,0.04)',
+          background: 'rgba(0,0,0,0.92)',
+          borderBottom: '1px dashed rgba(255,255,255,0.06)',
         }}>
         {/* Left: Transport + tools */}
         <div className="flex items-center gap-1">
           {/* Play/Pause */}
           <button
             onClick={onTogglePlay}
-            className="p-1.5 rounded transition-all"
+            className="p-1.5 transition-all"
             title={running ? 'Pausar' : 'Reproduzir'}
             data-guide="play-button"
             style={{
               color: running ? accent : 'rgba(255,255,255,0.7)',
-              background: running ? `${accent}15` : 'transparent',
+              background: running ? `${accent}10` : 'transparent',
+              border: running ? `1px dashed ${accent}30` : '1px dashed transparent',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = `${accent}20`; }}
-            onMouseLeave={e => { e.currentTarget.style.background = running ? `${accent}15` : 'transparent'; }}
           >
             {running ? <Pause size={12} strokeWidth={1.5} /> : <Play size={12} strokeWidth={1.5} />}
           </button>
@@ -268,8 +262,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
                 fontWeight: 300,
                 color: 'rgba(255,255,255,0.7)',
                 background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '2px',
+                border: '1px dashed rgba(255,255,255,0.08)',
                 padding: '2px 4px',
               }}
             >
@@ -282,12 +275,12 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           <div className="w-px h-3" style={{ borderLeft: '1px dashed rgba(255,255,255,0.12)' }} />
 
           {/* Reset + Undo */}
-          <button onClick={onReset} className="p-1.5 rounded transition-colors hover:bg-white/5" title="Reiniciar"
-            style={{ color: 'rgba(255,255,255,0.6)' }}>
+          <button onClick={onReset} className="p-1.5 transition-colors" title="Reiniciar"
+            style={{ color: 'rgba(255,255,255,0.45)' }}>
             <RotateCcw size={11} strokeWidth={1.5} />
           </button>
-          <button onClick={onUndo} className="p-1.5 rounded transition-colors hover:bg-white/5 disabled:opacity-20" title="Desfazer" disabled={!canUndo}
-            style={{ color: 'rgba(255,255,255,0.6)' }}>
+          <button onClick={onUndo} className="p-1.5 transition-colors disabled:opacity-20" title="Desfazer" disabled={!canUndo}
+            style={{ color: 'rgba(255,255,255,0.45)' }}>
             <Undo2 size={11} strokeWidth={1.5} />
           </button>
 
@@ -297,11 +290,13 @@ export const TopHUD: React.FC<TopHUDProps> = ({
               <div className="w-px h-3" style={{ borderLeft: '1px dashed rgba(255,255,255,0.12)' }} />
               <button
                 onClick={onToggleFieldHeatmap}
-                className="flex items-center gap-1 p-1.5 rounded transition-all"
+                className="flex items-center gap-1 p-1.5 transition-all"
                 title="Campo de Energia"
                 style={{
-                  color: fieldHeatmap ? '#ffaa44' : 'rgba(255,255,255,0.35)',
-                  background: fieldHeatmap ? 'rgba(255,170,68,0.08)' : 'transparent',
+                  color: fieldHeatmap ? '#ffaa44' : 'rgba(255,255,255,0.30)',
+                  background: fieldHeatmap ? 'rgba(255,170,68,0.06)' : 'transparent',
+                  border: fieldHeatmap ? '1px dashed rgba(255,170,68,0.25)' : '1px dashed transparent',
+                  fontFamily: MONO,
                   fontSize: '9px',
                   fontWeight: 200,
                   letterSpacing: '0.5px',
@@ -318,14 +313,14 @@ export const TopHUD: React.FC<TopHUDProps> = ({
                       key={fl.id}
                       onClick={() => onFieldLayerChange(fl.id)}
                       title={fl.title}
-                      className="w-5 h-5 rounded-sm transition-all flex items-center justify-center"
+                      className="w-5 h-5 transition-all flex items-center justify-center"
                       style={{
                         fontSize: '8px',
                         fontFamily: MONO,
-                        fontWeight: fieldLayer === fl.id ? 500 : 200,
-                        color: fieldLayer === fl.id ? fl.color : 'rgba(255,255,255,0.3)',
-                        background: fieldLayer === fl.id ? `${fl.color}15` : 'transparent',
-                        border: fieldLayer === fl.id ? `1px solid ${fl.color}40` : '1px solid transparent',
+                        fontWeight: fieldLayer === fl.id ? 400 : 200,
+                        color: fieldLayer === fl.id ? fl.color : 'rgba(255,255,255,0.25)',
+                        background: fieldLayer === fl.id ? `${fl.color}0c` : 'transparent',
+                        border: fieldLayer === fl.id ? `1px dashed ${fl.color}35` : '1px dashed transparent',
                       }}
                     >
                       {fl.label}
@@ -340,7 +335,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           {onOpenGuide && (
             <>
               <div className="w-px h-3" style={{ borderLeft: '1px dashed rgba(255,255,255,0.12)' }} />
-              <button onClick={onOpenGuide} className="p-1.5 rounded transition-colors hover:bg-white/5" title="Tour Guiado" data-guide-button
+              <button onClick={onOpenGuide} className="p-1.5 transition-colors" title="Tour Guiado" data-guide-button
                 style={{ color: '#ffd400' }}>
                 <BookOpen size={11} strokeWidth={1.5} />
               </button>
@@ -348,11 +343,11 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           )}
 
           {onOpenAchievements && (
-            <button onClick={onOpenAchievements} className="relative p-1.5 rounded transition-colors hover:bg-white/5 group" title="Conquistas"
+            <button onClick={onOpenAchievements} className="relative p-1.5 transition-colors" title="Conquistas"
               style={{ color: '#ffd400' }}>
               <Trophy size={11} strokeWidth={1.5} />
               {achievementCount > 0 && (
-                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center"
+                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 flex items-center justify-center"
                   style={{ background: '#ffd400' }}>
                   <span style={{ fontSize: '7px', fontWeight: 600, color: '#000' }}>{achievementCount > 9 ? '9+' : achievementCount}</span>
                 </div>
@@ -361,14 +356,14 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           )}
 
           {onOpenWorldLog && (
-            <button onClick={onOpenWorldLog} className="p-1.5 rounded transition-colors hover:bg-white/5" title="World Log"
+            <button onClick={onOpenWorldLog} className="p-1.5 transition-colors" title="World Log"
               style={{ color: '#37b2da' }}>
               <FileText size={11} strokeWidth={1.5} />
             </button>
           )}
 
           {onOpenChronicle && (
-            <button onClick={onOpenChronicle} className="p-1.5 rounded transition-colors hover:bg-white/5" title="Chronicle"
+            <button onClick={onOpenChronicle} className="p-1.5 transition-colors" title="Chronicle"
               style={{ color: '#8b5cf6' }}>
               <BookText size={11} strokeWidth={1.5} />
             </button>
@@ -379,9 +374,9 @@ export const TopHUD: React.FC<TopHUDProps> = ({
               <div className="w-px h-3" style={{ borderLeft: '1px dashed rgba(255,255,255,0.12)' }} />
               <button
                 onClick={onToggleHideUI}
-                className="p-1.5 rounded transition-colors hover:bg-white/5"
+                className="p-1.5 transition-colors"
                 title="Modo Cinematico (H)"
-                style={{ color: hideUI ? '#37b2da' : 'rgba(255,255,255,0.35)' }}
+                style={{ color: hideUI ? '#37b2da' : 'rgba(255,255,255,0.30)' }}
               >
                 {hideUI ? <EyeOff size={11} strokeWidth={1.5} /> : <Eye size={11} strokeWidth={1.5} />}
               </button>

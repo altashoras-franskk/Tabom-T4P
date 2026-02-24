@@ -2,6 +2,10 @@
 import React, { useState } from 'react';
 import { VoiceRole, ROLE_COLORS } from '../../../sim/music/musicTypes';
 
+const DOTO = "'Doto', monospace";
+const MONO = "'IBM Plex Mono', monospace";
+const ACCENT = '#37b2da';
+
 // ── Data types ────────────────────────────────────────────────────────────────
 export interface SStep { on: boolean; vel: number; }
 export interface SRow  {
@@ -87,32 +91,40 @@ export const StudioSequencer: React.FC<Props> = ({
   const hasSolo = rows.some(r => r.solo);
 
   return (
-    <div className="flex flex-col select-none" style={{ background: 'rgba(4,6,14,0.92)' }}>
+    <div className="flex flex-col select-none" style={{ background: 'rgba(0,0,0,0.94)', fontFamily: MONO }}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-white/[0.06]">
+      <div className="flex items-center gap-2 px-3 py-1.5" style={{borderBottom:'1px dashed rgba(255,255,255,0.04)'}}>
         {/* On/Off */}
         <button onClick={onToggleActive}
-          className={`flex items-center gap-1 text-[7px] font-mono px-2.5 py-1 rounded border transition-all
-            ${active
-              ? 'border-cyan-400/60 text-cyan-300 bg-cyan-500/15'
-              : 'border-white/15 text-white/30 hover:border-cyan-400/35 hover:text-white/55'}`}>
+          className="flex items-center gap-1 px-2.5 py-1 transition-all"
+          style={{
+            fontSize:7,letterSpacing:'0.08em',textTransform:'uppercase',
+            color: active ? ACCENT : 'rgba(255,255,255,0.25)',
+            background: active ? `${ACCENT}08` : 'transparent',
+            border: active ? `1px dashed ${ACCENT}30` : '1px dashed rgba(255,255,255,0.06)',
+          }}>
           {active
-            ? <><span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block mr-0.5" />ON</>
+            ? <><span className="w-1.5 h-1.5 animate-pulse inline-block mr-0.5" style={{background:ACCENT}}/>ON</>
             : <>○ OFF</>}
         </button>
 
-        <span className="text-[7.5px] font-mono uppercase tracking-widest text-white/35">Studio Seq</span>
-        <span className="text-[6px] font-mono text-white/18">{bpm} BPM · {stepCount} steps · 4/4</span>
+        <span style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(255,255,255,0.28)'}}>Studio Seq</span>
+        <span style={{fontSize:6,color:'rgba(255,255,255,0.14)'}}>{bpm} BPM · {stepCount} steps · 4/4</span>
 
         <div className="flex-1"/>
 
         {/* Step count */}
         <div className="flex items-center gap-0.5">
-          <span className="text-[5.5px] font-mono text-white/18 uppercase mr-1">Steps</span>
+          <span style={{fontSize:6,color:'rgba(255,255,255,0.14)',textTransform:'uppercase',marginRight:4}}>Steps</span>
           {([8,16] as const).map(n => (
             <button key={n} onClick={() => onSetStepCount(n)}
-              className={`text-[6px] font-mono px-2 py-0.5 rounded border transition-all
-                ${stepCount === n ? 'border-cyan-400/45 text-cyan-300 bg-cyan-500/10' : 'border-white/10 text-white/20 hover:text-white/45'}`}>
+              className="transition-all"
+              style={{
+                fontSize:7,padding:'2px 8px',
+                color: stepCount === n ? ACCENT : 'rgba(255,255,255,0.18)',
+                background: stepCount === n ? `${ACCENT}08` : 'transparent',
+                border: stepCount === n ? `1px dashed ${ACCENT}30` : '1px dashed rgba(255,255,255,0.04)',
+              }}>
               {n}
             </button>
           ))}
@@ -121,17 +133,22 @@ export const StudioSequencer: React.FC<Props> = ({
         {/* Patterns */}
         <div className="relative">
           <button onClick={() => setShowPatterns(v => !v)}
-            className="text-[6px] font-mono px-2 py-0.5 rounded border border-white/10 text-white/25 hover:text-white/55 hover:border-white/25 transition-all">
+            className="transition-all"
+            style={{fontSize:7,padding:'2px 8px',color:'rgba(255,255,255,0.22)',border:'1px dashed rgba(255,255,255,0.06)'}}>
             Padrões ▾
           </button>
           {showPatterns && (
-            <div className="absolute bottom-full right-0 mb-1 z-50 w-52 rounded-lg border border-white/10 bg-black/95 backdrop-blur-md py-1 shadow-2xl">
+            <div className="absolute bottom-full right-0 mb-1 z-50 w-52 py-1"
+              style={{background:'rgba(0,0,0,0.96)',border:'1px dashed rgba(255,255,255,0.06)'}}>
               {STUDIO_PATTERNS.map(pat => (
                 <button key={pat.name}
                   onClick={() => { onLoadPattern(pat); setShowPatterns(false); }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-white/5 transition-all group">
-                  <div className="text-[7px] font-mono text-white/70 group-hover:text-white/90">{pat.name}</div>
-                  <div className="text-[5.5px] font-mono text-white/25">{pat.desc}</div>
+                  className="w-full text-left px-3 py-1.5 transition-all"
+                  style={{background:'transparent'}}
+                  onMouseEnter={e=>(e.currentTarget.style.background='rgba(255,255,255,0.03)')}
+                  onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
+                  <div style={{fontSize:7,color:'rgba(255,255,255,0.55)'}}>{pat.name}</div>
+                  <div style={{fontSize:6,color:'rgba(255,255,255,0.20)'}}>{pat.desc}</div>
                 </button>
               ))}
             </div>
@@ -139,7 +156,8 @@ export const StudioSequencer: React.FC<Props> = ({
         </div>
 
         <button onClick={onClearAll}
-          className="text-[6px] font-mono px-2 py-0.5 rounded border border-red-900/35 text-red-900/60 hover:text-red-400/70 hover:border-red-500/40 transition-all">
+          className="transition-all"
+          style={{fontSize:7,padding:'2px 8px',color:'rgba(255,60,60,0.35)',border:'1px dashed rgba(255,60,60,0.12)'}}>
           Limpar
         </button>
       </div>
@@ -154,32 +172,29 @@ export const StudioSequencer: React.FC<Props> = ({
             <div key={row.role} className="flex items-center gap-2">
               {/* Left controls */}
               <div className="flex items-center gap-1 flex-shrink-0" style={{ width: 80 }}>
-                {/* Mute */}
-                <button onClick={() => onToggleMute(ri)}
-                  title="Mute"
-                  className="w-[18px] h-[18px] rounded text-[5px] font-mono flex items-center justify-center border transition-all"
+                <button onClick={() => onToggleMute(ri)} title="Mute"
+                  className="w-[18px] h-[18px] flex items-center justify-center transition-all"
                   style={{
-                    borderColor: row.muted ? 'rgba(255,255,255,0.08)' : color + '50',
-                    color:       row.muted ? 'rgba(255,255,255,0.18)' : color + 'cc',
-                    background:  row.muted ? 'transparent' : color + '12',
+                    fontSize:6,
+                    border: `1px dashed ${row.muted ? 'rgba(255,255,255,0.06)' : color + '40'}`,
+                    color:       row.muted ? 'rgba(255,255,255,0.15)' : color + 'bb',
+                    background:  row.muted ? 'transparent' : color + '08',
                   }}>M</button>
-                {/* Solo */}
-                <button onClick={() => onToggleSolo(ri)}
-                  title="Solo"
-                  className="w-[18px] h-[18px] rounded text-[5px] font-mono flex items-center justify-center border transition-all"
+                <button onClick={() => onToggleSolo(ri)} title="Solo"
+                  className="w-[18px] h-[18px] flex items-center justify-center transition-all"
                   style={{
-                    borderColor: row.solo ? '#ffd70099' : 'rgba(255,255,255,0.06)',
-                    color:       row.solo ? '#ffd700'   : 'rgba(255,255,255,0.18)',
-                    background:  row.solo ? '#ffd70012' : 'transparent',
+                    fontSize:6,
+                    border: `1px dashed ${row.solo ? 'rgba(255,215,0,0.50)' : 'rgba(255,255,255,0.04)'}`,
+                    color:       row.solo ? '#ffd700'   : 'rgba(255,255,255,0.15)',
+                    background:  row.solo ? 'rgba(255,215,0,0.06)' : 'transparent',
                   }}>S</button>
-                {/* Role label */}
-                <span className="flex-1 text-center text-[7px] font-mono uppercase tracking-widest transition-colors"
-                  style={{ color: dimmed ? 'rgba(255,255,255,0.15)' : color }}>
+                <span className="flex-1 text-center transition-colors"
+                  style={{ fontSize:7, letterSpacing:'0.10em', textTransform:'uppercase', color: dimmed ? 'rgba(255,255,255,0.12)' : color }}>
                   {row.role.slice(0, 3)}
                 </span>
-                {/* Clear row */}
                 <button onClick={() => onClearRow(ri)}
-                  className="text-[7px] text-white/12 hover:text-red-400/50 transition-colors" title="Limpar linha">✕</button>
+                  style={{fontSize:7,color:'rgba(255,255,255,0.10)'}}
+                  className="transition-colors" title="Limpar linha">✕</button>
               </div>
 
               {/* Steps */}
@@ -188,28 +203,27 @@ export const StudioSequencer: React.FC<Props> = ({
                   const step      = row.steps[si] ?? { on: false, vel: 0.8 };
                   const isOn      = step.on;
                   const isCur     = active && si === cursor;
-                  const isBeat    = si % 4 === 0;   // quarter note
-                  const isHalf    = si === 0 || si === 8;  // half note
+                  const isBeat    = si % 4 === 0;
+                  const isHalf    = si === 0 || si === 8;
 
                   return (
                     <button key={si} onClick={() => onToggleStep(ri, si)}
-                      className={`relative flex-1 rounded-sm transition-all ${isCur ? 'ring-1 ring-white/80' : ''}`}
+                      className={`relative flex-1 transition-all ${isCur ? 'ring-1 ring-white/70' : ''}`}
                       style={{
                         height: 22,
                         background: isOn
-                          ? isCur ? color : dimmed ? color + '30' : color + '70'
+                          ? isCur ? color : dimmed ? color + '28' : color + '60'
                           : isBeat
-                            ? 'rgba(255,255,255,0.055)'
-                            : 'rgba(255,255,255,0.025)',
+                            ? 'rgba(255,255,255,0.04)'
+                            : 'rgba(255,255,255,0.02)',
                         borderBottom: isOn
-                          ? `2px solid ${dimmed ? color + '44' : color}`
+                          ? `2px solid ${dimmed ? color + '35' : color}`
                           : isHalf
-                            ? '1px solid rgba(255,255,255,0.10)'
+                            ? '1px solid rgba(255,255,255,0.08)'
                             : isBeat
-                              ? '1px solid rgba(255,255,255,0.06)'
-                              : '1px solid rgba(255,255,255,0.025)',
-                        boxShadow: isCur && isOn ? `0 0 8px ${color}88` : isOn && !dimmed ? `0 0 2px ${color}40` : 'none',
-                        opacity: dimmed && !isCur ? 0.45 : 1,
+                              ? '1px solid rgba(255,255,255,0.04)'
+                              : '1px solid rgba(255,255,255,0.02)',
+                        opacity: dimmed && !isCur ? 0.4 : 1,
                       }}
                     />
                   );
@@ -224,7 +238,7 @@ export const StudioSequencer: React.FC<Props> = ({
           {Array.from({ length: stepCount }).map((_, si) => (
             <div key={si} className="flex-1 flex justify-start pl-0.5">
               {si % 4 === 0 && (
-                <span className="text-[5px] font-mono text-white/18">{si / 4 + 1}</span>
+                <span style={{fontSize:5,color:'rgba(255,255,255,0.14)'}}>{si / 4 + 1}</span>
               )}
             </div>
           ))}

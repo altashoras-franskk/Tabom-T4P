@@ -1,4 +1,6 @@
-// ── Music Lab — 20 Presets ────────────────────────────────────────────────────
+// ── Music Lab — 60 Curated Presets ──────────────────────────────────────────────
+// Each preset is designed as a complete musical experience: physics behavior,
+// harmonic language, timbral palette, and visual identity work as one system.
 import { MusicPreset, RoleConfig, Envelope } from './musicTypes';
 
 const Q = (a: number, d: number, s: number, r: number): Envelope =>
@@ -23,132 +25,29 @@ const role = (
   panSpread, maxVoices, cooldownMin,
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// ── PRESETS ──────────────────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
 export const MUSIC_PRESETS: MusicPreset[] = [
 
-  // ── 1. Berlin Techno Engine ──────────────────────────────────────────────
-  {
-    id:'berlin-techno', name:'Berlin Techno Engine', intensity:5,
-    description:'Kick 4/4 emergente por sync peaks. Bass pulse profundo.',
-    vibe:'Bunker, Sub-bass, Sidechain',
-    tags:['Techno','Club','Electronic','Dark'],
-    bpm:132, scale:'minor', root:36, quantaCount:128,
-    motionStyle:'swarm',
-    roles:{
-      KICK: role(.25,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.9,0,.3,6,.4),
-      BASS: role(.20,[36,48],Q(.005,.18,.6,.12),'sawtooth','lowpass',280,3,.7,-5,.4,4,.25),
-      PERC: role(.20,[60,72],Q(.001,.06,.0,.04),'hihat','highpass',5000,.5,.55,0,.8,4,.18),
-      LEAD: role(.20,[60,80],Q(.01,.10,.4,.18),'sawtooth','lowpass',1400,4,.6,7,.5,3,.3),
-      PAD:  role(.15,[48,60],Q(.4,.3,.7,.8),'sawtooth','lowpass',600,2,.35,0,.6,2,.8),
-    },
-    syncThreshold:.55, encounterR:.12, entainment:.65, eventRate:.9,
-    reverbAmt:.18, delayAmt:.15, delayTime:.17, masterGain:.88,
-    harmonyMode:'modal',
-    particleGlow:1.4, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:true,
-    primary:'#00d4ff', secondary:'#7700ff', accent:'#ff2255',
-    gateCount:4, attractorCount:1,
-  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── I. AMBIENT & MEDITATIVE ────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // ── 2. Minimal Microhouse ────────────────────────────────────────────────
-  {
-    id:'minimal-micro', name:'Minimal Microhouse', intensity:3,
-    description:'Groove swing, clicks percussivos. Menos é mais.',
-    vibe:'Clicks, Swing, Hypnotic',
-    tags:['Techno','Minimal','Groove'],
-    bpm:124, scale:'minor', root:36, quantaCount:64,
-    motionStyle:'drift',
-    roles:{
-      KICK: role(.18,[24,36],Q(.001,.06,.0,.04),'kick','lowpass',180,.4,.8,0,.2,4,.45),
-      PERC: role(.35,[60,84],Q(.001,.04,.0,.02),'snare','bandpass',3500,.8,.5,0,.7,5,.2),
-      BASS: role(.22,[36,48],Q(.01,.12,.3,.1),'triangle','lowpass',350,2,.55,0,.35,3,.35),
-      LEAD: role(.25,[60,72],Q(.008,.08,.4,.12),'square','lowpass',800,3,.45,12,.6,2,.4),
-    },
-    syncThreshold:.4, encounterR:.09, entainment:.4, eventRate:.6,
-    reverbAmt:.12, delayAmt:.25, delayTime:.12, masterGain:.8,
-    harmonyMode:'modal',
-    particleGlow:1.0, trailLen:3, lens:'Rhythm', bgPulse:false, cinematic:false,
-    primary:'#33ff88', secondary:'#1a1a2e', accent:'#ff8833',
-    gateCount:3, attractorCount:1,
-  },
-
-  // ── 3. Acid Swarm ────────────────────────────────────────────────────────
-  {
-    id:'acid-swarm', name:'Acid Swarm', intensity:5,
-    description:'303-style acid lines. Slides por proximidade. Ressonância.',
-    vibe:'Resonance, Squelch, Rave',
-    tags:['Techno','Acid','Rave','Electronic'],
-    bpm:130, scale:'minor', root:36, quantaCount:96,
-    motionStyle:'swarm',
-    roles:{
-      BASS: role(.40,[36,60],Q(.002,.12,.5,.1),'sawtooth','lowpass',400,18,.75,-7,.5,6,.15),
-      KICK: role(.15,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.85,0,.2,5,.4),
-      LEAD: role(.25,[48,72],Q(.003,.09,.6,.12),'sawtooth','lowpass',1800,12,.65,14,.6,4,.22),
-      PERC: role(.20,[60,84],Q(.001,.05,.0,.03),'hihat','highpass',7000,.4,.5,0,.8,4,.2),
-    },
-    syncThreshold:.45, encounterR:.11, entainment:.5, eventRate:1.2,
-    reverbAmt:.15, delayAmt:.22, delayTime:.19, masterGain:.85,
-    harmonyMode:'free',
-    particleGlow:1.8, trailLen:7, lens:'Tension', bgPulse:true, cinematic:false,
-    primary:'#ff6600', secondary:'#220033', accent:'#ffff00',
-    gateCount:5, attractorCount:2,
-  },
-
-  // ── 4. Detroit Chords ────────────────────────────────────────────────────
-  {
-    id:'detroit-chords', name:'Detroit Chords', intensity:4,
-    description:'Pads 7th/9th. Bass firme. Hi-hats cristalinos.',
-    vibe:'Soulful, Warm Pads, Deep',
-    tags:['Techno','Detroit','Soulful','Electronic'],
-    bpm:126, scale:'dorian', root:34, quantaCount:112,
-    motionStyle:'orbit',
-    roles:{
-      PAD:     role(.35,[48,72],Q(.35,.3,.75,.9),'sawtooth','lowpass',700,2,.6,4,.7,4,.6),
-      BASS:    role(.20,[33,45],Q(.008,.2,.65,.15),'sawtooth','lowpass',250,3,.75,0,.3,4,.3),
-      PERC:    role(.20,[60,84],Q(.001,.05,.0,.03),'hihat','highpass',6500,.4,.55,0,.8,4,.22),
-      STRINGS: role(.25,[55,72],Q(.2,.25,.6,.7),'triangle','lowpass',1800,1.5,.5,0,.8,3,.5),
-    },
-    syncThreshold:.5, encounterR:.13, entainment:.55, eventRate:.75,
-    reverbAmt:.3, delayAmt:.18, delayTime:.22, masterGain:.82,
-    harmonyMode:'consonant',
-    particleGlow:1.2, trailLen:6, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#4488ff', secondary:'#112244', accent:'#ff8844',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 5. Breakbeat Reactor ─────────────────────────────────────────────────
-  {
-    id:'breakbeat', name:'Breakbeat Reactor', intensity:5,
-    description:'Gates geram breaks. Snare clusters. Rápido e caótico.',
-    vibe:'Breaks, Chaos, Energy',
-    tags:['Breakbeat','Electronic','Energetic'],
-    bpm:145, scale:'pentatonic', root:36, quantaCount:128,
-    motionStyle:'swarm',
-    roles:{
-      KICK:  role(.20,[24,36],Q(.001,.07,.0,.04),'kick','lowpass',200,.5,.9,0,.2,5,.3),
-      PERC:  role(.30,[60,84],Q(.001,.07,.0,.05),'snare','bandpass',2800,.7,.7,0,.9,6,.12),
-      BASS:  role(.20,[36,48],Q(.004,.12,.5,.1),'sawtooth','lowpass',300,4,.65,0,.4,3,.28),
-      LEAD:  role(.30,[55,79],Q(.005,.08,.4,.12),'square','lowpass',1200,5,.55,8,.7,4,.2),
-    },
-    syncThreshold:.35, encounterR:.10, entainment:.35, eventRate:1.5,
-    reverbAmt:.1, delayAmt:.3, delayTime:.10, masterGain:.9,
-    harmonyMode:'free',
-    particleGlow:1.6, trailLen:4, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#ff3300', secondary:'#001133', accent:'#00ffaa',
-    gateCount:6, attractorCount:1,
-  },
-
-  // ── 6. Eno Drift Garden ──────────────────────────────────────────────────
+  // 1 ── Eno Drift Garden ─────────────────────────────────────────────────────
+  // Slow-drifting particles paint long pads and choral washes.
+  // motionStyle: drift — particles float like pollen. Few gates, low event rate.
   {
     id:'eno-drift', name:'Eno Drift Garden', intensity:1,
-    description:'Pads longos, root drift lento. Reverb expansivo.',
+    description:'Pads infinitos, root drift lento. Reverb expansivo como um jardim.',
     vibe:'Infinite, Still, Breathing',
     tags:['Ambient','Eno','Meditative','Soft'],
     bpm:48, scale:'major', root:53, quantaCount:64,
     motionStyle:'drift',
     roles:{
-      PAD:    role(.55,[48,72],Q(1.2,.5,.8,2.5),'sine','lowpass',900,1.2,.5,0,.9,4,1.8),
-      STRINGS:role(.30,[53,69],Q(.8,.4,.7,1.8),'triangle','lowpass',1200,1,.4,3,.8,3,1.5),
-      CHOIR:  role(.15,[60,72],Q(1.5,.6,.75,3.0),'sine','lowpass',700,1,.35,0,1.0,2,2.5),
+      PAD:     role(.55,[48,72],Q(1.2,.5,.8,2.5),'sine','lowpass',900,1.2,.50,0,.9,4,1.8),
+      STRINGS: role(.30,[53,69],Q(.8,.4,.7,1.8),'triangle','lowpass',1200,1,.40,3,.8,3,1.5),
+      CHOIR:   role(.15,[60,72],Q(1.5,.6,.75,3.0),'sine','lowpass',700,1,.35,0,1.,2,2.5),
     },
     syncThreshold:.3, encounterR:.18, entainment:.25, eventRate:.25,
     reverbAmt:.85, delayAmt:.5, delayTime:.55, masterGain:.7,
@@ -158,18 +57,19 @@ export const MUSIC_PRESETS: MusicPreset[] = [
     gateCount:2, attractorCount:1,
   },
 
-  // ── 7. Deep Space Choir ──────────────────────────────────────────────────
+  // 2 ── Deep Space Choir ─────────────────────────────────────────────────────
+  // Orbital particles singing in vast reverb. Lydian harmonic halos.
   {
     id:'deep-choir', name:'Deep Space Choir', intensity:2,
-    description:'Harmônicos vocais. Halos enormes. Cosmic.',
+    description:'Vozes cósmicas orbitando. Cada encontro é um harmônico vocal.',
     vibe:'Vast, Choral, Cosmic',
     tags:['Ambient','Choral','Space','Meditative'],
     bpm:40, scale:'lydian', root:48, quantaCount:72,
     motionStyle:'orbit',
     roles:{
-      CHOIR:  role(.50,[48,72],Q(1.8,.7,.82,3.5),'sine','lowpass',800,1.1,.45,0,.95,4,2.0),
-      PAD:    role(.30,[42,60],Q(2.0,.8,.85,4.0),'triangle','lowpass',600,1,.35,7,.9,3,2.5),
-      STRINGS:role(.20,[55,72],Q(.9,.5,.7,2.0),'sine','lowpass',1400,1.2,.4,-5,.7,2,1.8),
+      CHOIR:   role(.50,[48,72],Q(1.8,.7,.82,3.5),'sine','lowpass',800,1.1,.45,0,.95,4,2.0),
+      PAD:     role(.30,[42,60],Q(2.0,.8,.85,4.0),'triangle','lowpass',600,1,.35,7,.9,3,2.5),
+      STRINGS: role(.20,[55,72],Q(.9,.5,.7,2.0),'sine','lowpass',1400,1.2,.4,-5,.7,2,1.8),
     },
     syncThreshold:.28, encounterR:.20, entainment:.3, eventRate:.2,
     reverbAmt:.92, delayAmt:.6, delayTime:.7, masterGain:.65,
@@ -179,1648 +79,1455 @@ export const MUSIC_PRESETS: MusicPreset[] = [
     gateCount:1, attractorCount:1,
   },
 
-  // ── 8. Underwater Harmonics ──────────────────────────────────────────────
+  // 3 ── Meditation Pool ──────────────────────────────────────────────────────
+  // Ultra-slow meditation physics. Particles barely move. Each note is precious.
+  {
+    id:'meditation-pool', name:'Meditation Pool', intensity:1,
+    description:'Meditação ultralenta. Cada nota emerge como uma gota na superfície.',
+    vibe:'Stillness, Breath, Zen',
+    tags:['Ambient','Meditative','Soft','Drone'],
+    bpm:36, scale:'pentatonic', root:48, quantaCount:40,
+    motionStyle:'meditation',
+    roles:{
+      PAD:     role(.45,[48,72],Q(2.5,1.0,.85,4.0),'sine','lowpass',600,.8,.38,0,.9,3,3.0),
+      STRINGS: role(.35,[53,72],Q(1.5,.8,.75,3.0),'triangle','lowpass',800,1,.35,5,.8,2,2.5),
+      CHOIR:   role(.20,[60,72],Q(2.0,.8,.80,3.5),'sine','lowpass',550,.9,.30,0,1.,2,3.5),
+    },
+    syncThreshold:.20, encounterR:.25, entainment:.15, eventRate:.12,
+    reverbAmt:.95, delayAmt:.7, delayTime:.8, masterGain:.55,
+    harmonyMode:'consonant',
+    particleGlow:3.0, trailLen:20, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#aaccff', secondary:'#020208', accent:'#ffeedd',
+    gateCount:1, attractorCount:0,
+  },
+
+  // 4 ── Underwater Harmonics ─────────────────────────────────────────────────
+  // School-of-fish motion, detuned sine layers = subaquatic pressure.
   {
     id:'underwater', name:'Underwater Harmonics', intensity:2,
-    description:'Filtros LP, shimmer delay. Submerso e misterioso.',
-    vibe:'Submerged, Shimmer, Mystery',
-    tags:['Ambient','Aquatic','Electronic','Soft'],
-    bpm:62, scale:'mixolydian', root:50, quantaCount:80,
-    motionStyle:'flow',
+    description:'Cardume submerso. Frequências graves e harmônicos molhados.',
+    vibe:'Deep, Pressure, Liquid',
+    tags:['Ambient','Aquatic','Drone','Experimental'],
+    bpm:52, scale:'dorian', root:40, quantaCount:80,
+    motionStyle:'school',
     roles:{
-      PAD:    role(.40,[48,65],Q(.7,.4,.7,1.5),'sine','lowpass',450,3,.5,0,.8,4,1.2),
-      LEAD:   role(.30,[55,74],Q(.05,.15,.5,.3),'sine','lowpass',600,4,.5,3,.6,3,.4),
-      BASS:   role(.20,[36,50],Q(.1,.3,.6,.5),'triangle','lowpass',200,1.5,.55,0,.3,3,.7),
-      STRINGS:role(.10,[55,69],Q(.4,.3,.6,1.2),'triangle','lowpass',900,2,.4,0,.8,2,1.0),
+      BASS:    role(.30,[28,48],Q(.3,.3,.75,1.5),'sine','lowpass',200,1.5,.55,-3,.4,3,.8),
+      PAD:     role(.35,[40,64],Q(1.5,.5,.80,2.5),'triangle','lowpass',700,1.2,.45,8,.9,3,1.8),
+      STRINGS: role(.20,[48,72],Q(.8,.4,.65,1.5),'sine','lowpass',1100,1,.35,0,.7,2,1.2),
+      LEAD:    role(.15,[55,76],Q(.15,.2,.50,1.0),'triangle','bandpass',900,2,.30,12,.6,2,1.0),
     },
-    syncThreshold:.35, encounterR:.16, entainment:.4, eventRate:.4,
-    reverbAmt:.7, delayAmt:.6, delayTime:.43, masterGain:.72,
+    syncThreshold:.32, encounterR:.15, entainment:.35, eventRate:.35,
+    reverbAmt:.88, delayAmt:.55, delayTime:.45, masterGain:.7,
     harmonyMode:'consonant',
-    particleGlow:1.8, trailLen:10, lens:'Notes', bgPulse:false, cinematic:false,
-    primary:'#00aaff', secondary:'#001133', accent:'#88ffee',
-    gateCount:2, attractorCount:1,
+    particleGlow:1.8, trailLen:10, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#00aacc', secondary:'#001520', accent:'#88ffee',
+    gateCount:3, attractorCount:1,
   },
 
-  // ── 9. Glass Arpeggios ───────────────────────────────────────────────────
+  // 5 ── Glass Arpeggios ──────────────────────────────────────────────────────
+  // Lattice motion — particles snap to grid. Triangle arps shimmer like crystal.
   {
     id:'glass-arps', name:'Glass Arpeggios', intensity:3,
-    description:'Arps cristalinos. Philip Glass-ish. Brilho e clareza.',
-    vibe:'Crystalline, Minimal, Bright',
-    tags:['Classical','Minimalist','Arpeggios','Electronic'],
-    bpm:120, scale:'major', root:60, quantaCount:96,
+    description:'Arpejos cristalinos em padrão de grade. Philip Glass emergente.',
+    vibe:'Crystal, Pattern, Minimalist',
+    tags:['Classical','Minimalist','Arpeggios','Generative'],
+    bpm:88, scale:'major', root:60, quantaCount:96,
     motionStyle:'lattice',
     roles:{
-      ARP:     role(.50,[60,84],Q(.002,.08,.35,.15),'triangle','bandpass',3500,2,.55,0,.7,6,.18),
-      STRINGS: role(.25,[55,71],Q(.12,.2,.55,.4),'triangle','lowpass',2200,1,.4,4,.7,3,.3),
-      BASS:    role(.15,[43,55],Q(.01,.15,.5,.2),'sine','lowpass',250,1,.5,0,.3,3,.35),
-      PAD:     role(.10,[55,67],Q(.5,.3,.65,1.0),'triangle','lowpass',1800,1,.35,0,.8,2,.8),
+      ARP:     role(.35,[60,96],Q(.003,.12,.15,.22),'triangle','lowpass',3200,2,.55,0,.6,4,.14),
+      LEAD:    role(.25,[60,84],Q(.008,.10,.45,.18),'triangle','lowpass',2400,1.5,.50,5,.5,3,.22),
+      PAD:     role(.20,[48,72],Q(.6,.3,.7,1.2),'sine','lowpass',1000,1,.40,0,.8,2,.9),
+      BASS:    role(.20,[36,52],Q(.01,.2,.55,.2),'triangle','lowpass',400,1.5,.50,0,.3,3,.35),
     },
-    syncThreshold:.45, encounterR:.11, entainment:.6, eventRate:.9,
-    reverbAmt:.45, delayAmt:.35, delayTime:.24, masterGain:.78,
+    syncThreshold:.42, encounterR:.10, entainment:.55, eventRate:.65,
+    reverbAmt:.45, delayAmt:.4, delayTime:.22, masterGain:.78,
     harmonyMode:'consonant',
-    particleGlow:1.6, trailLen:5, lens:'Notes', bgPulse:false, cinematic:true,
-    primary:'#ffffff', secondary:'#0a0a1a', accent:'#88ddff',
-    gateCount:4, attractorCount:2,
+    particleGlow:1.2, trailLen:5, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#aaeeff', secondary:'#0a1020', accent:'#ffd700',
+    gateCount:4, attractorCount:1,
   },
 
-  // ── 10. Drone Mandala ────────────────────────────────────────────────────
+  // 6 ── Drone Mandala ────────────────────────────────────────────────────────
+  // Spiral physics — particles draw mandalas. Deep drones + overtones.
   {
     id:'drone-mandala', name:'Drone Mandala', intensity:1,
-    description:'Tensão harmônica estática. Quase sem eventos. Visual hipnótico.',
-    vibe:'Hypnotic, Still, Resonant',
-    tags:['Ambient','Drone','Experimental','Meditative'],
-    bpm:30, scale:'harmonic_minor', root:45, quantaCount:80,
-    motionStyle:'orbit',
+    description:'Espiral lenta formando mandala sonora. Drones e overtones emergentes.',
+    vibe:'Ritual, Trance, Ancient',
+    tags:['Drone','Meditative','Space','Experimental'],
+    bpm:44, scale:'phrygian', root:36, quantaCount:56,
+    motionStyle:'spiral',
     roles:{
-      PAD:  role(.60,[45,57],Q(2.5,.5,.9,5.0),'sawtooth','lowpass',350,3,.4,0,.9,4,3.0),
-      BASS: role(.25,[33,45],Q(3.0,.8,.95,6.0),'sine','lowpass',150,1,.45,0,.4,2,4.0),
-      CHOIR:role(.15,[52,64],Q(2.0,.7,.8,4.5),'triangle','lowpass',500,2,.35,7,.9,2,3.5),
+      PAD:     role(.40,[36,60],Q(2.0,.8,.85,3.5),'sawtooth','lowpass',350,2,.50,0,.9,3,2.0),
+      CHOIR:   role(.30,[48,72],Q(1.8,.7,.80,3.0),'sine','lowpass',700,1,.40,0,1.,2,2.5),
+      STRINGS: role(.20,[42,66],Q(1.0,.5,.70,2.0),'triangle','lowpass',1000,1.2,.35,5,.8,2,1.5),
+      BASS:    role(.10,[24,42],Q(.5,.4,.80,2.0),'sine','lowpass',180,.8,.55,0,.3,2,1.5),
     },
-    syncThreshold:.7, encounterR:.22, entainment:.15, eventRate:.15,
-    reverbAmt:.95, delayAmt:.7, delayTime:.8, masterGain:.6,
+    syncThreshold:.25, encounterR:.18, entainment:.20, eventRate:.18,
+    reverbAmt:.90, delayAmt:.65, delayTime:.7, masterGain:.6,
     harmonyMode:'modal',
     particleGlow:2.5, trailLen:18, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#660099', secondary:'#050008', accent:'#cc6600',
-    gateCount:1, attractorCount:1,
-  },
-
-  // ── 11. String Quartet Weave ─────────────────────────────────────────────
-  {
-    id:'string-quartet', name:'String Quartet Weave', intensity:3,
-    description:'4 vozes (Vn I/II/Vla/Vc). Contraponto por encontros.',
-    vibe:'Chamber, Interweaving, Alive',
-    tags:['Classical','Strings','Chamber','Generative'],
-    bpm:72, scale:'major', root:48, quantaCount:80,
-    motionStyle:'swarm',
-    roles:{
-      STRINGS: role(.70,[55,84],Q(.07,.15,.65,.5),'triangle','lowpass',2800,1.2,.55,0,.85,8,.3),
-      BASS:    role(.20,[40,52],Q(.08,.2,.6,.6),'triangle','lowpass',600,1,.5,0,.3,3,.4),
-      PAD:     role(.10,[55,67],Q(.5,.3,.65,1.2),'triangle','lowpass',1600,1,.3,5,.7,2,.8),
-    },
-    syncThreshold:.4, encounterR:.14, entainment:.35, eventRate:.7,
-    reverbAmt:.45, delayAmt:.12, delayTime:.28, masterGain:.75,
-    harmonyMode:'consonant',
-    particleGlow:1.2, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:false,
-    primary:'#ffd700', secondary:'#0d0a00', accent:'#cc8844',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 12. Minimalist Phasing ───────────────────────────────────────────────
-  {
-    id:'minimalist-phase', name:'Minimalist Phasing', intensity:3,
-    description:'Dois clusters em phase shifting. Padrões em Reich-ish.',
-    vibe:'Phase Shift, Evolving, Hypnotic',
-    tags:['Classical','Minimalist','Reich','Phasing'],
-    bpm:126, scale:'major', root:60, quantaCount:96,
-    motionStyle:'orbit',
-    roles:{
-      ARP:     role(.65,[60,79],Q(.002,.05,.3,.1),'triangle','bandpass',4000,1.5,.5,0,.6,8,.12),
-      STRINGS: role(.20,[60,72],Q(.08,.15,.5,.3),'triangle','lowpass',3000,1,.4,0,.7,3,.25),
-      PAD:     role(.15,[55,67],Q(.3,.2,.6,.8),'sine','lowpass',1200,1,.3,0,.8,2,.6),
-    },
-    syncThreshold:.35, encounterR:.10, entainment:.8, eventRate:1.1,
-    reverbAmt:.3, delayAmt:.4, delayTime:.15, masterGain:.75,
-    harmonyMode:'consonant',
-    particleGlow:1.4, trailLen:4, lens:'Rhythm', bgPulse:false, cinematic:true,
-    primary:'#eeffcc', secondary:'#050a00', accent:'#aaddff',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 13. Baroque Clockwork ────────────────────────────────────────────────
-  {
-    id:'baroque-clock', name:'Baroque Clockwork', intensity:3,
-    description:'Arpejos regulares. Ornamentação por proximidade.',
-    vibe:'Mechanical, Ornate, Precise',
-    tags:['Classical','Baroque','Ornate','Generative'],
-    bpm:96, scale:'major', root:55, quantaCount:88,
-    motionStyle:'lattice',
-    roles:{
-      ARP:     role(.40,[60,84],Q(.001,.06,.25,.12),'triangle','bandpass',3800,1.8,.52,0,.5,6,.14),
-      STRINGS: role(.30,[55,72],Q(.05,.12,.5,.35),'triangle','lowpass',2400,1.2,.48,4,.7,4,.2),
-      BASS:    role(.20,[43,55],Q(.01,.18,.55,.25),'triangle','lowpass',400,1,.5,0,.3,3,.3),
-      PAD:     role(.10,[55,67],Q(.4,.25,.6,.9),'sine','lowpass',1500,1,.3,0,.8,2,.7),
-    },
-    syncThreshold:.45, encounterR:.12, entainment:.5, eventRate:.85,
-    reverbAmt:.35, delayAmt:.2, delayTime:.17, masterGain:.76,
-    harmonyMode:'consonant',
-    particleGlow:1.3, trailLen:4, lens:'Notes', bgPulse:false, cinematic:false,
-    primary:'#ddcc88', secondary:'#0a0800', accent:'#88aacc',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 14. Romantic Swell ───────────────────────────────────────────────────
-  {
-    id:'romantic-swell', name:'Romantic Swell', intensity:3,
-    description:'Crescendos por charge. Rubato suave. Lush e emocional.',
-    vibe:'Lush, Emotional, Crescendo',
-    tags:['Classical','Romantic','Orchestral','Dynamic'],
-    bpm:76, scale:'harmonic_minor', root:51, quantaCount:112,
-    motionStyle:'flow',
-    roles:{
-      STRINGS: role(.40,[55,79],Q(.15,.2,.7,.8),'triangle','lowpass',2200,1.3,.55,0,.85,6,.35),
-      CHOIR:   role(.25,[60,72],Q(.5,.35,.75,1.5),'sine','lowpass',800,1.1,.45,5,1.0,3,.6),
-      PAD:     role(.20,[48,63],Q(.4,.3,.7,1.2),'triangle','lowpass',600,1,.4,0,.9,3,.8),
-      BASS:    role(.15,[38,50],Q(.06,.25,.65,.4),'triangle','lowpass',350,1,.55,0,.3,3,.4),
-    },
-    syncThreshold:.4, encounterR:.15, entainment:.4, eventRate:.55,
-    reverbAmt:.6, delayAmt:.25, delayTime:.35, masterGain:.72,
-    harmonyMode:'consonant',
-    particleGlow:1.8, trailLen:9, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#ff9966', secondary:'#0d0508', accent:'#9966ff',
+    primary:'#cc88ff', secondary:'#0a0515', accent:'#ffcc88',
     gateCount:2, attractorCount:1,
   },
 
-  // ── 15. Music Box Canon ──────────────────────────────────────────────────
+  // 7 ── Aurora Borealis ──────────────────────────────────────────────────────
+  // Migration physics — particles stream like northern lights. Whole tone mystery.
   {
-    id:'music-box', name:'Music Box Canon', intensity:2,
-    description:'Timbre caixa de música. Cânone por delay de clusters.',
-    vibe:'Delicate, Metallic, Precious',
-    tags:['Classical','Minimalist','Delicate','Ambient'],
-    bpm:85, scale:'major', root:64, quantaCount:64,
-    motionStyle:'lattice',
+    id:'aurora', name:'Aurora Borealis', intensity:2,
+    description:'Partículas migrando como cortinas de aurora. Melodias etéreas.',
+    vibe:'Northern Lights, Ethereal, Slow',
+    tags:['Ambient','Space','Experimental','Soft'],
+    bpm:46, scale:'whole_tone', root:50, quantaCount:88,
+    motionStyle:'migration',
     roles:{
-      ARP:  role(.60,[64,88],Q(.001,.04,.0,.18),'triangle','bandpass',5000,3,.5,0,.5,6,.22),
-      PAD:  role(.25,[60,72],Q(.6,.3,.6,1.5),'sine','lowpass',1200,1,.3,0,.7,3,.9),
-      BASS: role(.15,[52,60],Q(.01,.15,.4,.3),'sine','lowpass',350,1,.45,0,.3,2,.45),
+      STRINGS: role(.35,[48,76],Q(1.0,.5,.72,2.0),'triangle','lowpass',1400,1,.40,7,.9,3,1.5),
+      PAD:     role(.30,[42,66],Q(1.8,.7,.80,3.0),'sine','lowpass',650,.9,.38,0,.8,3,2.0),
+      CHOIR:   role(.20,[55,72],Q(1.5,.6,.75,2.5),'sine','lowpass',600,1,.32,0,1.,2,2.2),
+      ARP:     role(.15,[60,88],Q(.05,.15,.20,.5),'triangle','highpass',2000,1.5,.25,12,.7,2,.8),
     },
-    syncThreshold:.5, encounterR:.10, entainment:.55, eventRate:.65,
-    reverbAmt:.5, delayAmt:.45, delayTime:.35, masterGain:.72,
-    harmonyMode:'consonant',
-    particleGlow:1.5, trailLen:3, lens:'Notes', bgPulse:false, cinematic:true,
-    primary:'#ffffff', secondary:'#080808', accent:'#ffddaa',
-    gateCount:3, attractorCount:2,
+    syncThreshold:.30, encounterR:.16, entainment:.28, eventRate:.30,
+    reverbAmt:.88, delayAmt:.55, delayTime:.55, masterGain:.65,
+    harmonyMode:'free',
+    particleGlow:2.4, trailLen:14, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#44ffcc', secondary:'#020812', accent:'#ff88cc',
+    gateCount:3, attractorCount:0,
   },
 
-  // ── 16. Modal Jazz Field ─────────────────────────────────────────────────
-  {
-    id:'modal-jazz', name:'Modal Jazz Field', intensity:3,
-    description:'Modo Dórico. Call/response. Blue notes ocasionais.',
-    vibe:'Smoky, Modal, Improvisational',
-    tags:['Jazz','Modal','Improvisation','Warm'],
-    bpm:88, scale:'dorian', root:38, quantaCount:88,
-    motionStyle:'flow',
-    roles:{
-      LEAD:    role(.30,[60,82],Q(.008,.12,.5,.2),'sine','lowpass',2000,3,.6,0,.5,4,.22),
-      BASS:    role(.25,[38,52],Q(.01,.2,.65,.25),'triangle','lowpass',400,1.5,.62,0,.3,4,.3),
-      STRINGS: role(.25,[55,70],Q(.12,.2,.6,.5),'triangle','lowpass',2000,1,.48,0,.7,3,.35),
-      PAD:     role(.20,[55,67],Q(.4,.3,.68,1.0),'sine','lowpass',900,1.2,.4,7,.8,3,.7),
-    },
-    syncThreshold:.35, encounterR:.14, entainment:.35, eventRate:.6,
-    reverbAmt:.4, delayAmt:.3, delayTime:.33, masterGain:.78,
-    harmonyMode:'modal',
-    particleGlow:1.4, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:false,
-    primary:'#ff9944', secondary:'#0d0500', accent:'#44aaff',
-    gateCount:3, attractorCount:1,
-  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── II. ELECTRONIC & CLUB ──────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // ── 17. Swing Particles ──────────────────────────────────────────────────
+  // 8 ── Berlin Techno Engine ─────────────────────────────────────────────────
+  // Swarm physics — tight cluster bursts on gate crossings. 4/4 emergent.
   {
-    id:'swing-jazz', name:'Swing Particles', intensity:3,
-    description:'Swing feel. Walking bass generativo. Hats suaves.',
-    vibe:'Loose, Swingy, Alive',
-    tags:['Jazz','Swing','Walking Bass','Warm'],
-    bpm:115, scale:'blues', root:41, quantaCount:88,
+    id:'berlin-techno', name:'Berlin Techno Engine', intensity:5,
+    description:'Kick 4/4 emergente por sync peaks. Bass pulse profundo. Swarm bunker.',
+    vibe:'Bunker, Sub-bass, Sidechain',
+    tags:['Techno','Club','Electronic','Dark'],
+    bpm:132, scale:'minor', root:36, quantaCount:128,
     motionStyle:'swarm',
     roles:{
-      BASS:    role(.28,[38,52],Q(.005,.14,.6,.18),'triangle','lowpass',350,1.5,.65,0,.3,4,.22),
-      PERC:    role(.22,[60,84],Q(.001,.06,.0,.04),'hihat','highpass',5000,.5,.5,0,.9,5,.18),
-      LEAD:    role(.30,[55,79],Q(.01,.12,.5,.22),'triangle','lowpass',2200,3,.58,0,.6,4,.25),
-      PAD:     role(.20,[48,60],Q(.3,.25,.65,.8),'sine','lowpass',900,1.5,.4,0,.7,3,.6),
+      KICK:  role(.25,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.90,0,.3,6,.4),
+      BASS:  role(.20,[36,48],Q(.005,.18,.6,.12),'sawtooth','lowpass',280,3,.70,-5,.4,4,.25),
+      PERC:  role(.20,[60,72],Q(.001,.06,.0,.04),'hihat','highpass',5000,.5,.55,0,.8,4,.18),
+      LEAD:  role(.20,[60,80],Q(.01,.10,.4,.18),'sawtooth','lowpass',1400,4,.60,7,.5,3,.3),
+      PAD:   role(.15,[48,60],Q(.4,.3,.7,.8),'sawtooth','lowpass',600,2,.35,0,.6,2,.8),
     },
-    syncThreshold:.38, encounterR:.13, entainment:.42, eventRate:.75,
-    reverbAmt:.35, delayAmt:.28, delayTime:.26, masterGain:.8,
+    syncThreshold:.55, encounterR:.12, entainment:.65, eventRate:.9,
+    reverbAmt:.18, delayAmt:.15, delayTime:.17, masterGain:.88,
     harmonyMode:'modal',
-    particleGlow:1.3, trailLen:6, lens:'Rhythm', bgPulse:false, cinematic:false,
-    primary:'#ffaa55', secondary:'#0a0500', accent:'#55aaff',
-    gateCount:3, attractorCount:1,
+    particleGlow:1.4, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:true,
+    primary:'#00d4ff', secondary:'#7700ff', accent:'#ff2255',
+    gateCount:4, attractorCount:1,
   },
 
-  // ── 18. Free Jazz Sparks ─────────────────────────────────────────────────
+  // 9 ── Minimal Microhouse ───────────────────────────────────────────────────
+  // Drift physics — particles wander lazily. Click percussion + groove swing.
   {
-    id:'free-jazz', name:'Free Jazz Sparks', intensity:4,
-    description:'Dissonância controlada. Bursts por tensão. Improvisação.',
-    vibe:'Explosive, Free, Dissonant',
-    tags:['Jazz','Free Jazz','Experimental','Improvisation'],
-    bpm:100, scale:'chromatic', root:48, quantaCount:96,
-    motionStyle:'swarm',
-    roles:{
-      LEAD:    role(.40,[55,84],Q(.003,.1,.4,.15),'sawtooth','lowpass',3000,4,.6,0,.7,5,.15),
-      PERC:    role(.25,[60,84],Q(.001,.07,.0,.05),'snare','bandpass',2000,.8,.55,0,.9,4,.12),
-      BASS:    role(.20,[38,55],Q(.005,.15,.55,.2),'sawtooth','lowpass',600,3,.6,0,.4,3,.2),
-      STRINGS: role(.15,[55,72],Q(.06,.14,.5,.3),'sawtooth','lowpass',2500,2,.45,0,.7,2,.28),
-    },
-    syncThreshold:.3, encounterR:.09, entainment:.2, eventRate:1.3,
-    reverbAmt:.25, delayAmt:.18, delayTime:.14, masterGain:.82,
-    harmonyMode:'dissonant',
-    particleGlow:1.5, trailLen:4, lens:'Tension', bgPulse:false, cinematic:false,
-    primary:'#ff4444', secondary:'#0a0000', accent:'#44ffaa',
-    gateCount:5, attractorCount:1,
-  },
-
-  // ── 19. Cage Chance Ritual ───────────────────────────────────────────────
-  {
-    id:'cage-ritual', name:'Cage Chance Ritual', intensity:1,
-    description:'Silêncio como operador. Eventos raros e significativos.',
-    vibe:'Silence, Contemplation, Rare Events',
-    tags:['Experimental','Cage','Chance','Sparse'],
-    bpm:60, scale:'chromatic', root:48, quantaCount:48,
+    id:'minimal-micro', name:'Minimal Microhouse', intensity:3,
+    description:'Groove swing com clicks percussivos. Menos é mais.',
+    vibe:'Clicks, Swing, Hypnotic',
+    tags:['Techno','Minimal','Groove'],
+    bpm:124, scale:'minor', root:36, quantaCount:64,
     motionStyle:'drift',
     roles:{
-      PERC: role(.40,[48,84],Q(.001,.04,.0,.08),'noise','bandpass',1200,1,.45,0,.9,4,.6),
-      PAD:  role(.35,[48,72],Q(1.0,.5,.7,3.0),'sine','lowpass',800,1.5,.35,0,.8,3,2.0),
-      BASS: role(.25,[36,55],Q(.05,.3,.5,.8),'sine','lowpass',300,1,.4,0,.5,2,1.5),
+      KICK:  role(.18,[24,36],Q(.001,.06,.0,.04),'kick','lowpass',180,.4,.80,0,.2,4,.45),
+      PERC:  role(.35,[60,84],Q(.001,.04,.0,.02),'snare','bandpass',3500,.8,.50,0,.7,5,.2),
+      BASS:  role(.22,[36,48],Q(.01,.12,.3,.1),'triangle','lowpass',350,2,.55,0,.35,3,.35),
+      LEAD:  role(.25,[60,72],Q(.008,.08,.4,.12),'square','lowpass',800,3,.45,12,.6,2,.4),
     },
-    syncThreshold:.65, encounterR:.20, entainment:.1, eventRate:.15,
-    reverbAmt:.8, delayAmt:.55, delayTime:.9, masterGain:.6,
+    syncThreshold:.4, encounterR:.09, entainment:.4, eventRate:.6,
+    reverbAmt:.12, delayAmt:.25, delayTime:.12, masterGain:.8,
+    harmonyMode:'modal',
+    particleGlow:1.0, trailLen:3, lens:'Rhythm', bgPulse:false, cinematic:false,
+    primary:'#33ff88', secondary:'#1a1a2e', accent:'#ff8833',
+    gateCount:3, attractorCount:1,
+  },
+
+  // 10 ── Acid Swarm ──────────────────────────────────────────────────────────
+  // Murmuration physics — 303 lines slide with flock velocity. High resonance.
+  {
+    id:'acid-swarm', name:'Acid Swarm', intensity:5,
+    description:'303-style acid com flock murmuration. Slides por velocidade do bando.',
+    vibe:'Resonance, Squelch, Rave',
+    tags:['Techno','Acid','Rave','Electronic'],
+    bpm:138, scale:'minor', root:36, quantaCount:96,
+    motionStyle:'murmuration',
+    roles:{
+      KICK:  role(.18,[24,36],Q(.001,.07,.0,.05),'kick','lowpass',220,.5,.85,0,.2,5,.35),
+      BASS:  role(.30,[36,52],Q(.002,.12,.45,.08),'sawtooth','lowpass',360,18,.75,-7,.4,4,.14),
+      PERC:  role(.22,[60,84],Q(.001,.05,.0,.03),'hihat','highpass',6000,.5,.50,0,.7,4,.16),
+      LEAD:  role(.30,[52,76],Q(.003,.10,.35,.10),'sawtooth','lowpass',450,14,.65,0,.5,3,.18),
+    },
+    syncThreshold:.5, encounterR:.11, entainment:.7, eventRate:.85,
+    reverbAmt:.15, delayAmt:.2, delayTime:.14, masterGain:.82,
+    harmonyMode:'modal',
+    particleGlow:1.6, trailLen:6, lens:'Rhythm', bgPulse:true, cinematic:true,
+    primary:'#ff5500', secondary:'#220000', accent:'#00ff88',
+    gateCount:4, attractorCount:2,
+  },
+
+  // 11 ── Detroit Chords ──────────────────────────────────────────────────────
+  // Dance physics — pairs orbit each other. Chord stabs between partners.
+  {
+    id:'detroit-chords', name:'Detroit Chords', intensity:4,
+    description:'Pares orbitantes gerando chord stabs. Dança de Detroit soul.',
+    vibe:'Soulful, Chords, Garage',
+    tags:['Techno','Club','Groove','Ambient'],
+    bpm:122, scale:'minor', root:48, quantaCount:88,
+    motionStyle:'dance',
+    roles:{
+      KICK:    role(.18,[24,36],Q(.001,.10,.0,.06),'kick','lowpass',200,.5,.82,0,.2,4,.42),
+      BASS:    role(.18,[36,52],Q(.008,.22,.55,.15),'sawtooth','lowpass',300,2.5,.65,-3,.35,3,.3),
+      PAD:     role(.25,[48,72],Q(.08,.15,.65,.45),'sawtooth','lowpass',1200,3,.55,7,.8,4,.5),
+      LEAD:    role(.20,[60,84],Q(.01,.08,.50,.15),'square','lowpass',1800,2.5,.50,5,.6,3,.25),
+      STRINGS: role(.19,[48,72],Q(.3,.2,.7,1.0),'triangle','lowpass',1400,1,.40,0,.7,3,.8),
+    },
+    syncThreshold:.48, encounterR:.12, entainment:.55, eventRate:.7,
+    reverbAmt:.3, delayAmt:.35, delayTime:.22, masterGain:.82,
+    harmonyMode:'modal',
+    particleGlow:1.3, trailLen:6, lens:'Harmony', bgPulse:true, cinematic:false,
+    primary:'#ff9944', secondary:'#1a0a1e', accent:'#44aaff',
+    gateCount:4, attractorCount:1,
+  },
+
+  // 12 ── Breakbeat Reactor ───────────────────────────────────────────────────
+  // Chaos physics — brownian motion creates unpredictable rhythms. High energy.
+  {
+    id:'breakbeat', name:'Breakbeat Reactor', intensity:5,
+    description:'Caos browniano gerando breaks imprevisíveis. Cada colisão é um hit.',
+    vibe:'Breaks, Chaos, Rave',
+    tags:['Breakbeat','Electronic','Experimental','Rave'],
+    bpm:140, scale:'minor', root:36, quantaCount:112,
+    motionStyle:'chaos',
+    roles:{
+      KICK:  role(.20,[24,36],Q(.001,.06,.0,.04),'kick','lowpass',220,.5,.90,0,.3,6,.3),
+      PERC:  role(.30,[48,84],Q(.001,.05,.0,.03),'snare','bandpass',3500,1,.55,0,.8,5,.15),
+      BASS:  role(.20,[36,52],Q(.003,.15,.50,.08),'sawtooth','lowpass',280,4,.70,-5,.3,4,.2),
+      LEAD:  role(.15,[60,84],Q(.005,.08,.35,.12),'square','bandpass',1600,3,.50,7,.5,3,.18),
+      ARP:   role(.15,[60,96],Q(.002,.06,.10,.08),'square','lowpass',2800,2,.45,0,.7,3,.12),
+    },
+    syncThreshold:.6, encounterR:.10, entainment:.75, eventRate:1.0,
+    reverbAmt:.12, delayAmt:.18, delayTime:.11, masterGain:.85,
     harmonyMode:'free',
-    particleGlow:2.0, trailLen:14, lens:'Events', bgPulse:false, cinematic:true,
-    primary:'#aaaaaa', secondary:'#030303', accent:'#ffffff',
+    particleGlow:1.5, trailLen:4, lens:'Rhythm', bgPulse:true, cinematic:true,
+    primary:'#ff2200', secondary:'#0a0008', accent:'#ffcc00',
+    gateCount:6, attractorCount:2,
+  },
+
+  // 13 ── Dub Techno Fog ──────────────────────────────────────────────────────
+  // Organism physics — breathing cluster. Deep delay + reverb wash.
+  {
+    id:'dub-techno', name:'Dub Techno Fog', intensity:3,
+    description:'Massa orgânica respirando em delay infinito. Cordas dubby.',
+    vibe:'Dub, Fog, Hypnotic',
+    tags:['Techno','Ambient','Drone','Club'],
+    bpm:120, scale:'dorian', root:36, quantaCount:80,
+    motionStyle:'organism',
+    roles:{
+      KICK:    role(.15,[24,36],Q(.001,.12,.0,.08),'kick','lowpass',160,.4,.75,0,.2,3,.5),
+      BASS:    role(.22,[36,52],Q(.01,.25,.60,.2),'sine','lowpass',250,1.5,.60,0,.3,3,.4),
+      PAD:     role(.28,[48,72],Q(.5,.3,.75,1.5),'sawtooth','lowpass',600,2.5,.45,5,.8,3,1.0),
+      PERC:    role(.15,[60,84],Q(.001,.04,.0,.03),'hihat','highpass',4500,.5,.40,0,.6,4,.22),
+      STRINGS: role(.20,[48,72],Q(.4,.3,.65,1.2),'triangle','lowpass',1100,1,.38,0,.7,2,.9),
+    },
+    syncThreshold:.38, encounterR:.13, entainment:.45, eventRate:.5,
+    reverbAmt:.75, delayAmt:.65, delayTime:.35, masterGain:.75,
+    harmonyMode:'modal',
+    particleGlow:1.6, trailLen:10, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#5588cc', secondary:'#050810', accent:'#aaddff',
+    gateCount:3, attractorCount:1,
+  },
+
+  // 14 ── Carnival Samba ──────────────────────────────────────────────────────
+  // Carnival physics — 3 vortices spinning. Syncopated percussion explosion.
+  {
+    id:'carnival-samba', name:'Carnival Samba', intensity:5,
+    description:'Três vórtices em festa. Percussão sincopada com swing brasileiro.',
+    vibe:'Carnaval, Ritmo, Energia',
+    tags:['Groove','Dynamic','Electronic','Experimental'],
+    bpm:126, scale:'dorian', root:48, quantaCount:120,
+    motionStyle:'carnival',
+    roles:{
+      KICK:    role(.18,[24,36],Q(.001,.07,.0,.05),'kick','lowpass',200,.5,.85,0,.2,5,.35),
+      PERC:    role(.30,[48,84],Q(.001,.05,.0,.02),'snare','bandpass',3000,.8,.55,0,.8,5,.14),
+      BASS:    role(.18,[36,52],Q(.008,.15,.50,.1),'sawtooth','lowpass',320,3,.65,-3,.35,4,.22),
+      ARP:     role(.20,[60,96],Q(.003,.08,.15,.12),'square','lowpass',2400,2,.50,0,.7,4,.1),
+      LEAD:    role(.14,[60,84],Q(.01,.10,.40,.15),'sawtooth','lowpass',1600,3,.55,7,.5,3,.2),
+    },
+    syncThreshold:.55, encounterR:.11, entainment:.7, eventRate:.9,
+    reverbAmt:.2, delayAmt:.25, delayTime:.13, masterGain:.85,
+    harmonyMode:'modal',
+    particleGlow:1.5, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:true,
+    primary:'#ffcc00', secondary:'#1a0a00', accent:'#ff3366',
+    gateCount:5, attractorCount:3,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── III. CLASSICAL & MINIMALIST ────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 15 ── Reich Phase Machine ─────────────────────────────────────────────────
+  // Revolution physics — spiral collapse/eject creates phasing patterns.
+  {
+    id:'reich-phase', name:'Reich Phase Machine', intensity:3,
+    description:'Phasing emergente por espiral. Padrões se desalinham e realinham.',
+    vibe:'Phasing, Pattern, Process',
+    tags:['Classical','Minimalist','Generative','Experimental'],
+    bpm:96, scale:'major', root:60, quantaCount:80,
+    motionStyle:'revolution',
+    roles:{
+      ARP:     role(.35,[60,84],Q(.003,.10,.18,.15),'triangle','lowpass',2800,1.5,.50,0,.6,4,.16),
+      LEAD:    role(.25,[60,80],Q(.005,.08,.45,.12),'triangle','lowpass',2200,1,.48,3,.5,3,.18),
+      PAD:     role(.20,[48,72],Q(.5,.3,.7,1.0),'sine','lowpass',900,1,.38,0,.7,2,.8),
+      PERC:    role(.20,[60,84],Q(.001,.04,.0,.03),'noise','highpass',4000,.4,.42,0,.6,4,.2),
+    },
+    syncThreshold:.45, encounterR:.10, entainment:.6, eventRate:.7,
+    reverbAmt:.35, delayAmt:.45, delayTime:.28, masterGain:.78,
+    harmonyMode:'consonant',
+    particleGlow:1.2, trailLen:6, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#ccffaa', secondary:'#080c08', accent:'#ffaa44',
+    gateCount:4, attractorCount:1,
+  },
+
+  // 16 ── Satie Gymnopédie ────────────────────────────────────────────────────
+  // Drift physics — gentle wandering. Sparse piano-like tones in lydian.
+  {
+    id:'satie-gymno', name:'Satie Gymnopédie', intensity:2,
+    description:'Deriva suave com notas esparsas de piano. Simplicidade perfeita.',
+    vibe:'Sparse, Gentle, Elegant',
+    tags:['Classical','Minimalist','Soft','Ambient'],
+    bpm:62, scale:'lydian', root:53, quantaCount:48,
+    motionStyle:'drift',
+    roles:{
+      LEAD:    role(.40,[60,84],Q(.01,.15,.40,.3),'triangle','lowpass',2000,1,.45,0,.5,2,.5),
+      PAD:     role(.30,[48,72],Q(1.0,.5,.75,2.0),'sine','lowpass',800,1,.35,0,.8,2,1.5),
+      BASS:    role(.15,[36,52],Q(.05,.3,.55,.4),'sine','lowpass',350,1,.50,0,.3,2,.6),
+      STRINGS: role(.15,[48,72],Q(.5,.3,.65,1.5),'triangle','lowpass',1200,1,.35,5,.7,2,1.2),
+    },
+    syncThreshold:.30, encounterR:.15, entainment:.30, eventRate:.30,
+    reverbAmt:.65, delayAmt:.4, delayTime:.35, masterGain:.7,
+    harmonyMode:'consonant',
+    particleGlow:1.5, trailLen:8, lens:'Notes', bgPulse:false, cinematic:true,
+    primary:'#ffeedd', secondary:'#0a0808', accent:'#aaccff',
     gateCount:2, attractorCount:0,
   },
 
-  // ── 20. Glitch Ritual Machine ────────────────────────────────────────────
+  // 17 ── Bartók Pizzicato ────────────────────────────────────────────────────
+  // Jazz physics — small clusters form and dissolve. Plucked string textures.
   {
-    id:'glitch-ritual', name:'Glitch Ritual Machine', intensity:5,
-    description:'Micro-cortes, stutters, rate-limited. Visual glitch bonito.',
-    vibe:'Glitched, Digital, Stuttering',
-    tags:['Experimental','Glitch','Electronic','Digital'],
-    bpm:140, scale:'whole_tone', root:36, quantaCount:112,
-    motionStyle:'lattice',
+    id:'bartok-pizz', name:'Bartók Pizzicato', intensity:3,
+    description:'Microclusters formam, improvisam e dissolvem. Pizzicato folclórico.',
+    vibe:'Folk, Plucked, Angular',
+    tags:['Classical','Experimental','Strings','Dynamic'],
+    bpm:104, scale:'harmonic_minor', root:45, quantaCount:72,
+    motionStyle:'jazz',
     roles:{
-      PERC:  role(.30,[60,84],Q(.001,.025,.0,.02),'noise','highpass',6000,.8,.65,0,.8,6,.1),
-      LEAD:  role(.30,[48,72],Q(.002,.04,.2,.04),'square','lowpass',2500,8,.6,0,.7,5,.12),
-      BASS:  role(.20,[36,52],Q(.001,.1,.4,.06),'sawtooth','lowpass',500,6,.7,0,.4,4,.18),
-      ARP:   role(.20,[60,80],Q(.001,.03,.1,.04),'square','bandpass',3000,5,.5,0,.6,5,.1),
+      STRINGS: role(.30,[48,76],Q(.003,.08,.12,.15),'triangle','bandpass',1800,2,.50,0,.7,3,.18),
+      LEAD:    role(.25,[52,84],Q(.005,.10,.35,.12),'triangle','lowpass',2200,2,.48,5,.5,3,.2),
+      PERC:    role(.20,[60,84],Q(.001,.04,.0,.03),'noise','bandpass',2500,.6,.42,0,.6,4,.16),
+      PAD:     role(.15,[42,60],Q(.4,.3,.6,1.0),'sine','lowpass',600,1,.35,0,.7,2,.9),
+      BASS:    role(.10,[28,48],Q(.01,.15,.45,.15),'triangle','lowpass',300,1.5,.55,0,.3,2,.4),
     },
-    syncThreshold:.32, encounterR:.08, entainment:.25, eventRate:2.0,
-    reverbAmt:.12, delayAmt:.2, delayTime:.07, masterGain:.85,
-    harmonyMode:'dissonant',
-    particleGlow:1.2, trailLen:2, lens:'Events', bgPulse:true, cinematic:false,
-    primary:'#00ffff', secondary:'#000a0a', accent:'#ff00ff',
+    syncThreshold:.40, encounterR:.10, entainment:.50, eventRate:.55,
+    reverbAmt:.35, delayAmt:.3, delayTime:.18, masterGain:.78,
+    harmonyMode:'modal',
+    particleGlow:1.0, trailLen:4, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#ffd700', secondary:'#0c0800', accent:'#88aaff',
+    gateCount:4, attractorCount:1,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── IV. JAZZ & IMPROVISATION ───────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 18 ── Cool Jazz Midnight ──────────────────────────────────────────────────
+  // Jazz physics — microcluster improvisation. Modal voicings + brush percussion.
+  {
+    id:'cool-jazz', name:'Cool Jazz Midnight', intensity:3,
+    description:'Clusters improvisando em modal. Brushes, piano, contrabaixo.',
+    vibe:'Smoky, Modal, Late Night',
+    tags:['Jazz','Improvisation','Modal','Soft'],
+    bpm:72, scale:'dorian', root:45, quantaCount:64,
+    motionStyle:'jazz',
+    roles:{
+      BASS:    role(.20,[28,48],Q(.02,.25,.65,.3),'triangle','lowpass',280,1.5,.55,0,.3,2,.4),
+      LEAD:    role(.25,[55,84],Q(.01,.12,.45,.2),'triangle','lowpass',1800,1.5,.48,0,.5,3,.25),
+      PAD:     role(.18,[48,72],Q(.5,.3,.70,1.2),'sine','lowpass',800,1,.38,5,.7,2,.9),
+      PERC:    role(.22,[48,72],Q(.001,.06,.0,.04),'noise','bandpass',2000,.5,.40,0,.6,4,.2),
+      ARP:     role(.15,[60,88],Q(.005,.10,.20,.15),'triangle','lowpass',2400,1,.40,0,.5,2,.3),
+    },
+    syncThreshold:.35, encounterR:.12, entainment:.40, eventRate:.45,
+    reverbAmt:.55, delayAmt:.4, delayTime:.28, masterGain:.72,
+    harmonyMode:'modal',
+    particleGlow:1.3, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#ff9944', secondary:'#0a0608', accent:'#88ccff',
+    gateCount:3, attractorCount:1,
+  },
+
+  // 19 ── Free Jazz Storm ─────────────────────────────────────────────────────
+  // War physics — two armies of sound colliding. Chromatic freedom.
+  {
+    id:'free-jazz', name:'Free Jazz Storm', intensity:5,
+    description:'Dois exércitos tímbricos colidindo. Cromatismo livre. Ornette Coleman.',
+    vibe:'Free, Collision, Energy',
+    tags:['Jazz','Experimental','Dynamic','Improvisation'],
+    bpm:108, scale:'chromatic', root:48, quantaCount:96,
+    motionStyle:'war',
+    roles:{
+      LEAD:    role(.25,[48,96],Q(.003,.08,.35,.1),'sawtooth','lowpass',2500,3,.55,7,.6,3,.15),
+      PERC:    role(.25,[48,84],Q(.001,.05,.0,.04),'noise','bandpass',3000,.6,.48,0,.8,5,.12),
+      BASS:    role(.20,[28,52],Q(.005,.18,.55,.12),'sawtooth','lowpass',350,3,.65,-5,.3,3,.2),
+      ARP:     role(.15,[60,96],Q(.002,.06,.15,.08),'square','bandpass',2000,4,.45,12,.7,3,.1),
+      PAD:     role(.15,[42,66],Q(.2,.2,.50,.5),'sawtooth','lowpass',700,2,.35,0,.6,2,.5),
+    },
+    syncThreshold:.55, encounterR:.09, entainment:.65, eventRate:1.0,
+    reverbAmt:.25, delayAmt:.2, delayTime:.12, masterGain:.8,
+    harmonyMode:'free',
+    particleGlow:1.5, trailLen:4, lens:'Tension', bgPulse:true, cinematic:true,
+    primary:'#ff3333', secondary:'#0a0004', accent:'#ffcc00',
     gateCount:6, attractorCount:2,
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ── PRESETS 21–40: New Quantum Era (Channel/Rail/Tunnel/Sequencer ready) ──
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // ── 21. Acid House 303 ────────────────────────────────────────────────────
+  // 20 ── Bebop Cells ─────────────────────────────────────────────────────────
+  // Cells physics — breathing groups. Fast harmonic lines over walking bass.
   {
-    id:'acid-house', name:'Acid House 303', intensity:5,
-    description:'303 squelch clássico. Ressonância alta, slide por proximidade.',
-    vibe:'Squelch, Rave, Resonance',
-    tags:['Techno','Acid','Rave','Electronic'],
-    bpm:130, scale:'phrygian', root:40, quantaCount:112,
-    motionStyle:'orbit',
+    id:'bebop-cells', name:'Bebop Cells', intensity:4,
+    description:'Grupos celulares respirando. Linhas harmônicas rápidas. Walking bass.',
+    vibe:'Swing, Virtuosity, Energy',
+    tags:['Jazz','Groove','Dynamic','Improvisation'],
+    bpm:160, scale:'mixolydian', root:48, quantaCount:80,
+    motionStyle:'cells',
     roles:{
-      BASS: role(.45,[36,60],Q(.002,.12,.5,.1),'sawtooth','lowpass',380,20,.78,-7,.5,6,.14),
-      KICK: role(.15,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.85,0,.2,5,.4),
-      LEAD: role(.25,[52,72],Q(.003,.09,.55,.1),'sawtooth','lowpass',1600,14,.68,14,.6,4,.2),
-      PERC: role(.15,[60,80],Q(.001,.05,.0,.03),'hihat','highpass',6500,.5,.5,0,.8,4,.2),
+      BASS:    role(.20,[28,52],Q(.01,.12,.55,.1),'triangle','lowpass',350,1.5,.60,0,.3,3,.18),
+      LEAD:    role(.30,[55,96],Q(.003,.06,.35,.08),'triangle','lowpass',2800,1.5,.50,0,.5,3,.12),
+      PERC:    role(.25,[48,84],Q(.001,.04,.0,.02),'hihat','highpass',5000,.4,.45,0,.7,5,.1),
+      ARP:     role(.15,[60,90],Q(.003,.08,.20,.1),'triangle','lowpass',2400,1,.42,5,.6,3,.14),
+      PAD:     role(.10,[48,66],Q(.2,.2,.5,.5),'sine','lowpass',700,1,.30,0,.6,2,.8),
     },
-    syncThreshold:.42, encounterR:.11, entainment:.5, eventRate:1.3,
-    reverbAmt:.12, delayAmt:.22, delayTime:.19, masterGain:.87,
-    harmonyMode:'free',
-    particleGlow:1.8, trailLen:6, lens:'Tension', bgPulse:true, cinematic:false,
-    primary:'#ff6600', secondary:'#1a0020', accent:'#ffff00',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 22. Drone Cathedral ───────────────────────────────────────────────────
-  {
-    id:'drone-cathedral', name:'Drone Cathedral', intensity:2,
-    description:'Drones longos e PADs etéreos. Quase estático, infinitamente rico.',
-    vibe:'Ethereal, Drone, Sacred',
-    tags:['Ambient','Drone','Space','Meditative'],
-    bpm:52, scale:'whole_tone', root:36, quantaCount:64,
-    motionStyle:'drift',
-    roles:{
-      PAD:     role(.45,[36,60],Q(.8,.5,.85,2.0),'sawtooth','lowpass',500,1.5,.55,0,.9,3,1.2),
-      STRINGS: role(.30,[48,72],Q(.5,.4,.75,1.5),'triangle','lowpass',1200,1,.45,0,1.0,2,1.0),
-      CHOIR:   role(.15,[60,72],Q(.6,.3,.7,1.8),'sine','lowpass',2000,.8,.35,0,.8,2,1.4),
-      BASS:    role(.10,[24,40],Q(.1,.4,.8,.8),'sine','lowpass',180,2,.6,0,.2,2,1.5),
-    },
-    syncThreshold:.7, encounterR:.18, entainment:.8, eventRate:.25,
-    reverbAmt:.55, delayAmt:.35, delayTime:.38, masterGain:.75,
-    harmonyMode:'consonant',
-    particleGlow:1.0, trailLen:12, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#9966ff', secondary:'#050810', accent:'#aaccff',
-    gateCount:2, attractorCount:1,
-  },
-
-  // ── 23. Afrobeat Cosmos ───────────────────────────────────────────────────
-  {
-    id:'afrobeat-cosmos', name:'Afrobeat Cosmos', intensity:4,
-    description:'Polirritmia emergente. Cross-rythm de Fela Kuti via partículas.',
-    vibe:'Polyrhythm, Groove, Africa',
-    tags:['Groove','Experimental','Electronic','Dynamic'],
-    bpm:112, scale:'major', root:43, quantaCount:120,
-    motionStyle:'swarm',
-    roles:{
-      KICK:    role(.15,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.88,0,.25,5,.42),
-      BASS:    role(.22,[36,52],Q(.008,.15,.6,.12),'sawtooth','lowpass',320,3,.72,0,.3,4,.28),
-      PERC:    role(.30,[55,80],Q(.001,.05,.0,.03),'snare','bandpass',3200,.8,.6,0,.9,6,.15),
-      STRINGS: role(.20,[55,72],Q(.18,.2,.55,.6),'triangle','lowpass',1600,1.5,.5,0,.8,3,.5),
-      LEAD:    role(.13,[60,76],Q(.01,.1,.45,.15),'square','lowpass',1200,3,.55,0,.6,2,.4),
-    },
-    syncThreshold:.48, encounterR:.12, entainment:.55, eventRate:1.0,
-    reverbAmt:.2, delayAmt:.18, delayTime:.27, masterGain:.85,
+    syncThreshold:.50, encounterR:.09, entainment:.60, eventRate:.85,
+    reverbAmt:.25, delayAmt:.2, delayTime:.1, masterGain:.78,
     harmonyMode:'modal',
-    particleGlow:1.3, trailLen:4, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#ff9922', secondary:'#1a0800', accent:'#00ffaa',
-    gateCount:5, attractorCount:2,
-  },
-
-  // ── 24. Industrial Forge ──────────────────────────────────────────────────
-  {
-    id:'industrial-forge', name:'Industrial Forge', intensity:5,
-    description:'Distorção pesada. Kick metálico. Texturas brutalistas.',
-    vibe:'Brutal, Metal, Noise',
-    tags:['Electronic','Dark','Experimental','Club'],
-    bpm:145, scale:'chromatic', root:36, quantaCount:130,
-    motionStyle:'spiral',
-    roles:{
-      KICK:  role(.25,[24,36],Q(.001,.1,.0,.06),'kick','lowpass',250,.6,.92,0,.35,6,.38),
-      PERC:  role(.30,[48,72],Q(.001,.05,.0,.04),'noise','bandpass',2800,8,.7,0,.9,5,.15),
-      BASS:  role(.25,[30,48],Q(.005,.2,.5,.1),'sawtooth','lowpass',400,5,.75,0,.4,4,.25),
-      LEAD:  role(.20,[48,72],Q(.008,.12,.4,.1),'square','lowpass',1800,6,.65,7,.7,3,.3),
-    },
-    syncThreshold:.35, encounterR:.10, entainment:.35, eventRate:1.8,
-    reverbAmt:.08, delayAmt:.12, delayTime:.11, masterGain:.9,
-    harmonyMode:'dissonant',
-    particleGlow:1.5, trailLen:3, lens:'Tension', bgPulse:true, cinematic:false,
-    primary:'#cc2200', secondary:'#0a0a0a', accent:'#ff6600',
+    particleGlow:1.0, trailLen:3, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#ff9944', secondary:'#0c0608', accent:'#44ff88',
     gateCount:5, attractorCount:1,
   },
 
-  // ── 25. K-Pop Heaven ──────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── V. PHYSICS SHOWCASE ────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 21 ── Ballistic Cathedral ─────────────────────────────────────────────────
+  // Ballistic physics with gravity. Particles fall and bounce, creating rhythm.
   {
-    id:'kpop-heaven', name:'K-Pop Heaven', intensity:4,
-    description:'Synths brilhantes, arpejos rápidos, harmonias doces. Ultra-polido.',
-    vibe:'Bright, Sparkle, Sugar',
-    tags:['Electronic','Groove','Dynamic','Soft'],
-    bpm:126, scale:'major', root:38, quantaCount:108,
-    motionStyle:'flow',
+    id:'ballistic-cathedral', name:'Ballistic Cathedral', intensity:4,
+    description:'Gravidade real. Partículas caem e ricocheteiam em gates — cada quique é uma nota.',
+    vibe:'Gravity, Bounce, Percussion',
+    tags:['Experimental','Dynamic','Generative'],
+    bpm:100, scale:'pentatonic', root:48, quantaCount:60,
+    motionStyle:'ballistic',
     roles:{
-      LEAD:    role(.28,[60,80],Q(.008,.1,.5,.12),'sawtooth','lowpass',2200,4,.65,0,.6,4,.25),
-      ARP:     role(.28,[64,84],Q(.003,.06,.3,.08),'square','bandpass',3000,5,.55,12,.7,5,.12),
-      PAD:     role(.22,[48,66],Q(.3,.3,.72,.8),'sawtooth','lowpass',900,2,.5,0,.8,3,.7),
-      CHOIR:   role(.15,[55,69],Q(.35,.25,.65,.9),'sine','lowpass',2500,.8,.45,0,.9,2,.8),
-      KICK:    role(.07,[24,36],Q(.001,.07,.0,.04),'kick','lowpass',200,.5,.75,0,.2,3,.45),
+      PERC:    role(.30,[48,84],Q(.001,.05,.0,.04),'noise','bandpass',2500,.6,.55,0,.7,5,.15),
+      LEAD:    role(.25,[55,84],Q(.005,.10,.35,.15),'triangle','lowpass',2200,1.5,.48,0,.5,3,.2),
+      BASS:    role(.20,[28,48],Q(.01,.2,.55,.15),'sine','lowpass',250,1,.55,0,.3,3,.3),
+      ARP:     role(.15,[60,96],Q(.003,.08,.12,.1),'triangle','lowpass',3000,1.5,.42,5,.6,3,.14),
+      STRINGS: role(.10,[48,72],Q(.3,.2,.6,.8),'triangle','lowpass',1200,1,.35,0,.7,2,.8),
     },
-    syncThreshold:.55, encounterR:.12, entainment:.6, eventRate:.85,
-    reverbAmt:.28, delayAmt:.22, delayTime:.15, masterGain:.82,
+    syncThreshold:.45, encounterR:.10, entainment:.55, eventRate:.7,
+    reverbAmt:.55, delayAmt:.4, delayTime:.25, masterGain:.78,
     harmonyMode:'consonant',
-    particleGlow:1.6, trailLen:7, lens:'Harmony', bgPulse:true, cinematic:true,
-    primary:'#ff55cc', secondary:'#100015', accent:'#00e5ff',
-    gateCount:3, attractorCount:2,
+    particleGlow:1.3, trailLen:5, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#ffd700', secondary:'#080808', accent:'#88aaff',
+    gateCount:5, attractorCount:0,
   },
 
-  // ── 26. Bossa Nova Quântica ───────────────────────────────────────────────
+  // 22 ── Murmuration Song ────────────────────────────────────────────────────
+  // Full murmuration with all 8 roles — the flock IS the orchestra.
   {
-    id:'bossa-nova', name:'Bossa Nova Quântica', intensity:3,
-    description:'Syncopação suave. Violão+Baixo emergindo de polos opostos.',
-    vibe:'Swing, Gentle, Breezy',
-    tags:['Jazz','Swing','Soft','Groove'],
-    bpm:105, scale:'major', root:41, quantaCount:88,
-    motionStyle:'drift',
+    id:'murmuration-song', name:'Murmuration Song', intensity:4,
+    description:'O bando É a orquestra. 8 roles em formação de estorninho cantante.',
+    vibe:'Flock, Orchestra, Emergence',
+    tags:['Generative','Experimental','Orchestral','Dynamic'],
+    bpm:88, scale:'major', root:48, quantaCount:128,
+    motionStyle:'murmuration',
     roles:{
-      BASS:    role(.30,[36,50],Q(.008,.18,.65,.15),'triangle','lowpass',340,2,.7,0,.3,3,.32),
-      STRINGS: role(.30,[52,68],Q(.15,.2,.6,.65),'triangle','lowpass',1400,1.2,.52,0,.75,3,.55),
-      CHOIR:   role(.25,[58,70],Q(.3,.22,.62,.8),'sine','lowpass',2200,.8,.42,0,.85,2,.85),
-      PERC:    role(.15,[55,72],Q(.001,.04,.0,.025),'snare','bandpass',3000,.6,.45,0,.7,3,.25),
+      KICK:    role(.10,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',180,.4,.75,0,.2,3,.45),
+      BASS:    role(.12,[36,52],Q(.01,.2,.55,.15),'sine','lowpass',280,1.5,.55,0,.3,3,.35),
+      PERC:    role(.12,[48,84],Q(.001,.04,.0,.03),'hihat','highpass',5000,.5,.40,0,.7,4,.18),
+      PAD:     role(.15,[48,72],Q(.6,.3,.75,1.2),'sine','lowpass',900,1,.38,0,.8,3,1.0),
+      LEAD:    role(.15,[55,84],Q(.008,.1,.45,.15),'triangle','lowpass',2000,1.5,.48,5,.5,3,.22),
+      ARP:     role(.12,[60,96],Q(.003,.08,.15,.1),'triangle','lowpass',2800,1,.42,0,.6,3,.14),
+      STRINGS: role(.12,[48,76],Q(.35,.2,.65,1.0),'triangle','lowpass',1400,1,.38,3,.8,3,.7),
+      CHOIR:   role(.12,[48,72],Q(1.0,.5,.75,2.0),'sine','lowpass',700,1,.32,0,.9,2,1.5),
     },
-    syncThreshold:.58, encounterR:.14, entainment:.65, eventRate:.65,
-    reverbAmt:.35, delayAmt:.2, delayTime:.3, masterGain:.78,
+    syncThreshold:.42, encounterR:.11, entainment:.55, eventRate:.6,
+    reverbAmt:.45, delayAmt:.35, delayTime:.22, masterGain:.8,
     harmonyMode:'consonant',
-    particleGlow:1.1, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#44cc88', secondary:'#081510', accent:'#ffcc44',
+    particleGlow:1.5, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#88aaff', secondary:'#060810', accent:'#ffcc88',
+    gateCount:4, attractorCount:1,
+  },
+
+  // 23 ── Organism Pulse ──────────────────────────────────────────────────────
+  // Organism physics — mass breathes. Pressure creates rhythm, release creates melody.
+  {
+    id:'organism-pulse', name:'Organism Pulse', intensity:3,
+    description:'Organismo vivo respirando. Contração = ritmo, expansão = melodia.',
+    vibe:'Alive, Breath, Organic',
+    tags:['Generative','Experimental','Organic Instruments','Ambient'],
+    bpm:76, scale:'dorian', root:40, quantaCount:96,
+    motionStyle:'organism',
+    roles:{
+      KICK:    role(.12,[24,36],Q(.001,.1,.0,.06),'kick','lowpass',180,.4,.72,0,.2,3,.5),
+      BASS:    role(.18,[28,48],Q(.02,.25,.65,.2),'sine','lowpass',220,1,.55,0,.3,3,.4),
+      PAD:     role(.25,[42,66],Q(1.0,.5,.80,2.0),'triangle','lowpass',700,1.2,.42,5,.8,3,1.2),
+      LEAD:    role(.18,[55,80],Q(.01,.12,.42,.18),'triangle','lowpass',1800,1.5,.45,0,.5,3,.25),
+      STRINGS: role(.15,[48,72],Q(.4,.3,.65,1.0),'triangle','lowpass',1200,1,.38,3,.7,2,.8),
+      CHOIR:   role(.12,[48,72],Q(1.2,.5,.75,2.5),'sine','lowpass',650,1,.32,0,.9,2,1.5),
+    },
+    syncThreshold:.38, encounterR:.13, entainment:.45, eventRate:.5,
+    reverbAmt:.55, delayAmt:.4, delayTime:.3, masterGain:.75,
+    harmonyMode:'modal',
+    particleGlow:1.8, trailLen:8, lens:'Events', bgPulse:false, cinematic:true,
+    primary:'#44ff88', secondary:'#040a06', accent:'#ff88cc',
     gateCount:3, attractorCount:1,
   },
 
-  // ── 27. Trap 808 Universe ─────────────────────────────────────────────────
+  // 24 ── Predator Prey ───────────────────────────────────────────────────────
+  // Predation physics — roles chase/flee. Musical tension from pursuit.
   {
-    id:'trap-808', name:'Trap 808 Universe', intensity:5,
-    description:'808 sub profundo. Hi-hats rápidos triplets. Melodia trap etérea.',
-    vibe:'808, Triplets, Dark',
-    tags:['Electronic','Dark','Club','Groove'],
-    bpm:148, scale:'minor', root:36, quantaCount:100,
-    motionStyle:'orbit',
+    id:'predator-prey', name:'Predator Prey', intensity:4,
+    description:'Roles perseguem e fogem. A tensão da caça vira tensão harmônica.',
+    vibe:'Hunt, Flight, Tension',
+    tags:['Experimental','Dynamic','Generative'],
+    bpm:112, scale:'harmonic_minor', root:40, quantaCount:88,
+    motionStyle:'predation',
     roles:{
-      KICK:    role(.20,[24,36],Q(.001,.25,.0,.18),'kick','lowpass',160,.5,.95,0,.25,4,.5),
-      BASS:    role(.25,[30,48],Q(.002,.4,.7,.3),'sine','lowpass',180,1.5,.85,-12,.25,3,.35),
-      PERC:    role(.30,[60,84],Q(.001,.025,.0,.015),'hihat','highpass',8000,.4,.6,0,1.0,6,.1),
-      LEAD:    role(.15,[60,76],Q(.01,.12,.5,.15),'sawtooth','bandpass',1600,5,.58,7,.6,3,.3),
-      PAD:     role(.10,[48,62],Q(.4,.3,.7,.9),'sawtooth','lowpass',700,2,.38,0,.7,2,.9),
+      KICK:    role(.12,[24,36],Q(.001,.07,.0,.05),'kick','lowpass',200,.5,.82,0,.2,4,.4),
+      BASS:    role(.18,[28,52],Q(.008,.2,.55,.12),'sawtooth','lowpass',300,2.5,.65,-3,.3,3,.25),
+      PERC:    role(.18,[48,84],Q(.001,.05,.0,.03),'snare','bandpass',3000,.6,.48,0,.7,5,.15),
+      LEAD:    role(.22,[52,88],Q(.005,.08,.40,.12),'sawtooth','lowpass',2000,3,.55,7,.5,3,.18),
+      PAD:     role(.15,[42,66],Q(.3,.2,.60,.8),'triangle','lowpass',700,1.5,.38,0,.7,2,.7),
+      ARP:     role(.15,[60,90],Q(.003,.08,.15,.1),'square','lowpass',2500,2,.42,0,.6,3,.12),
     },
-    syncThreshold:.4, encounterR:.10, entainment:.38, eventRate:1.1,
-    reverbAmt:.22, delayAmt:.18, delayTime:.25, masterGain:.88,
-    harmonyMode:'modal',
-    particleGlow:1.4, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:true,
-    primary:'#cc0044', secondary:'#080010', accent:'#ff8800',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 28. Neo-Soul Orbit ────────────────────────────────────────────────────
-  {
-    id:'neo-soul', name:'Neo-Soul Orbit', intensity:3,
-    description:'Acordes 7ths/9ths densos. Groove irresistível. Rhodes emergente.',
-    vibe:'Warm, 9ths, Soul',
-    tags:['Jazz','Groove','Soft','Strings'],
-    bpm:90, scale:'dorian', root:38, quantaCount:96,
-    motionStyle:'orbit',
-    roles:{
-      BASS:    role(.25,[33,48],Q(.008,.2,.68,.15),'sawtooth','lowpass',260,3,.75,0,.3,4,.3),
-      PAD:     role(.30,[48,68],Q(.35,.3,.75,.9),'sawtooth','lowpass',800,2,.58,4,.75,3,.65),
-      STRINGS: role(.25,[52,68],Q(.2,.25,.62,.7),'triangle','lowpass',1600,1.5,.52,0,.85,3,.5),
-      CHOIR:   role(.12,[58,70],Q(.4,.25,.68,.95),'sine','lowpass',2400,.8,.38,0,.9,2,.9),
-      PERC:    role(.08,[55,72],Q(.001,.05,.0,.03),'snare','bandpass',2800,.6,.42,0,.75,3,.3),
-    },
-    syncThreshold:.55, encounterR:.13, entainment:.6, eventRate:.65,
-    reverbAmt:.32, delayAmt:.2, delayTime:.28, masterGain:.8,
-    harmonyMode:'consonant',
-    particleGlow:1.2, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#ff9944', secondary:'#100808', accent:'#88cc44',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 29. Drum & Bass Reactor ───────────────────────────────────────────────
-  {
-    id:'drum-and-bass', name:'Drum & Bass Reactor', intensity:5,
-    description:'Breakbeat a 174 BPM. Sub-bass enorme. Strings trêmulas.',
-    vibe:'Breaks, 174BPM, Sub',
-    tags:['Electronic','Breakbeat','Dark','Dynamic'],
-    bpm:174, scale:'minor', root:35, quantaCount:140,
-    motionStyle:'spiral',
-    roles:{
-      KICK:    role(.18,[24,36],Q(.001,.07,.0,.05),'kick','lowpass',200,.5,.88,0,.28,5,.35),
-      BASS:    role(.25,[30,50],Q(.003,.25,.7,.18),'sawtooth','lowpass',240,2,.82,-7,.3,4,.25),
-      PERC:    role(.28,[55,80],Q(.001,.04,.0,.025),'snare','bandpass',3500,.8,.65,0,.9,6,.12),
-      LEAD:    role(.18,[55,75],Q(.01,.1,.45,.12),'sawtooth','lowpass',1800,5,.62,7,.6,3,.28),
-      STRINGS: role(.11,[52,68],Q(.2,.2,.58,.65),'triangle','lowpass',1600,1.5,.48,0,.8,2,.5),
-    },
-    syncThreshold:.38, encounterR:.10, entainment:.4, eventRate:1.5,
-    reverbAmt:.15, delayAmt:.14, delayTime:.17, masterGain:.88,
-    harmonyMode:'modal',
-    particleGlow:1.5, trailLen:4, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#0066ff', secondary:'#000510', accent:'#ff3388',
+    syncThreshold:.48, encounterR:.10, entainment:.6, eventRate:.75,
+    reverbAmt:.3, delayAmt:.25, delayTime:.15, masterGain:.8,
+    harmonyMode:'dissonant',
+    particleGlow:1.4, trailLen:5, lens:'Tension', bgPulse:true, cinematic:true,
+    primary:'#ff4422', secondary:'#0a0204', accent:'#44ffcc',
     gateCount:5, attractorCount:2,
   },
 
-  // ── 30. Gospel Revival ────────────────────────────────────────────────────
+  // 25 ── Exodus Migration ────────────────────────────────────────────────────
+  // Exodus physics — mass fleeing. Notes fire as the swarm crosses gates.
   {
-    id:'gospel-revival', name:'Gospel Revival', intensity:3,
-    description:'Coro emergente por sync peaks. Strings orquestrais. Espírito.',
-    vibe:'Soulful, Choir, Holy',
-    tags:['Choral','Orchestral','Soft','Modal'],
-    bpm:82, scale:'major', root:45, quantaCount:96,
-    motionStyle:'swarm',
+    id:'exodus-song', name:'Exodus Migration', intensity:4,
+    description:'Migração em massa cruzando portais sonoros. Épico e linear.',
+    vibe:'Epic, Linear, Journey',
+    tags:['Generative','Dynamic','Orchestral','Experimental'],
+    bpm:94, scale:'mixolydian', root:45, quantaCount:112,
+    motionStyle:'exodus',
     roles:{
-      CHOIR:   role(.40,[55,72],Q(.3,.25,.72,.95),'sine','lowpass',2200,.8,.55,0,1.0,4,.75),
-      PAD:     role(.28,[48,64],Q(.45,.35,.78,1.1),'sawtooth','lowpass',700,2,.48,0,.85,3,.85),
-      STRINGS: role(.22,[52,70],Q(.25,.22,.62,.75),'triangle','lowpass',1800,1.5,.5,0,.9,3,.6),
-      BASS:    role(.10,[36,50],Q(.01,.22,.7,.18),'triangle','lowpass',280,2,.65,0,.35,2,.35),
+      KICK:    role(.10,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',180,.4,.78,0,.2,3,.45),
+      BASS:    role(.15,[28,48],Q(.01,.2,.55,.15),'triangle','lowpass',300,1.5,.55,0,.3,3,.3),
+      STRINGS: role(.25,[42,72],Q(.3,.2,.65,1.0),'triangle','lowpass',1400,1,.42,5,.8,3,.7),
+      LEAD:    role(.20,[55,84],Q(.01,.10,.45,.15),'sawtooth','lowpass',2000,2,.50,0,.5,3,.22),
+      PAD:     role(.15,[42,66],Q(.6,.3,.75,1.5),'sine','lowpass',800,1,.38,0,.8,2,1.0),
+      CHOIR:   role(.15,[48,72],Q(1.0,.5,.75,2.0),'sine','lowpass',700,1,.35,0,.9,2,1.5),
     },
-    syncThreshold:.65, encounterR:.16, entainment:.75, eventRate:.5,
-    reverbAmt:.48, delayAmt:.25, delayTime:.35, masterGain:.78,
-    harmonyMode:'consonant',
-    particleGlow:1.1, trailLen:10, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#ffcc44', secondary:'#100c00', accent:'#ffaacc',
-    gateCount:2, attractorCount:1,
-  },
-
-  // ── 31. Flamenco Oscuro ───────────────────────────────────────────────────
-  {
-    id:'flamenco-oscuro', name:'Flamenco Oscuro', intensity:4,
-    description:'Modo frígio andaluz. Zapateado percussivo. Guitarra flamenca.',
-    vibe:'Phrygian, Passion, Flamenco',
-    tags:['Modal','Strings','Groove','Dynamic'],
-    bpm:120, scale:'phrygian', root:45, quantaCount:104,
-    motionStyle:'flow',
-    roles:{
-      BASS:    role(.28,[38,52],Q(.01,.18,.6,.14),'sawtooth','lowpass',340,3,.72,0,.35,3,.3),
-      LEAD:    role(.32,[55,78],Q(.005,.1,.5,.12),'sawtooth','lowpass',1800,8,.68,0,.7,4,.22),
-      PERC:    role(.28,[55,78],Q(.001,.04,.0,.025),'snare','bandpass',3200,.8,.6,0,.85,5,.15),
-      STRINGS: role(.12,[52,68],Q(.15,.2,.58,.65),'triangle','lowpass',1500,1.5,.48,0,.8,2,.5),
-    },
-    syncThreshold:.5, encounterR:.11, entainment:.52, eventRate:1.1,
-    reverbAmt:.22, delayAmt:.15, delayTime:.22, masterGain:.84,
+    syncThreshold:.42, encounterR:.12, entainment:.5, eventRate:.6,
+    reverbAmt:.5, delayAmt:.4, delayTime:.25, masterGain:.78,
     harmonyMode:'modal',
-    particleGlow:1.3, trailLen:5, lens:'Tension', bgPulse:true, cinematic:false,
-    primary:'#cc3300', secondary:'#120500', accent:'#ffc044',
-    gateCount:4, attractorCount:2,
+    particleGlow:1.6, trailLen:8, lens:'Events', bgPulse:false, cinematic:true,
+    primary:'#88ff44', secondary:'#060a04', accent:'#ffaa44',
+    gateCount:5, attractorCount:0,
   },
 
-  // ── 32. Gamelan Quantum ───────────────────────────────────────────────────
+  // 26 ── Polarization Duet ───────────────────────────────────────────────────
+  // Polarization physics — two harmonic poles emerge. Consonance vs dissonance.
   {
-    id:'gamelan-quantum', name:'Gamelan Quantum', intensity:3,
-    description:'Metalofones flutuantes. Pelog/Slendro via whole tone. Trance ritual.',
-    vibe:'Metallophones, Ritual, Bali',
-    tags:['Modal','Meditative','Orchestral','Ambient'],
-    bpm:92, scale:'whole_tone', root:36, quantaCount:88,
+    id:'polarization-duet', name:'Polarization Duet', intensity:3,
+    description:'Duas polaridades harmônicas emergem. Consonância vs dissonância viva.',
+    vibe:'Duality, Contrast, Tension',
+    tags:['Experimental','Generative','Dynamic'],
+    bpm:84, scale:'harmonic_minor', root:48, quantaCount:80,
+    motionStyle:'polarization',
+    roles:{
+      PAD:     role(.25,[42,66],Q(.6,.3,.75,1.5),'sawtooth','lowpass',700,2,.42,5,.8,3,1.0),
+      LEAD:    role(.22,[52,84],Q(.01,.10,.42,.15),'triangle','lowpass',2000,1.5,.48,0,.5,3,.22),
+      STRINGS: role(.20,[48,76],Q(.35,.2,.65,1.0),'triangle','lowpass',1400,1,.38,3,.8,2,.7),
+      BASS:    role(.18,[28,52],Q(.02,.25,.60,.2),'sine','lowpass',250,1,.55,0,.3,3,.4),
+      CHOIR:   role(.15,[48,72],Q(1.0,.5,.75,2.0),'sine','lowpass',650,1,.32,0,.9,2,1.5),
+    },
+    syncThreshold:.38, encounterR:.14, entainment:.45, eventRate:.5,
+    reverbAmt:.55, delayAmt:.45, delayTime:.35, masterGain:.72,
+    harmonyMode:'modal',
+    particleGlow:1.8, trailLen:9, lens:'Tension', bgPulse:false, cinematic:true,
+    primary:'#ff8800', secondary:'#080404', accent:'#4488ff',
+    gateCount:4, attractorCount:1,
+  },
+
+  // 27 ── Revolution Spiral ───────────────────────────────────────────────────
+  // Revolution physics — spiral tightens then ejects. Musical tension/release cycle.
+  {
+    id:'revolution-spiral', name:'Revolution Spiral', intensity:4,
+    description:'Espiral que aperta até explodir. Cada colapso é um clímax musical.',
+    vibe:'Tightening, Release, Cycle',
+    tags:['Experimental','Dynamic','Generative'],
+    bpm:108, scale:'phrygian', root:40, quantaCount:96,
+    motionStyle:'revolution',
+    roles:{
+      KICK:    role(.12,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.82,0,.2,4,.4),
+      BASS:    role(.18,[28,52],Q(.005,.18,.55,.12),'sawtooth','lowpass',320,3,.65,-5,.3,3,.22),
+      LEAD:    role(.25,[52,84],Q(.005,.08,.40,.1),'sawtooth','lowpass',1800,3,.55,7,.5,3,.16),
+      PERC:    role(.18,[48,84],Q(.001,.05,.0,.03),'snare','bandpass',3000,.6,.48,0,.7,5,.14),
+      PAD:     role(.15,[42,66],Q(.3,.2,.55,.6),'triangle','lowpass',600,1.5,.38,0,.6,2,.6),
+      ARP:     role(.12,[60,96],Q(.003,.06,.12,.08),'square','lowpass',2600,2,.42,0,.6,3,.1),
+    },
+    syncThreshold:.50, encounterR:.10, entainment:.65, eventRate:.8,
+    reverbAmt:.3, delayAmt:.25, delayTime:.15, masterGain:.82,
+    harmonyMode:'dissonant',
+    particleGlow:1.5, trailLen:6, lens:'Tension', bgPulse:true, cinematic:true,
+    primary:'#cc44ff', secondary:'#0a0210', accent:'#44ffcc',
+    gateCount:5, attractorCount:2,
+  },
+
+  // 28 ── Explosion Nebula ────────────────────────────────────────────────────
+  // Explosion physics — burst/regroup cycles. Each expansion spawns melodic debris.
+  {
+    id:'explosion-nebula', name:'Explosion Nebula', intensity:5,
+    description:'Explosões cíclicas. Cada expansão espalha fragmentos melódicos.',
+    vibe:'Burst, Debris, Cosmic',
+    tags:['Experimental','Space','Dynamic','Generative'],
+    bpm:96, scale:'whole_tone', root:42, quantaCount:104,
+    motionStyle:'explosion',
+    roles:{
+      KICK:    role(.12,[24,36],Q(.001,.06,.0,.04),'kick','lowpass',200,.5,.85,0,.2,5,.35),
+      PERC:    role(.22,[48,84],Q(.001,.04,.0,.03),'snare','bandpass',3500,.8,.50,0,.8,5,.12),
+      LEAD:    role(.25,[52,88],Q(.003,.08,.30,.1),'triangle','lowpass',2500,2,.50,5,.5,3,.14),
+      ARP:     role(.18,[60,96],Q(.002,.06,.12,.08),'triangle','highpass',2000,1.5,.42,12,.7,3,.1),
+      PAD:     role(.12,[42,66],Q(.3,.2,.50,.5),'sine','lowpass',650,1,.35,0,.6,2,.6),
+      STRINGS: role(.11,[48,72],Q(.2,.2,.55,.8),'triangle','lowpass',1200,1,.35,0,.7,2,.7),
+    },
+    syncThreshold:.50, encounterR:.10, entainment:.6, eventRate:.8,
+    reverbAmt:.4, delayAmt:.35, delayTime:.2, masterGain:.8,
+    harmonyMode:'free',
+    particleGlow:1.8, trailLen:5, lens:'Events', bgPulse:true, cinematic:true,
+    primary:'#ff6600', secondary:'#0a0400', accent:'#88ccff',
+    gateCount:5, attractorCount:1,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── VI. WORLD & MODAL ──────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 29 ── Sitar Raga ──────────────────────────────────────────────────────────
+  // Spiral physics — slow unwinding like a raga. Phrygian drone tanpura.
+  {
+    id:'sitar-raga', name:'Sitar Raga Meditation', intensity:2,
+    description:'Raga emergente com drone tanpura. Espiral meditativa.',
+    vibe:'Raga, Drone, Tanpura',
+    tags:['Modal','Meditative','Strings','Ambient'],
+    bpm:68, scale:'phrygian', root:45, quantaCount:72,
+    motionStyle:'spiral',
+    roles:{
+      STRINGS: role(.35,[48,84],Q(.01,.12,.45,.3),'triangle','bandpass',1600,3,.50,7,.7,3,.25),
+      PAD:     role(.25,[36,60],Q(2.0,.8,.85,3.5),'sine','lowpass',350,1,.45,0,.8,3,2.0),
+      LEAD:    role(.20,[55,84],Q(.008,.10,.40,.2),'triangle','lowpass',2200,2,.48,0,.5,3,.22),
+      BASS:    role(.10,[28,42],Q(.5,.4,.80,2.0),'sine','lowpass',180,.8,.50,0,.2,2,1.5),
+      CHOIR:   role(.10,[48,72],Q(1.5,.6,.75,2.5),'sine','lowpass',600,1,.30,0,.9,2,2.0),
+    },
+    syncThreshold:.32, encounterR:.15, entainment:.30, eventRate:.35,
+    reverbAmt:.75, delayAmt:.5, delayTime:.45, masterGain:.7,
+    harmonyMode:'modal',
+    particleGlow:2.0, trailLen:12, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#ffd700', secondary:'#0a0800', accent:'#ff6644',
+    gateCount:3, attractorCount:1,
+  },
+
+  // 30 ── Gamelan Bells ───────────────────────────────────────────────────────
+  // Lattice physics — grid snapping like metalophone keys. Slendro-like scale.
+  {
+    id:'gamelan-bells', name:'Gamelan Bells', intensity:3,
+    description:'Metalofone em grade. Bells e gongs sobrepostos em camadas.',
+    vibe:'Bells, Layers, Ceremony',
+    tags:['Modal','Experimental','Minimalist'],
+    bpm:78, scale:'pentatonic', root:55, quantaCount:72,
     motionStyle:'lattice',
     roles:{
-      PERC:    role(.35,[52,80],Q(.001,.08,.1,.4),'sine','bandpass',2200,4,.6,0,1.0,5,.25),
-      STRINGS: role(.30,[48,70],Q(.08,.18,.55,.8),'triangle','lowpass',1400,1.5,.52,0,.9,3,.45),
-      PAD:     role(.25,[42,62],Q(.4,.3,.72,.95),'sine','lowpass',600,1.5,.45,0,.8,2,.85),
-      BASS:    role(.10,[30,46],Q(.05,.25,.7,.3),'sine','lowpass',200,1.5,.65,0,.3,2,.5),
+      LEAD:    role(.30,[55,84],Q(.003,.2,.10,.5),'triangle','bandpass',2800,3,.50,0,.6,3,.25),
+      ARP:     role(.25,[60,96],Q(.002,.15,.08,.4),'triangle','bandpass',3500,2,.45,5,.7,3,.18),
+      PAD:     role(.20,[42,66],Q(.8,.4,.70,1.5),'sine','lowpass',600,1,.38,0,.8,2,1.0),
+      BASS:    role(.15,[28,48],Q(.05,.3,.65,.5),'sine','lowpass',250,1,.50,0,.3,2,.5),
+      PERC:    role(.10,[60,84],Q(.001,.08,.0,.06),'noise','bandpass',4000,.4,.38,0,.6,3,.2),
     },
-    syncThreshold:.6, encounterR:.14, entainment:.68, eventRate:.6,
-    reverbAmt:.42, delayAmt:.3, delayTime:.32, masterGain:.8,
+    syncThreshold:.38, encounterR:.12, entainment:.45, eventRate:.55,
+    reverbAmt:.65, delayAmt:.5, delayTime:.32, masterGain:.72,
     harmonyMode:'consonant',
-    particleGlow:1.2, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#cc8800', secondary:'#100800', accent:'#44ddff',
-    gateCount:3, attractorCount:2,
+    particleGlow:1.4, trailLen:6, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#ffd700', secondary:'#0c0a04', accent:'#ff4400',
+    gateCount:4, attractorCount:1,
   },
 
-  // ── 33. Tibetan Bowls ─────────────────────────────────────────────────────
+  // 31 ── Flamenco Duende ─────────────────────────────────────────────────────
+  // Revolution physics — spiraling intensity like a flamenco buildup.
   {
-    id:'tibetan-bowls', name:'Tibetan Bowls', intensity:1,
-    description:'Bols tibetanos com overtones longos. Meditativo extremo.',
-    vibe:'Overtones, Silence, Buddhism',
-    tags:['Meditative','Drone','Ambient','Space'],
-    bpm:40, scale:'whole_tone', root:41, quantaCount:48,
-    motionStyle:'drift',
+    id:'flamenco', name:'Flamenco Duende', intensity:4,
+    description:'Espiral flamenca. Cada volta aperta a intensidade até o grito.',
+    vibe:'Fire, Passion, Spiral',
+    tags:['Modal','Dynamic','Strings','Groove'],
+    bpm:118, scale:'phrygian', root:40, quantaCount:80,
+    motionStyle:'revolution',
     roles:{
-      PAD:     role(.5,[36,60],Q(1.2,.8,.9,3.5),'sine','lowpass',400,1,.5,0,.9,2,2.5),
-      STRINGS: role(.3,[48,68],Q(.8,.6,.82,2.8),'triangle','lowpass',900,1,.42,0,.85,2,2.0),
-      BASS:    role(.2,[28,42],Q(.15,.5,.85,1.5),'sine','lowpass',140,1.5,.62,0,.25,1,2.0),
+      STRINGS: role(.30,[48,80],Q(.005,.08,.35,.12),'triangle','bandpass',1800,3,.55,0,.7,3,.16),
+      PERC:    role(.25,[48,72],Q(.001,.05,.0,.03),'snare','bandpass',2500,.6,.50,0,.7,5,.12),
+      BASS:    role(.18,[28,48],Q(.01,.15,.50,.1),'triangle','lowpass',300,2,.55,0,.3,3,.22),
+      LEAD:    role(.15,[55,88],Q(.003,.06,.38,.1),'sawtooth','lowpass',2200,3,.50,5,.5,3,.14),
+      PAD:     role(.12,[40,60],Q(.2,.2,.50,.5),'sine','lowpass',500,1.5,.35,0,.6,2,.6),
     },
-    syncThreshold:.75, encounterR:.20, entainment:.85, eventRate:.2,
-    reverbAmt:.65, delayAmt:.4, delayTime:.6, masterGain:.72,
-    harmonyMode:'consonant',
-    particleGlow:.9, trailLen:15, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#8844bb', secondary:'#040408', accent:'#eecc88',
-    gateCount:1, attractorCount:1,
-  },
-
-  // ── 34. Prog Rock Odyssey ─────────────────────────────────────────────────
-  {
-    id:'prog-rock', name:'Prog Rock Odyssey', intensity:4,
-    description:'Compassos irregulares emergentes. STRINGS épicas. Modo lídio.',
-    vibe:'7/8, Lydian, Epic',
-    tags:['Orchestral','Dynamic','Modal','Strings'],
-    bpm:108, scale:'lydian', root:43, quantaCount:112,
-    motionStyle:'orbit',
-    roles:{
-      BASS:    role(.22,[33,50],Q(.008,.2,.65,.15),'sawtooth','lowpass',270,3,.75,0,.3,4,.3),
-      LEAD:    role(.28,[55,78],Q(.01,.12,.5,.14),'sawtooth','lowpass',2200,6,.68,5,.6,4,.28),
-      STRINGS: role(.28,[50,70],Q(.2,.25,.62,.7),'triangle','lowpass',1700,1.5,.52,0,.9,3,.5),
-      CHOIR:   role(.14,[58,72],Q(.4,.3,.7,.95),'sine','lowpass',2400,.8,.4,0,.9,2,.85),
-      PERC:    role(.08,[52,72],Q(.001,.06,.0,.04),'snare','bandpass',2600,.7,.5,0,.7,3,.25),
-    },
-    syncThreshold:.52, encounterR:.13, entainment:.58, eventRate:.82,
-    reverbAmt:.3, delayAmt:.22, delayTime:.3, masterGain:.82,
-    harmonyMode:'consonant',
-    particleGlow:1.3, trailLen:7, lens:'Harmony', bgPulse:true, cinematic:true,
-    primary:'#6699ff', secondary:'#080c18', accent:'#cc8800',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 35. Synthwave '84 ─────────────────────────────────────────────────────
-  {
-    id:'synthwave-84', name:"Synthwave '84", intensity:4,
-    description:'Arpejos analógicos, bass pulsante, REV snare icônico.',
-    vibe:'80s, Neon, Retrowave',
-    tags:['Electronic','Club','Arpeggios','Dynamic'],
-    bpm:118, scale:'minor', root:40, quantaCount:108,
-    motionStyle:'flow',
-    roles:{
-      BASS:    role(.25,[33,50],Q(.005,.2,.68,.14),'sawtooth','lowpass',280,3,.78,0,.35,4,.28),
-      LEAD:    role(.22,[55,75],Q(.01,.12,.5,.14),'sawtooth','lowpass',1800,5,.65,7,.6,4,.28),
-      ARP:     role(.28,[60,82],Q(.003,.07,.35,.08),'square','bandpass',2500,6,.58,12,.75,5,.12),
-      PAD:     role(.18,[48,64],Q(.4,.35,.75,.95),'sawtooth','lowpass',750,2,.5,0,.8,3,.75),
-      KICK:    role(.07,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.82,0,.22,3,.42),
-    },
-    syncThreshold:.48, encounterR:.12, entainment:.52, eventRate:1.0,
-    reverbAmt:.28, delayAmt:.22, delayTime:.19, masterGain:.85,
-    harmonyMode:'modal',
-    particleGlow:1.5, trailLen:6, lens:'Notes', bgPulse:true, cinematic:true,
-    primary:'#00ccff', secondary:'#08000f', accent:'#ff0088',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 36. Post-Rock Cosmos ──────────────────────────────────────────────────
-  {
-    id:'post-rock', name:'Post-Rock Cosmos', intensity:4,
-    description:'Crescendo infinito. Guitarras distorcidas emergem de drones suaves.',
-    vibe:'Build, Crescendo, Celestial',
-    tags:['Dynamic','Orchestral','Drone','Strings'],
-    bpm:96, scale:'mixolydian', root:43, quantaCount:104,
-    motionStyle:'swarm',
-    roles:{
-      BASS:    role(.22,[33,50],Q(.008,.22,.68,.18),'sawtooth','lowpass',260,2,.75,0,.3,4,.3),
-      LEAD:    role(.30,[50,74],Q(.015,.15,.55,.18),'sawtooth','lowpass',2000,8,.65,0,.7,4,.28),
-      STRINGS: role(.30,[50,70],Q(.25,.28,.65,.8),'triangle','lowpass',1600,1.5,.52,0,.9,3,.52),
-      PAD:     role(.18,[44,64],Q(.5,.4,.78,1.2),'sawtooth','lowpass',650,2,.48,0,.85,2,.9),
-    },
-    syncThreshold:.55, encounterR:.14, entainment:.62, eventRate:.75,
-    reverbAmt:.38, delayAmt:.28, delayTime:.4, masterGain:.82,
-    harmonyMode:'consonant',
-    particleGlow:1.2, trailLen:9, lens:'Harmony', bgPulse:true, cinematic:true,
-    primary:'#3366ff', secondary:'#050810', accent:'#ff8822',
-    gateCount:3, attractorCount:1,
-  },
-
-  // ── 37. Nu-Jazz Orbit ─────────────────────────────────────────────────────
-  {
-    id:'nu-jazz', name:'Nu-Jazz Orbit', intensity:3,
-    description:'Jazz pós-bop elétrico. Clusters dorian. Improvisação emergente.',
-    vibe:'Cluster, Modal, Electric',
-    tags:['Jazz','Free Jazz','Improvisation','Modal'],
-    bpm:105, scale:'dorian', root:38, quantaCount:100,
-    motionStyle:'orbit',
-    roles:{
-      BASS:    role(.28,[33,50],Q(.008,.18,.65,.15),'sawtooth','lowpass',300,3,.72,0,.32,4,.28),
-      STRINGS: role(.28,[50,70],Q(.2,.22,.6,.68),'triangle','lowpass',1500,1.5,.52,0,.85,3,.5),
-      ARP:     role(.28,[58,80],Q(.004,.08,.4,.1),'square','bandpass',2800,5,.55,12,.75,5,.15),
-      PAD:     role(.16,[46,64],Q(.35,.3,.72,.9),'sawtooth','lowpass',800,2,.48,4,.8,2,.75),
-    },
-    syncThreshold:.5, encounterR:.13, entainment:.58, eventRate:.8,
-    reverbAmt:.35, delayAmt:.25, delayTime:.3, masterGain:.8,
-    harmonyMode:'modal',
-    particleGlow:1.2, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#ff9933', secondary:'#0c0800', accent:'#44ccff',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 38. Detroit Classic ───────────────────────────────────────────────────
-  {
-    id:'detroit-classic', name:'Detroit Classic', intensity:5,
-    description:'Techno de Detroit puro. Strings épicas sobre kick 4/4 implacável.',
-    vibe:'Soulful Machine, Deep Motor',
-    tags:['Techno','Detroit','Electronic','Club'],
-    bpm:138, scale:'minor', root:45, quantaCount:120,
-    motionStyle:'orbit',
-    roles:{
-      KICK:    role(.20,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.9,0,.3,5,.4),
-      BASS:    role(.22,[33,50],Q(.005,.18,.62,.12),'sawtooth','lowpass',260,3,.72,0,.35,4,.28),
-      STRINGS: role(.28,[52,70],Q(.2,.25,.65,.75),'triangle','lowpass',1700,1.5,.5,0,.85,3,.5),
-      LEAD:    role(.20,[58,76],Q(.01,.1,.48,.14),'sawtooth','lowpass',2000,5,.62,7,.6,3,.3),
-      PERC:    role(.10,[55,78],Q(.001,.04,.0,.025),'hihat','highpass',7000,.4,.55,0,.9,4,.18),
-    },
-    syncThreshold:.5, encounterR:.12, entainment:.55, eventRate:1.0,
-    reverbAmt:.25, delayAmt:.18, delayTime:.2, masterGain:.86,
+    syncThreshold:.50, encounterR:.10, entainment:.65, eventRate:.8,
+    reverbAmt:.25, delayAmt:.2, delayTime:.12, masterGain:.82,
     harmonyMode:'modal',
     particleGlow:1.3, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:true,
-    primary:'#4488ff', secondary:'#050810', accent:'#ff6622',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 39. Arabic Maqam ──────────────────────────────────────────────────────
-  {
-    id:'arabic-maqam', name:'Arabic Maqam', intensity:3,
-    description:'Frígico com segunda aumentada. Oud e percussão dobruk.',
-    vibe:'Maqam, Oud, Raga',
-    tags:['Modal','Meditative','Strings','Dynamic'],
-    bpm:100, scale:'phrygian', root:45, quantaCount:96,
-    motionStyle:'flow',
-    roles:{
-      BASS:    role(.28,[36,52],Q(.008,.18,.62,.14),'sawtooth','lowpass',320,3,.72,0,.3,3,.3),
-      LEAD:    role(.32,[55,78],Q(.005,.1,.52,.12),'sawtooth','lowpass',1600,10,.68,0,.7,4,.2),
-      STRINGS: role(.25,[50,68],Q(.15,.2,.58,.65),'triangle','lowpass',1400,1.5,.5,0,.8,3,.5),
-      PERC:    role(.15,[52,74],Q(.001,.045,.0,.03),'snare','bandpass',3000,.8,.55,0,.85,4,.2),
-    },
-    syncThreshold:.5, encounterR:.12, entainment:.55, eventRate:.9,
-    reverbAmt:.28, delayAmt:.2, delayTime:.25, masterGain:.82,
-    harmonyMode:'modal',
-    particleGlow:1.2, trailLen:6, lens:'Tension', bgPulse:true, cinematic:false,
-    primary:'#ccaa22', secondary:'#100800', accent:'#44aacc',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 40. Cumbia Cósmica ────────────────────────────────────────────────────
-  {
-    id:'cumbia-cosmica', name:'Cumbia Cósmica', intensity:4,
-    description:'Cumbia electrónica. Ritmo 6/8 contagiante. Synths galácticos.',
-    vibe:'Colombia, 6/8, Cosmic',
-    tags:['Groove','Electronic','Dynamic','Rhythm'],
-    bpm:114, scale:'major', root:43, quantaCount:112,
-    motionStyle:'swarm',
-    roles:{
-      KICK:    role(.15,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.85,0,.25,4,.42),
-      BASS:    role(.25,[36,52],Q(.008,.16,.62,.12),'sawtooth','lowpass',320,3,.75,0,.35,4,.28),
-      PERC:    role(.30,[55,78],Q(.001,.04,.0,.025),'snare','bandpass',3200,.8,.62,0,.9,6,.15),
-      STRINGS: role(.20,[52,68],Q(.15,.2,.58,.65),'triangle','lowpass',1500,1.5,.5,0,.85,3,.5),
-      ARP:     role(.10,[62,82],Q(.003,.06,.32,.08),'square','bandpass',2600,5,.52,10,.7,4,.15),
-    },
-    syncThreshold:.48, encounterR:.12, entainment:.55, eventRate:1.05,
-    reverbAmt:.22, delayAmt:.2, delayTime:.24, masterGain:.86,
-    harmonyMode:'modal',
-    particleGlow:1.3, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#ffcc22', secondary:'#0a0800', accent:'#00ccff',
+    primary:'#ff2200', secondary:'#0a0200', accent:'#ffd700',
     gateCount:5, attractorCount:2,
   },
 
+  // 32 ── Saharan Blues ───────────────────────────────────────────────────────
+  // Migration physics — desert caravan. Blues scale + pentatonic groove.
+  {
+    id:'saharan-blues', name:'Saharan Blues', intensity:3,
+    description:'Caravana no deserto. Blues do Sahara com groove hipnótico.',
+    vibe:'Desert, Trance, Groove',
+    tags:['Modal','Groove','Experimental'],
+    bpm:108, scale:'blues', root:40, quantaCount:72,
+    motionStyle:'migration',
+    roles:{
+      LEAD:    role(.30,[55,84],Q(.005,.10,.40,.15),'triangle','lowpass',2000,2,.48,5,.5,3,.2),
+      BASS:    role(.20,[28,48],Q(.01,.2,.55,.15),'triangle','lowpass',300,1.5,.55,0,.3,3,.3),
+      PERC:    role(.22,[48,84],Q(.001,.05,.0,.03),'noise','bandpass',3000,.5,.45,0,.7,4,.16),
+      PAD:     role(.15,[36,60],Q(.5,.3,.65,1.0),'sine','lowpass',500,1,.38,0,.7,2,.8),
+      STRINGS: role(.13,[48,72],Q(.2,.2,.55,.8),'triangle','lowpass',1200,1,.35,3,.7,2,.7),
+    },
+    syncThreshold:.40, encounterR:.11, entainment:.50, eventRate:.6,
+    reverbAmt:.4, delayAmt:.35, delayTime:.22, masterGain:.78,
+    harmonyMode:'modal',
+    particleGlow:1.2, trailLen:6, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#cc8844', secondary:'#0a0604', accent:'#44aaff',
+    gateCount:4, attractorCount:0,
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
-  // ── PRESETS 41–60: SHOWZÃO — Full Tool Showcase, Maximum Diversity ────────
+  // ── VII. ORGANIC INSTRUMENTS ───────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // ── 41. Techno Hypnosis ───────────────────────────────────────────────────
-  // Brutal 4/4 industrial techno — all 8 voices, kick drives everything
+  // 33 ── Cello Solo ──────────────────────────────────────────────────────────
+  // Drift physics — lone wanderer. Rich sawtooth filtered to cello timbre.
   {
-    id:'techno-hypnosis', name:'Techno Hypnosis', intensity:5,
-    description:'Industrial 4/4 — kick+bass+all 8 voices in tight spiral formation. Brutal.',
-    vibe:'Industrial, 4/4, Iron',
-    tags:['Techno','Club','Electronic','Dark'],
-    bpm:136, scale:'minor', root:36, quantaCount:140,
-    motionStyle:'spiral',
+    id:'cello-solo', name:'Cello Solo', intensity:2,
+    description:'Partícula solitária vagando. Timbre de cello em sawtooth filtrado.',
+    vibe:'Solo, Intimate, Melancholy',
+    tags:['Strings','Soft','Ambient','Classical'],
+    bpm:56, scale:'minor', root:36, quantaCount:32,
+    motionStyle:'drift',
     roles:{
-      KICK:    role(.22,[24,36],Q(.001,.09,.0,.06),'kick','lowpass',200,.5,.92,0,.3,6,.38),
-      BASS:    role(.18,[30,48],Q(.003,.20,.68,.12),'sawtooth','lowpass',260,4,.80,-5,.35,5,.22),
-      PERC:    role(.18,[55,78],Q(.001,.045,.0,.03),'hihat','highpass',7000,.4,.60,0,.9,6,.16),
-      PAD:     role(.10,[42,58],Q(.5,.4,.75,1.5),'sawtooth','lowpass',500,2,.38,0,.75,2,.85),
-      LEAD:    role(.12,[55,76],Q(.008,.11,.45,.12),'sawtooth','lowpass',1800,6,.65,7,.6,4,.25),
-      ARP:     role(.08,[60,84],Q(.002,.06,.28,.08),'square','bandpass',3000,8,.55,14,.7,4,.12),
-      STRINGS: role(.07,[50,68],Q(.18,.22,.60,.7),'triangle','lowpass',1600,1.5,.45,0,.8,2,.55),
-      CHOIR:   role(.05,[55,70],Q(.4,.30,.70,1.2),'sine','lowpass',2200,.8,.38,0,.9,2,1.0),
+      STRINGS: role(.50,[36,72],Q(.15,.15,.65,1.5),'sawtooth','lowpass',1200,2,.50,3,.6,2,.4),
+      PAD:     role(.30,[36,60],Q(1.2,.5,.78,2.5),'sine','lowpass',600,1,.35,0,.8,2,1.5),
+      CHOIR:   role(.20,[48,66],Q(1.0,.4,.70,2.0),'sine','lowpass',550,.9,.28,0,.9,2,2.0),
     },
-    syncThreshold:.50, encounterR:.11, entainment:.60, eventRate:1.1,
-    reverbAmt:.18, delayAmt:.14, delayTime:.17, masterGain:.90,
-    harmonyMode:'dissonant',
-    particleGlow:1.6, trailLen:4, lens:'Rhythm', bgPulse:true, cinematic:true,
-    primary:'#ff1144', secondary:'#0a0008', accent:'#00ccff',
+    syncThreshold:.25, encounterR:.18, entainment:.20, eventRate:.22,
+    reverbAmt:.72, delayAmt:.45, delayTime:.4, masterGain:.65,
+    harmonyMode:'consonant',
+    particleGlow:2.0, trailLen:14, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#cc8844', secondary:'#0a0604', accent:'#ffeedd',
+    gateCount:2, attractorCount:0,
+  },
+
+  // 34 ── Jazz Upright Bass ───────────────────────────────────────────────────
+  // Flow physics — walking line. Triangle wave filtered for woody tone.
+  {
+    id:'upright-bass', name:'Jazz Upright Bass', intensity:2,
+    description:'Walking bass line emergente. Tom de madeira com harmônicos naturais.',
+    vibe:'Walking, Woody, Groove',
+    tags:['Jazz','Strings','Groove'],
+    bpm:92, scale:'dorian', root:28, quantaCount:48,
+    motionStyle:'flow',
+    roles:{
+      BASS:    role(.45,[28,52],Q(.015,.18,.55,.2),'triangle','lowpass',400,1.5,.60,0,.3,3,.22),
+      LEAD:    role(.25,[48,76],Q(.01,.1,.40,.15),'triangle','lowpass',1800,1,.45,0,.5,2,.3),
+      PERC:    role(.15,[48,72],Q(.001,.05,.0,.04),'noise','bandpass',2000,.4,.38,0,.6,3,.22),
+      PAD:     role(.15,[42,60],Q(.4,.3,.65,1.0),'sine','lowpass',700,1,.32,0,.7,2,.9),
+    },
+    syncThreshold:.35, encounterR:.12, entainment:.40, eventRate:.45,
+    reverbAmt:.45, delayAmt:.3, delayTime:.22, masterGain:.72,
+    harmonyMode:'modal',
+    particleGlow:1.0, trailLen:5, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#cc7744', secondary:'#0a0604', accent:'#88ccff',
+    gateCount:3, attractorCount:1,
+  },
+
+  // 35 ── Guitar Fingerpick ───────────────────────────────────────────────────
+  // Lattice physics — snapped grid like frets. Quick attack triangle tones.
+  {
+    id:'guitar-pick', name:'Guitar Fingerpick', intensity:3,
+    description:'Grade como trastes. Dedilhado emergente em padrões repetitivos.',
+    vibe:'Acoustic, Pattern, Folk',
+    tags:['Strings','Minimalist','Soft','Generative'],
+    bpm:98, scale:'major', root:52, quantaCount:56,
+    motionStyle:'lattice',
+    roles:{
+      LEAD:    role(.35,[52,80],Q(.003,.1,.18,.2),'triangle','lowpass',2400,1.5,.48,0,.5,3,.18),
+      ARP:     role(.25,[52,84],Q(.002,.08,.12,.15),'triangle','lowpass',3000,1,.42,0,.6,3,.14),
+      BASS:    role(.20,[36,52],Q(.01,.15,.50,.15),'triangle','lowpass',350,1,.52,0,.3,2,.35),
+      PAD:     role(.20,[48,66],Q(.5,.3,.6,.8),'sine','lowpass',800,1,.35,0,.7,2,.8),
+    },
+    syncThreshold:.40, encounterR:.10, entainment:.50, eventRate:.55,
+    reverbAmt:.4, delayAmt:.35, delayTime:.2, masterGain:.75,
+    harmonyMode:'consonant',
+    particleGlow:1.0, trailLen:4, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#ccaa66', secondary:'#0a0804', accent:'#88aaff',
+    gateCount:4, attractorCount:1,
+  },
+
+  // 36 ── Saxophone Breath ────────────────────────────────────────────────────
+  // Flow physics — fluid movement like breath. Sawtooth+bandpass = sax tone.
+  {
+    id:'saxophone', name:'Saxophone Breath', intensity:3,
+    description:'Sopro fluido. Sawtooth+bandpass como timbre de sax tenor.',
+    vibe:'Breath, Fluid, Soul',
+    tags:['Jazz','Improvisation','Modal'],
+    bpm:82, scale:'mixolydian', root:48, quantaCount:56,
+    motionStyle:'flow',
+    roles:{
+      LEAD:    role(.40,[48,80],Q(.02,.12,.50,.25),'sawtooth','bandpass',1600,3,.55,5,.5,3,.22),
+      BASS:    role(.20,[28,48],Q(.02,.22,.60,.2),'triangle','lowpass',300,1.5,.52,0,.3,2,.35),
+      PAD:     role(.18,[42,66],Q(.5,.3,.65,1.0),'sine','lowpass',700,1,.35,0,.7,2,.8),
+      PERC:    role(.12,[48,72],Q(.001,.06,.0,.04),'noise','bandpass',2200,.4,.38,0,.6,3,.22),
+      STRINGS: role(.10,[48,72],Q(.3,.2,.55,.8),'triangle','lowpass',1200,1,.32,0,.7,2,.8),
+    },
+    syncThreshold:.35, encounterR:.13, entainment:.40, eventRate:.42,
+    reverbAmt:.5, delayAmt:.35, delayTime:.25, masterGain:.72,
+    harmonyMode:'modal',
+    particleGlow:1.2, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#ffaa44', secondary:'#0a0604', accent:'#88ccff',
+    gateCount:3, attractorCount:1,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── VIII. EVOLUTION & SYSTEMS ──────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 37 ── Darwin's Garden ─────────────────────────────────────────────────────
+  // Predation + high mutation. Roles evolve over time. Musical Darwinism.
+  {
+    id:'darwin-garden', name:'Darwin\'s Garden', intensity:3,
+    description:'Alta mutação. Roles evoluem. O jardim sonoro se auto-seleciona.',
+    vibe:'Evolution, Mutation, Emergent',
+    tags:['Experimental','Generative','Organic Instruments'],
+    bpm:84, scale:'major', root:48, quantaCount:96,
+    motionStyle:'predation',
+    roles:{
+      KICK:    role(.08,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',180,.4,.72,0,.2,3,.5),
+      BASS:    role(.12,[28,52],Q(.01,.2,.55,.15),'sine','lowpass',250,1,.52,0,.3,3,.35),
+      PERC:    role(.12,[48,84],Q(.001,.04,.0,.03),'hihat','highpass',5000,.5,.38,0,.7,4,.18),
+      PAD:     role(.18,[42,66],Q(.5,.3,.70,1.2),'sine','lowpass',800,1,.38,0,.8,3,1.0),
+      LEAD:    role(.15,[55,84],Q(.008,.1,.42,.15),'triangle','lowpass',2000,1.5,.45,0,.5,3,.22),
+      ARP:     role(.12,[60,96],Q(.003,.08,.15,.1),'triangle','lowpass',2800,1,.40,0,.6,3,.14),
+      STRINGS: role(.12,[48,76],Q(.3,.2,.60,.8),'triangle','lowpass',1200,1,.35,3,.7,2,.7),
+      CHOIR:   role(.11,[48,72],Q(1.0,.5,.72,2.0),'sine','lowpass',650,1,.30,0,.9,2,1.5),
+    },
+    syncThreshold:.40, encounterR:.12, entainment:.50, eventRate:.55,
+    reverbAmt:.45, delayAmt:.35, delayTime:.25, masterGain:.75,
+    harmonyMode:'modal',
+    particleGlow:1.5, trailLen:7, lens:'Events', bgPulse:false, cinematic:true,
+    primary:'#44cc44', secondary:'#040a04', accent:'#ffaa88',
+    gateCount:4, attractorCount:1,
+  },
+
+  // 38 ── Ant Colony ──────────────────────────────────────────────────────────
+  // School physics — dense swarm with tight alignment. Rhythmic emergence.
+  {
+    id:'ant-colony', name:'Ant Colony', intensity:3,
+    description:'Colônia densa com alinhamento apertado. Ritmo emergente do coletivo.',
+    vibe:'Collective, Dense, Pattern',
+    tags:['Generative','Experimental','Groove'],
+    bpm:116, scale:'minor', root:40, quantaCount:128,
+    motionStyle:'school',
+    roles:{
+      KICK:    role(.15,[24,36],Q(.001,.06,.0,.04),'kick','lowpass',180,.4,.78,0,.2,4,.4),
+      PERC:    role(.28,[48,84],Q(.001,.04,.0,.02),'noise','bandpass',3500,.6,.45,0,.7,5,.12),
+      BASS:    role(.18,[28,48],Q(.008,.15,.50,.1),'triangle','lowpass',280,1.5,.55,0,.3,3,.25),
+      LEAD:    role(.15,[55,80],Q(.005,.08,.35,.1),'square','lowpass',1600,2,.45,0,.5,3,.18),
+      ARP:     role(.14,[60,90],Q(.002,.06,.12,.08),'triangle','lowpass',2500,1.5,.40,0,.6,3,.1),
+      PAD:     role(.10,[42,60],Q(.3,.2,.55,.6),'sine','lowpass',600,1,.32,0,.6,2,.7),
+    },
+    syncThreshold:.45, encounterR:.09, entainment:.60, eventRate:.7,
+    reverbAmt:.2, delayAmt:.2, delayTime:.12, masterGain:.8,
+    harmonyMode:'modal',
+    particleGlow:1.0, trailLen:3, lens:'Rhythm', bgPulse:false, cinematic:false,
+    primary:'#ff8844', secondary:'#0a0604', accent:'#44ff88',
+    gateCount:5, attractorCount:1,
+  },
+
+  // 39 ── Neural Network ──────────────────────────────────────────────────────
+  // Dance physics — pairs form synapses. Each connection fires a note.
+  {
+    id:'neural-net', name:'Neural Network', intensity:3,
+    description:'Pares formam sinapses. Cada conexão dispara uma nota. Cérebro vivo.',
+    vibe:'Synapses, Connections, Intelligence',
+    tags:['Generative','Experimental','Electronic'],
+    bpm:92, scale:'whole_tone', root:48, quantaCount:80,
+    motionStyle:'dance',
+    roles:{
+      LEAD:    role(.25,[55,88],Q(.003,.08,.30,.1),'triangle','lowpass',2500,2,.48,5,.5,3,.16),
+      ARP:     role(.22,[60,96],Q(.002,.06,.12,.08),'square','lowpass',3000,1.5,.42,0,.7,3,.1),
+      PAD:     role(.20,[42,66],Q(.4,.3,.60,.8),'sine','lowpass',700,1,.35,0,.7,2,.7),
+      PERC:    role(.15,[48,72],Q(.001,.04,.0,.02),'noise','highpass',4500,.4,.38,0,.6,4,.14),
+      BASS:    role(.10,[28,48],Q(.01,.2,.50,.12),'triangle','lowpass',280,1.5,.48,0,.3,2,.3),
+      STRINGS: role(.08,[48,72],Q(.3,.2,.55,.8),'triangle','lowpass',1200,1,.32,3,.7,2,.8),
+    },
+    syncThreshold:.42, encounterR:.10, entainment:.55, eventRate:.6,
+    reverbAmt:.4, delayAmt:.35, delayTime:.2, masterGain:.75,
+    harmonyMode:'free',
+    particleGlow:1.5, trailLen:6, lens:'Events', bgPulse:false, cinematic:true,
+    primary:'#00e5ff', secondary:'#040810', accent:'#ff88cc',
+    gateCount:4, attractorCount:1,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── IX. ELECTRONIC SUBGENRES ───────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 40 ── IDM Lattice ─────────────────────────────────────────────────────────
+  // Lattice physics — grid snapping creates broken patterns. Autechre-esque.
+  {
+    id:'idm-lattice', name:'IDM Lattice', intensity:4,
+    description:'Grade quebrando patterns em ritmos impossíveis. Autechre digital.',
+    vibe:'Glitch, Grid, Broken',
+    tags:['Experimental','Electronic','Glitch'],
+    bpm:136, scale:'chromatic', root:48, quantaCount:72,
+    motionStyle:'lattice',
+    roles:{
+      PERC:    role(.28,[48,96],Q(.001,.03,.0,.02),'noise','bandpass',4000,4,.50,0,.8,5,.08),
+      BASS:    role(.22,[28,52],Q(.002,.1,.40,.05),'square','lowpass',350,6,.60,-7,.3,3,.15),
+      LEAD:    role(.22,[52,96],Q(.002,.06,.25,.06),'square','bandpass',2000,5,.48,12,.6,3,.1),
+      ARP:     role(.15,[60,96],Q(.001,.04,.08,.04),'square','highpass',2500,3,.40,0,.7,3,.06),
+      PAD:     role(.13,[42,60],Q(.1,.15,.35,.3),'sawtooth','lowpass',600,2,.32,0,.5,2,.5),
+    },
+    syncThreshold:.55, encounterR:.08, entainment:.7, eventRate:.9,
+    reverbAmt:.15, delayAmt:.2, delayTime:.09, masterGain:.78,
+    harmonyMode:'free',
+    particleGlow:1.0, trailLen:2, lens:'Rhythm', bgPulse:false, cinematic:false,
+    primary:'#00e5ff', secondary:'#000a0c', accent:'#ff00ff',
     gateCount:6, attractorCount:2,
   },
 
-  // ── 42. Liquid Drum & Bass ────────────────────────────────────────────────
-  // 172bpm DnB — rolling bassline, syncopated Amen-style breaks, lush pads
+  // 41 ── Ambient House ───────────────────────────────────────────────────────
+  // Drift physics — gentle 4/4 in haze. Orb-style warmth.
   {
-    id:'liquid-dnb', name:'Liquid Drum & Bass', intensity:5,
-    description:'172bpm rolling DnB — liquid bassline, complex Amen breaks, lush harmonics.',
-    vibe:'172BPM, Rolling Bass, Liquid',
-    tags:['Electronic','Breakbeat','Dynamic','Strings'],
-    bpm:172, scale:'minor', root:38, quantaCount:132,
-    motionStyle:'swarm',
+    id:'ambient-house', name:'Ambient House', intensity:3,
+    description:'4/4 suave em neblina. Warmth de pads com groove gentil.',
+    vibe:'Warm, Hazy, Sunday',
+    tags:['Ambient','Club','Electronic','Soft'],
+    bpm:118, scale:'major', root:48, quantaCount:80,
+    motionStyle:'drift',
     roles:{
-      KICK:    role(.15,[24,36],Q(.001,.07,.0,.045),'kick','lowpass',200,.5,.88,0,.28,5,.32),
-      PERC:    role(.28,[55,84],Q(.001,.038,.0,.022),'snare','bandpass',3200,.8,.70,0,.95,7,.10),
-      BASS:    role(.25,[30,52],Q(.003,.22,.72,.18),'sawtooth','lowpass',230,2,.85,-8,.3,4,.22),
-      LEAD:    role(.14,[55,76],Q(.01,.12,.50,.14),'sawtooth','lowpass',1900,5,.62,7,.6,3,.28),
-      STRINGS: role(.10,[50,70],Q(.20,.22,.60,.70),'triangle','lowpass',1600,1.5,.50,0,.85,2,.5),
-      PAD:     role(.08,[44,62],Q(.45,.35,.78,1.2),'sawtooth','lowpass',700,2,.42,0,.8,2,.9),
+      KICK:    role(.15,[24,36],Q(.001,.12,.0,.08),'kick','lowpass',160,.4,.72,0,.2,3,.5),
+      BASS:    role(.18,[36,52],Q(.01,.2,.55,.15),'sine','lowpass',250,1,.52,0,.3,3,.35),
+      PAD:     role(.28,[48,72],Q(.6,.3,.78,1.5),'sawtooth','lowpass',800,2,.45,5,.8,3,.9),
+      LEAD:    role(.18,[60,84],Q(.01,.10,.40,.18),'triangle','lowpass',2000,1.5,.42,0,.5,2,.3),
+      ARP:     role(.12,[60,88],Q(.003,.08,.15,.12),'triangle','lowpass',2800,1,.38,0,.6,2,.2),
+      PERC:    role(.09,[60,72],Q(.001,.04,.0,.03),'hihat','highpass',5000,.4,.35,0,.6,3,.22),
     },
-    syncThreshold:.38, encounterR:.10, entainment:.42, eventRate:1.5,
-    reverbAmt:.18, delayAmt:.12, delayTime:.15, masterGain:.88,
+    syncThreshold:.40, encounterR:.11, entainment:.45, eventRate:.55,
+    reverbAmt:.55, delayAmt:.45, delayTime:.28, masterGain:.78,
+    harmonyMode:'consonant',
+    particleGlow:1.5, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#88ccff', secondary:'#060810', accent:'#ffcc88',
+    gateCount:4, attractorCount:1,
+  },
+
+  // 42 ── Trance Gates ────────────────────────────────────────────────────────
+  // Murmuration physics — flock surges through gates. Arpeggio hypnosis.
+  {
+    id:'trance-gates', name:'Trance Gates', intensity:5,
+    description:'Flock murmuration cruzando portais. Arpejos hipnóticos em cascata.',
+    vibe:'Euphoria, Cascade, Energy',
+    tags:['Electronic','Club','Rave'],
+    bpm:140, scale:'minor', root:45, quantaCount:120,
+    motionStyle:'murmuration',
+    roles:{
+      KICK:    role(.18,[24,36],Q(.001,.07,.0,.05),'kick','lowpass',200,.5,.88,0,.2,5,.35),
+      BASS:    role(.16,[36,52],Q(.005,.15,.55,.08),'sawtooth','lowpass',300,2,.68,-5,.3,3,.25),
+      ARP:     role(.28,[60,96],Q(.003,.08,.12,.1),'sawtooth','lowpass',2800,3,.55,7,.7,4,.08),
+      LEAD:    role(.18,[55,84],Q(.01,.10,.45,.15),'sawtooth','lowpass',2200,3,.52,5,.5,3,.18),
+      PAD:     role(.12,[48,66],Q(.3,.2,.65,.8),'sawtooth','lowpass',600,2,.38,0,.7,2,.8),
+      PERC:    role(.08,[60,84],Q(.001,.04,.0,.02),'hihat','highpass',6000,.4,.40,0,.7,4,.14),
+    },
+    syncThreshold:.55, encounterR:.10, entainment:.70, eventRate:.9,
+    reverbAmt:.3, delayAmt:.35, delayTime:.15, masterGain:.85,
     harmonyMode:'modal',
-    particleGlow:1.5, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#00aaff', secondary:'#000810', accent:'#ff4488',
-    gateCount:5, attractorCount:2,
+    particleGlow:1.6, trailLen:6, lens:'Rhythm', bgPulse:true, cinematic:true,
+    primary:'#cc44ff', secondary:'#0a0210', accent:'#44ffcc',
+    gateCount:6, attractorCount:2,
   },
 
-  // ── 43. Psytrance Vortex ──────────────────────────────────────────────────
-  // 145bpm Goa / Israeli psytrance — pentatonic arps, driving bass, spiral
+  // 43 ── Lo-fi Rain ──────────────────────────────────────────────────────────
+  // Organism physics — breathing cluster. Low-pass everything. Warm.
   {
-    id:'psytrance-vortex', name:'Psytrance Vortex', intensity:5,
-    description:'145bpm Israeli psytrance — hypnotic arps, pentatonic, spiral motion.',
-    vibe:'145BPM, Goa, Hypnotic',
-    tags:['Electronic','Rave','Club','Experimental'],
-    bpm:145, scale:'pentatonic', root:40, quantaCount:120,
-    motionStyle:'spiral',
+    id:'lofi-rain', name:'Lo-fi Rain', intensity:2,
+    description:'Tudo filtrado como vinil. Chuva orgânica. Warmth nostálgica.',
+    vibe:'Warm, Vintage, Rain',
+    tags:['Ambient','Soft','Electronic','Groove'],
+    bpm:75, scale:'pentatonic', root:48, quantaCount:56,
+    motionStyle:'organism',
     roles:{
-      KICK:    role(.18,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.90,0,.25,5,.4),
-      BASS:    role(.22,[30,48],Q(.002,.15,.68,.10),'sawtooth','lowpass',220,3,.85,-5,.3,4,.20),
-      ARP:     role(.32,[60,90],Q(.002,.06,.30,.07),'square','bandpass',3200,10,.60,16,.8,6,.10),
-      LEAD:    role(.18,[55,79],Q(.006,.10,.45,.12),'sawtooth','lowpass',2000,8,.65,9,.65,4,.22),
-      PAD:     role(.10,[46,64],Q(.5,.38,.78,1.3),'sawtooth','lowpass',650,2,.42,0,.8,2,.85),
+      KICK:    role(.12,[24,36],Q(.001,.12,.0,.08),'kick','lowpass',120,.3,.65,0,.2,2,.55),
+      BASS:    role(.18,[36,52],Q(.015,.25,.55,.2),'sine','lowpass',200,1,.48,0,.3,2,.4),
+      PAD:     role(.28,[48,66],Q(.8,.4,.75,1.5),'sine','lowpass',550,1,.38,0,.8,2,1.2),
+      LEAD:    role(.20,[55,76],Q(.01,.12,.38,.2),'triangle','lowpass',1200,1,.42,0,.4,2,.35),
+      PERC:    role(.12,[48,72],Q(.001,.06,.0,.04),'noise','lowpass',2000,.3,.32,0,.5,3,.25),
+      ARP:     role(.10,[60,84],Q(.005,.10,.15,.12),'triangle','lowpass',1800,1,.35,0,.5,2,.3),
     },
-    syncThreshold:.42, encounterR:.10, entainment:.45, eventRate:1.4,
-    reverbAmt:.25, delayAmt:.18, delayTime:.20, masterGain:.88,
-    harmonyMode:'free',
-    particleGlow:1.8, trailLen:5, lens:'Tension', bgPulse:true, cinematic:true,
-    primary:'#00ff88', secondary:'#000a04', accent:'#ff00cc',
-    gateCount:5, attractorCount:3,
+    syncThreshold:.32, encounterR:.14, entainment:.35, eventRate:.4,
+    reverbAmt:.6, delayAmt:.45, delayTime:.3, masterGain:.7,
+    harmonyMode:'consonant',
+    particleGlow:1.2, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#ccaa88', secondary:'#0a0804', accent:'#88aacc',
+    gateCount:3, attractorCount:1,
   },
 
-  // ── 44. Dubstep Wobble ────────────────────────────────────────────────────
-  // 140bpm dubstep — massive wobble bass, heavy half-time drops, glitch percs
-  {
-    id:'dubstep-wobble', name:'Dubstep Wobble', intensity:5,
-    description:'140bpm dubstep — massive LFO wobble bass, half-time drops, glitch percs.',
-    vibe:'Wobble, Drop, Heavy',
-    tags:['Electronic','Club','Glitch','Dark'],
-    bpm:140, scale:'minor', root:36, quantaCount:96,
-    motionStyle:'orbit',
-    roles:{
-      KICK:    role(.20,[24,36],Q(.001,.10,.0,.07),'kick','lowpass',200,.5,.92,0,.3,5,.42),
-      BASS:    role(.35,[24,46],Q(.003,.30,.72,.22),'sawtooth','lowpass',180,16,.88,-8,.25,3,.28),
-      PERC:    role(.20,[55,80],Q(.001,.04,.0,.025),'noise','bandpass',4500,1,.65,0,.9,5,.14),
-      LEAD:    role(.15,[52,74],Q(.008,.12,.45,.14),'square','lowpass',1800,8,.65,7,.6,4,.28),
-      PAD:     role(.10,[44,62],Q(.5,.4,.78,1.4),'sawtooth','lowpass',600,2,.42,0,.8,2,.95),
-    },
-    syncThreshold:.38, encounterR:.10, entainment:.38, eventRate:1.0,
-    reverbAmt:.22, delayAmt:.18, delayTime:.22, masterGain:.90,
-    harmonyMode:'dissonant',
-    particleGlow:1.6, trailLen:4, lens:'Tension', bgPulse:true, cinematic:false,
-    primary:'#cc00ff', secondary:'#080010', accent:'#00ffff',
-    gateCount:5, attractorCount:2,
-  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── X. CINEMATIC & ORCHESTRAL ──────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // ── 45. Deep House Chicago ────────────────────────────────────────────────
-  // 124bpm deep house — warm bass, choir stabs, rolling strings, Chicago soul
+  // 44 ── Film Noir ───────────────────────────────────────────────────────────
+  // Flow physics — slow suspense. Minor + chromatic tension.
   {
-    id:'deep-house', name:'Deep House Chicago', intensity:3,
-    description:'124bpm Chicago deep house — warm bass, soulful choir stabs, rolling strings.',
-    vibe:'Soulful, Warm, Deep',
-    tags:['Electronic','Club','Groove','Choral'],
-    bpm:124, scale:'dorian', root:38, quantaCount:108,
+    id:'film-noir', name:'Film Noir', intensity:2,
+    description:'Suspense lento em flow. Sombras harmônicas, tensão cromática.',
+    vibe:'Suspense, Shadow, Mystery',
+    tags:['Ambient','Dark','Experimental'],
+    bpm:58, scale:'harmonic_minor', root:36, quantaCount:56,
     motionStyle:'flow',
     roles:{
-      KICK:    role(.18,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.85,0,.25,4,.42),
-      BASS:    role(.22,[33,50],Q(.005,.18,.68,.14),'sawtooth','lowpass',280,3,.78,0,.3,4,.28),
-      PERC:    role(.15,[55,76],Q(.001,.04,.0,.025),'hihat','highpass',6500,.4,.55,0,.85,5,.18),
-      PAD:     role(.20,[46,64],Q(.4,.32,.75,1.0),'sawtooth','lowpass',800,2,.52,0,.8,3,.75),
-      CHOIR:   role(.15,[55,70],Q(.35,.28,.72,1.0),'sine','lowpass',2400,.8,.48,0,.9,3,.9),
-      STRINGS: role(.10,[50,68],Q(.20,.22,.60,.70),'triangle','lowpass',1600,1.5,.48,0,.8,2,.55),
+      PAD:     role(.30,[36,60],Q(1.0,.5,.75,2.0),'sawtooth','lowpass',500,2,.42,5,.8,3,1.2),
+      STRINGS: role(.25,[42,72],Q(.5,.3,.65,1.2),'triangle','lowpass',1100,1,.38,3,.7,2,.8),
+      BASS:    role(.18,[24,42],Q(.1,.3,.65,1.0),'sine','lowpass',180,1,.50,0,.3,2,.6),
+      LEAD:    role(.15,[52,80],Q(.02,.12,.40,.2),'triangle','lowpass',1600,1.5,.42,0,.5,2,.35),
+      CHOIR:   role(.12,[48,66],Q(1.2,.5,.72,2.5),'sine','lowpass',550,.9,.30,0,.9,2,2.0),
     },
-    syncThreshold:.55, encounterR:.13, entainment:.62, eventRate:.75,
-    reverbAmt:.35, delayAmt:.22, delayTime:.28, masterGain:.82,
-    harmonyMode:'consonant',
-    particleGlow:1.2, trailLen:7, lens:'Harmony', bgPulse:true, cinematic:true,
-    primary:'#ff8833', secondary:'#0c0600', accent:'#00ccff',
-    gateCount:3, attractorCount:2,
+    syncThreshold:.28, encounterR:.15, entainment:.25, eventRate:.25,
+    reverbAmt:.72, delayAmt:.5, delayTime:.45, masterGain:.65,
+    harmonyMode:'dissonant',
+    particleGlow:1.8, trailLen:12, lens:'Tension', bgPulse:false, cinematic:true,
+    primary:'#8888aa', secondary:'#040408', accent:'#ff6644',
+    gateCount:2, attractorCount:1,
   },
 
-  // ── 46. Jungle 94 ─────────────────────────────────────────────────────────
-  // 160bpm jungle/rave — Amen-break chopped, heavy sub, melodic breaks
+  // 45 ── Epic Crescendo ──────────────────────────────────────────────────────
+  // Exodus physics — all particles migrating toward climax. Full orchestra.
   {
-    id:'jungle-94', name:'Jungle 94', intensity:5,
-    description:'160bpm jungle — chopped Amen breaks, heavy sub-bass, melodic rave energy.',
-    vibe:'Amen, Rave, 1994',
-    tags:['Electronic','Breakbeat','Rave','Club'],
-    bpm:160, scale:'minor', root:40, quantaCount:120,
-    motionStyle:'swarm',
+    id:'epic-crescendo', name:'Epic Crescendo', intensity:5,
+    description:'Migração épica para o clímax. Orquestra completa em movimento.',
+    vibe:'Epic, Climax, Power',
+    tags:['Orchestral','Dynamic','Cinematic'],
+    bpm:96, scale:'major', root:48, quantaCount:128,
+    motionStyle:'exodus',
     roles:{
-      KICK:    role(.12,[24,36],Q(.001,.06,.0,.04),'kick','lowpass',200,.5,.88,0,.25,4,.35),
-      PERC:    role(.35,[55,84],Q(.001,.038,.0,.022),'snare','bandpass',2800,.9,.72,0,1.0,8,.09),
-      BASS:    role(.28,[26,46],Q(.002,.18,.72,.14),'sawtooth','lowpass',200,2,.88,-10,.25,4,.20),
-      LEAD:    role(.15,[55,76],Q(.008,.10,.45,.12),'sawtooth','lowpass',1800,5,.62,7,.6,3,.25),
-      PAD:     role(.10,[46,64],Q(.4,.32,.75,1.0),'sawtooth','lowpass',700,2,.42,0,.8,2,.85),
+      KICK:    role(.10,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.82,0,.2,4,.4),
+      BASS:    role(.12,[28,48],Q(.01,.2,.55,.15),'triangle','lowpass',300,1.5,.55,0,.3,3,.3),
+      PERC:    role(.10,[48,72],Q(.001,.06,.0,.04),'snare','bandpass',3000,.5,.45,0,.7,4,.2),
+      STRINGS: role(.22,[42,76],Q(.15,.15,.65,1.2),'sawtooth','lowpass',1400,1.5,.48,5,.8,3,.5),
+      LEAD:    role(.15,[55,88],Q(.01,.10,.48,.15),'sawtooth','lowpass',2200,2,.50,3,.5,3,.2),
+      PAD:     role(.12,[42,66],Q(.5,.3,.72,1.5),'sine','lowpass',800,1,.38,0,.8,2,.9),
+      CHOIR:   role(.12,[48,72],Q(.8,.4,.75,2.0),'sine','lowpass',700,1,.35,0,.9,2,1.2),
+      ARP:     role(.07,[60,90],Q(.003,.08,.15,.1),'triangle','lowpass',2800,1,.38,0,.6,2,.14),
     },
-    syncThreshold:.35, encounterR:.09, entainment:.38, eventRate:1.6,
-    reverbAmt:.15, delayAmt:.22, delayTime:.125, masterGain:.90,
-    harmonyMode:'modal',
-    particleGlow:1.5, trailLen:3, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#ff4400', secondary:'#0a0200', accent:'#00ffcc',
+    syncThreshold:.48, encounterR:.11, entainment:.55, eventRate:.7,
+    reverbAmt:.55, delayAmt:.4, delayTime:.25, masterGain:.82,
+    harmonyMode:'consonant',
+    particleGlow:1.8, trailLen:8, lens:'Events', bgPulse:true, cinematic:true,
+    primary:'#ffd700', secondary:'#0a0800', accent:'#ff4400',
     gateCount:6, attractorCount:1,
   },
 
-  // ── 47. Ambient Cosmos ────────────────────────────────────────────────────
-  // 38bpm mega-ambient — 9 layers, whole_tone, infinite reverb, drift
+  // 46 ── Horror Cells ────────────────────────────────────────────────────────
+  // Cells physics — organic pulsing clusters. Chromatic tension. Dissonant.
   {
-    id:'ambient-cosmos', name:'Ambient Cosmos', intensity:1,
-    description:'38bpm mega-ambient — 9 harmonic layers, whole_tone, vast infinite reverb.',
-    vibe:'Infinite, Vast, Breathing',
-    tags:['Ambient','Space','Drone','Meditative'],
-    bpm:38, scale:'whole_tone', root:48, quantaCount:64,
-    motionStyle:'drift',
+    id:'horror-cells', name:'Horror Cells', intensity:4,
+    description:'Clusters orgânicos pulsando. Dissonância cromática. Tensão visceral.',
+    vibe:'Terror, Visceral, Organism',
+    tags:['Experimental','Dark','Cinematic'],
+    bpm:66, scale:'chromatic', root:36, quantaCount:72,
+    motionStyle:'cells',
     roles:{
-      PAD:     role(.35,[36,64],Q(1.5,.6,.88,3.5),'sine','lowpass',500,1.5,.52,0,.9,3,2.2),
-      STRINGS: role(.25,[48,70],Q(.9,.5,.80,2.8),'triangle','lowpass',1200,1,.45,0,.85,2,1.8),
-      CHOIR:   role(.20,[55,72],Q(1.2,.6,.82,3.2),'sine','lowpass',1800,.8,.42,0,.95,2,2.5),
-      BASS:    role(.12,[28,44],Q(.25,.5,.88,2.0),'sine','lowpass',140,1,.62,0,.25,2,2.5),
-      LEAD:    role(.08,[55,76],Q(.5,.4,.72,2.0),'triangle','lowpass',2200,2,.38,0,.6,2,1.5),
+      PAD:     role(.30,[30,60],Q(.8,.4,.70,2.0),'sawtooth','lowpass',400,3,.45,7,.8,3,1.0),
+      STRINGS: role(.25,[36,72],Q(.1,.2,.50,.8),'sawtooth','bandpass',1200,4,.42,12,.7,3,.5),
+      BASS:    role(.18,[24,42],Q(.1,.3,.65,1.5),'sine','lowpass',150,1,.55,0,.3,2,.6),
+      PERC:    role(.15,[36,72],Q(.001,.08,.0,.05),'noise','bandpass',2000,.5,.38,0,.6,4,.2),
+      CHOIR:   role(.12,[42,60],Q(1.5,.6,.70,3.0),'sine','lowpass',450,1,.30,0,.9,2,2.5),
     },
-    syncThreshold:.65, encounterR:.20, entainment:.78, eventRate:.20,
-    reverbAmt:.92, delayAmt:.65, delayTime:.70, masterGain:.68,
-    harmonyMode:'consonant',
-    particleGlow:2.8, trailLen:18, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#6688dd', secondary:'#020410', accent:'#ddeeff',
-    gateCount:1, attractorCount:1,
-  },
-
-  // ── 48. Lo-Fi Hip-Hop ─────────────────────────────────────────────────────
-  // 84bpm lo-fi hip-hop — warm vinyl, dorian, lazy groove, cassette warmth
-  {
-    id:'lofi-hiphop', name:'Lo-Fi Hip-Hop', intensity:2,
-    description:'84bpm lo-fi hip-hop — warm vinyl crackle, dorian, lazy groove, cassette warmth.',
-    vibe:'Vinyl, Chill, Coffee',
-    tags:['Groove','Jazz','Soft','Ambient'],
-    bpm:84, scale:'dorian', root:38, quantaCount:72,
-    motionStyle:'drift',
-    roles:{
-      KICK:    role(.18,[24,36],Q(.001,.08,.0,.06),'kick','lowpass',200,.5,.75,0,.2,3,.50),
-      BASS:    role(.25,[33,50],Q(.008,.20,.68,.18),'triangle','lowpass',320,2,.72,0,.3,3,.38),
-      PERC:    role(.18,[55,72],Q(.001,.05,.0,.035),'snare','bandpass',2200,.7,.50,0,.8,3,.28),
-      STRINGS: role(.22,[48,68],Q(.18,.22,.62,.75),'triangle','lowpass',1400,1.5,.52,0,.75,2,.55),
-      PAD:     role(.17,[46,64],Q(.5,.38,.78,1.4),'sine','lowpass',800,1.5,.45,0,.7,2,1.0),
-    },
-    syncThreshold:.52, encounterR:.14, entainment:.58, eventRate:.55,
-    reverbAmt:.42, delayAmt:.28, delayTime:.38, masterGain:.78,
-    harmonyMode:'consonant',
-    particleGlow:1.0, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#cc9955', secondary:'#0a0700', accent:'#88aacc',
-    gateCount:2, attractorCount:1,
-  },
-
-  // ── 49. Gamelan Trance ────────────────────────────────────────────────────
-  // 92bpm Balinese gamelan ritual — metallophones, spiral orbit, pelog-ish
-  {
-    id:'gamelan-trance', name:'Gamelan Trance', intensity:3,
-    description:'92bpm Balinese ritual — metallophones in spiral orbit, whole_tone pelog.',
-    vibe:'Metallophones, Ritual, Bali',
-    tags:['Modal','Meditative','Orchestral','Experimental'],
-    bpm:92, scale:'whole_tone', root:36, quantaCount:96,
-    motionStyle:'spiral',
-    roles:{
-      PERC:    role(.38,[52,84],Q(.001,.10,.12,.5),'sine','bandpass',2800,5,.62,0,1.0,6,.22),
-      STRINGS: role(.28,[48,70],Q(.08,.18,.55,.8),'triangle','lowpass',1400,1.5,.52,0,.9,3,.45),
-      PAD:     role(.22,[42,62],Q(.4,.30,.72,.95),'sine','lowpass',550,1.5,.45,0,.8,2,.85),
-      BASS:    role(.12,[28,44],Q(.05,.25,.75,.4),'sine','lowpass',180,1.5,.65,0,.3,2,.55),
-    },
-    syncThreshold:.62, encounterR:.14, entainment:.70, eventRate:.65,
-    reverbAmt:.48, delayAmt:.32, delayTime:.35, masterGain:.80,
-    harmonyMode:'consonant',
-    particleGlow:1.3, trailLen:9, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#ddaa22', secondary:'#100800', accent:'#44ddff',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 50. Cumbia Electrónica ────────────────────────────────────────────────
-  // 108bpm Colombian cumbia digital — contagious 6/8 groove, synth horns
-  {
-    id:'cumbia-electronica', name:'Cumbia Electrónica', intensity:4,
-    description:'108bpm Colombian cumbia digital — contagious 6/8 groove, synth horns, dance.',
-    vibe:'Colombia, 6/8, Fiesta',
-    tags:['Groove','Electronic','Dynamic','Modal'],
-    bpm:108, scale:'mixolydian', root:41, quantaCount:112,
-    motionStyle:'swarm',
-    roles:{
-      KICK:    role(.15,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.85,0,.25,4,.42),
-      BASS:    role(.25,[36,52],Q(.008,.16,.65,.12),'sawtooth','lowpass',320,3,.78,0,.35,4,.28),
-      PERC:    role(.28,[55,80],Q(.001,.04,.0,.025),'snare','bandpass',3000,.9,.65,0,.9,7,.14),
-      ARP:     role(.20,[60,84],Q(.003,.07,.35,.08),'square','bandpass',2600,6,.58,12,.8,5,.12),
-      STRINGS: role(.12,[50,68],Q(.15,.20,.58,.65),'triangle','lowpass',1500,1.5,.50,0,.8,2,.5),
-    },
-    syncThreshold:.50, encounterR:.12, entainment:.58, eventRate:1.1,
-    reverbAmt:.22, delayAmt:.20, delayTime:.25, masterGain:.86,
-    harmonyMode:'modal',
-    particleGlow:1.3, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#ffcc00', secondary:'#0a0800', accent:'#ee2244',
-    gateCount:5, attractorCount:2,
-  },
-
-  // ── 51. Orchestral Storm ──────────────────────────────────────────────────
-  // Full 8-voice orchestral crescendo — epic cinematic, all roles at max
-  {
-    id:'orchestral-storm', name:'Orchestral Storm', intensity:5,
-    description:'All 8 voices — epic crescendo, film score, full orchestral eruption.',
-    vibe:'Symphonic, Epic, Crescendo',
-    tags:['Orchestral','Classical','Choral','Dynamic'],
-    bpm:108, scale:'harmonic_minor', root:48, quantaCount:140,
-    motionStyle:'swarm',
-    roles:{
-      KICK:    role(.10,[24,36],Q(.001,.09,.0,.06),'kick','lowpass',200,.5,.88,0,.3,4,.45),
-      BASS:    role(.12,[33,52],Q(.01,.25,.72,.22),'triangle','lowpass',300,2,.72,0,.3,3,.38),
-      PERC:    role(.10,[48,72],Q(.001,.08,.0,.055),'snare','bandpass',2400,.8,.58,0,.8,4,.28),
-      PAD:     role(.14,[44,66],Q(.5,.38,.80,1.5),'sawtooth','lowpass',650,2,.52,0,.85,3,.95),
-      LEAD:    role(.14,[52,76],Q(.012,.18,.58,.18),'sawtooth','lowpass',1600,4,.65,5,.7,4,.35),
-      ARP:     role(.10,[60,88],Q(.003,.08,.38,.10),'square','bandpass',2800,6,.55,14,.75,4,.15),
-      STRINGS: role(.15,[50,74],Q(.18,.22,.68,.85),'triangle','lowpass',1800,1.5,.58,0,.9,5,.45),
-      CHOIR:   role(.15,[55,72],Q(.5,.35,.78,1.8),'sine','lowpass',2200,.8,.52,0,1.0,4,.85),
-    },
-    syncThreshold:.62, encounterR:.14, entainment:.68, eventRate:.90,
-    reverbAmt:.52, delayAmt:.28, delayTime:.38, masterGain:.82,
-    harmonyMode:'consonant',
-    particleGlow:1.5, trailLen:10, lens:'Harmony', bgPulse:true, cinematic:true,
-    primary:'#dd9944', secondary:'#0a0600', accent:'#4488cc',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 52. Krautrock Engine ──────────────────────────────────────────────────
-  // 110bpm motorik beat — Can / Neu! / Cluster — relentless, hypnotic lattice
-  {
-    id:'krautrock-engine', name:'Krautrock Engine', intensity:4,
-    description:'110bpm motorik — Can / Neu! relentless lattice beat, dorian drone hypnosis.',
-    vibe:'Motorik, Trance, Motorway',
-    tags:['Electronic','Experimental','Groove','Minimalism'],
-    bpm:110, scale:'dorian', root:38, quantaCount:104,
-    motionStyle:'lattice',
-    roles:{
-      KICK:    role(.22,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.88,0,.2,4,.42),
-      BASS:    role(.25,[33,50],Q(.005,.18,.68,.12),'sawtooth','lowpass',280,3,.78,0,.3,4,.28),
-      PERC:    role(.22,[55,76],Q(.001,.04,.0,.025),'hihat','highpass',7000,.4,.60,0,.9,5,.18),
-      LEAD:    role(.18,[52,74],Q(.01,.12,.50,.14),'sawtooth','lowpass',1800,5,.65,7,.6,4,.28),
-      PAD:     role(.13,[44,62],Q(.4,.32,.75,1.2),'sawtooth','lowpass',700,2,.45,0,.75,2,.85),
-    },
-    syncThreshold:.45, encounterR:.12, entainment:.52, eventRate:.88,
-    reverbAmt:.25, delayAmt:.20, delayTime:.18, masterGain:.85,
-    harmonyMode:'modal',
-    particleGlow:1.2, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#aaccee', secondary:'#05080a', accent:'#ff8822',
-    gateCount:4, attractorCount:1,
-  },
-
-  // ── 53. Dub Reggae Deep ───────────────────────────────────────────────────
-  // 78bpm heavyweight dub — massive bass rumble, Kingston delays, drift
-  {
-    id:'dub-reggae', name:'Dub Reggae Deep', intensity:3,
-    description:'78bpm Kingston dub — massive bass rumble, huge delay echoes, rhythm drift.',
-    vibe:'Kingston, Dub Echo, Bass',
-    tags:['Groove','Electronic','Soft','Ambient'],
-    bpm:78, scale:'mixolydian', root:40, quantaCount:84,
-    motionStyle:'drift',
-    roles:{
-      KICK:    role(.18,[24,36],Q(.001,.09,.0,.07),'kick','lowpass',200,.5,.88,0,.25,4,.55),
-      BASS:    role(.35,[28,46],Q(.004,.28,.82,.22),'sine','lowpass',160,1.5,.90,-8,.2,3,.38),
-      PERC:    role(.22,[52,76],Q(.001,.045,.0,.028),'snare','bandpass',2600,.7,.55,0,.85,4,.22),
-      STRINGS: role(.15,[50,68],Q(.22,.22,.62,.75),'triangle','lowpass',1400,1.5,.50,0,.8,2,.55),
-      PAD:     role(.10,[44,60],Q(.6,.4,.80,2.0),'sine','lowpass',550,1.5,.42,0,.75,2,1.2),
-    },
-    syncThreshold:.58, encounterR:.15, entainment:.68, eventRate:.50,
-    reverbAmt:.65, delayAmt:.75, delayTime:.666, masterGain:.78,
-    harmonyMode:'consonant',
-    particleGlow:1.0, trailLen:10, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#ffcc00', secondary:'#080a00', accent:'#00cc88',
-    gateCount:2, attractorCount:1,
-  },
-
-  // ── 54. Flamenco Futura ───────────────────────────────────────────────────
-  // 118bpm flamenco fusion — phrygian passion, rasgueo percussions, flow
-  {
-    id:'flamenco-futura', name:'Flamenco Futura', intensity:4,
-    description:'118bpm flamenco fusion — phrygian passion, rasgueo percussions, flow motion.',
-    vibe:'Phrygian, Passion, Andalusia',
-    tags:['Modal','Strings','Dynamic','Groove'],
-    bpm:118, scale:'phrygian', root:45, quantaCount:104,
-    motionStyle:'flow',
-    roles:{
-      BASS:    role(.25,[36,52],Q(.01,.18,.65,.14),'sawtooth','lowpass',340,3,.75,0,.3,3,.30),
-      LEAD:    role(.30,[55,80],Q(.005,.10,.52,.12),'sawtooth','lowpass',1900,9,.70,0,.7,4,.20),
-      PERC:    role(.28,[55,78],Q(.001,.04,.0,.025),'snare','bandpass',3200,.9,.62,0,.85,6,.14),
-      STRINGS: role(.12,[52,70],Q(.15,.20,.60,.68),'triangle','lowpass',1500,1.5,.52,0,.8,2,.5),
-      ARP:     role(.05,[64,84],Q(.002,.06,.28,.08),'square','bandpass',2800,7,.52,14,.7,3,.12),
-    },
-    syncThreshold:.52, encounterR:.12, entainment:.55, eventRate:1.1,
-    reverbAmt:.22, delayAmt:.15, delayTime:.22, masterGain:.84,
-    harmonyMode:'modal',
-    particleGlow:1.3, trailLen:5, lens:'Tension', bgPulse:true, cinematic:false,
-    primary:'#dd3300', secondary:'#120500', accent:'#ffcc33',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 55. Jazz Big Band Swing ───────────────────────────────────────────────
-  // 142bpm big band swing — brass + bass + full walk, major 7ths, orbit
-  {
-    id:'jazz-bigband', name:'Jazz Big Band Swing', intensity:4,
-    description:'142bpm big band swing — brass ensemble, walking bass, full major 7ths orbit.',
-    vibe:'Brass, Swing, Big Band',
-    tags:['Jazz','Swing','Orchestral','Groove'],
-    bpm:142, scale:'major', root:40, quantaCount:112,
-    motionStyle:'orbit',
-    roles:{
-      BASS:    role(.22,[33,52],Q(.005,.16,.68,.14),'triangle','lowpass',350,2,.75,0,.3,4,.25),
-      PERC:    role(.18,[55,76],Q(.001,.05,.0,.03),'snare','bandpass',2500,.8,.60,0,.85,5,.20),
-      LEAD:    role(.28,[55,82],Q(.008,.12,.52,.16),'sawtooth','lowpass',2200,4,.65,5,.6,5,.22),
-      STRINGS: role(.18,[50,70],Q(.18,.20,.62,.70),'triangle','lowpass',1600,1.5,.52,0,.8,3,.45),
-      CHOIR:   role(.14,[55,72],Q(.35,.28,.70,.95),'sine','lowpass',2400,.8,.45,0,.9,3,.85),
-    },
-    syncThreshold:.48, encounterR:.13, entainment:.52, eventRate:1.0,
-    reverbAmt:.32, delayAmt:.22, delayTime:.25, masterGain:.82,
-    harmonyMode:'consonant',
-    particleGlow:1.3, trailLen:6, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#ffaa44', secondary:'#0a0600', accent:'#44aaff',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 56. New Age Crystal ───────────────────────────────────────────────────
-  // 52bpm new age — pristine pentatonic, shimmer, ethereal layers, lattice
-  {
-    id:'newage-crystal', name:'New Age Crystal', intensity:1,
-    description:'52bpm new age — pristine pentatonic, crystal shimmer, ethereal lattice layers.',
-    vibe:'Crystal, Pristine, Ethereal',
-    tags:['Ambient','Meditative','Soft','Classical'],
-    bpm:52, scale:'pentatonic', root:60, quantaCount:72,
-    motionStyle:'lattice',
-    roles:{
-      ARP:     role(.45,[64,92],Q(.002,.08,.35,.22),'triangle','bandpass',5000,3,.55,0,.65,5,.22),
-      STRINGS: role(.28,[55,75],Q(.12,.20,.58,.50),'triangle','lowpass',2200,1.2,.50,4,.75,3,.38),
-      PAD:     role(.18,[52,68],Q(.6,.35,.78,1.6),'sine','lowpass',900,1.5,.40,0,.8,2,1.0),
-      BASS:    role(.09,[40,55],Q(.05,.22,.62,.45),'sine','lowpass',320,1,.58,0,.3,2,.55),
-    },
-    syncThreshold:.58, encounterR:.14, entainment:.65, eventRate:.50,
-    reverbAmt:.58, delayAmt:.40, delayTime:.375, masterGain:.75,
-    harmonyMode:'consonant',
-    particleGlow:1.8, trailLen:10, lens:'Notes', bgPulse:false, cinematic:true,
-    primary:'#eef8ff', secondary:'#030608', accent:'#88ccff',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 57. Balkan Groove ─────────────────────────────────────────────────────
-  // 132bpm Balkan polyrhythm — 7/8 feel, dorian, folk frenzy, swarm
-  {
-    id:'balkan-groove', name:'Balkan Groove', intensity:5,
-    description:'132bpm Balkan frenzy — 7/8 feel, dorian folk fire, polyrhythmic swarm.',
-    vibe:'7/8, Balkan, Frenzy',
-    tags:['Modal','Groove','Dynamic','Experimental'],
-    bpm:132, scale:'dorian', root:41, quantaCount:116,
-    motionStyle:'swarm',
-    roles:{
-      KICK:    role(.16,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.88,0,.25,4,.38),
-      BASS:    role(.22,[36,52],Q(.008,.16,.65,.12),'sawtooth','lowpass',320,3,.78,0,.3,4,.28),
-      PERC:    role(.30,[52,80],Q(.001,.04,.0,.025),'snare','bandpass',3000,.9,.65,0,.95,7,.12),
-      LEAD:    role(.20,[55,79],Q(.006,.10,.50,.12),'sawtooth','lowpass',1800,7,.68,8,.65,4,.22),
-      ARP:     role(.12,[62,86],Q(.003,.06,.32,.08),'square','bandpass',2800,9,.58,14,.8,4,.12),
-    },
-    syncThreshold:.42, encounterR:.11, entainment:.48, eventRate:1.3,
-    reverbAmt:.22, delayAmt:.18, delayTime:.20, masterGain:.88,
-    harmonyMode:'modal',
-    particleGlow:1.4, trailLen:4, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#ee3322', secondary:'#0a0200', accent:'#ffcc00',
-    gateCount:5, attractorCount:2,
-  },
-
-  // ── 58. Neo-Classical Generative ─────────────────────────────────────────
-  // 96bpm modern classical — Arvo Pärt / Glass lattice, harmonic minor
-  {
-    id:'neoclassical', name:'Neo-Classical Generative', intensity:3,
-    description:'96bpm modern classical — Arvo Pärt tintinnabuli, harmonic_minor lattice.',
-    vibe:'Pärt, Tintinnabuli, Luminous',
-    tags:['Classical','Minimalism','Phasing','Strings'],
-    bpm:96, scale:'harmonic_minor', root:48, quantaCount:88,
-    motionStyle:'lattice',
-    roles:{
-      ARP:     role(.30,[60,84],Q(.002,.06,.28,.12),'triangle','bandpass',4200,2,.52,0,.65,5,.15),
-      STRINGS: role(.32,[52,72],Q(.08,.16,.58,.45),'triangle','lowpass',2400,1.2,.52,4,.8,4,.28),
-      BASS:    role(.22,[40,55],Q(.01,.20,.62,.25),'triangle','lowpass',400,1,.62,0,.3,3,.38),
-      PAD:     role(.16,[48,66],Q(.45,.32,.75,1.2),'sine','lowpass',900,1.5,.40,0,.8,2,.85),
-    },
-    syncThreshold:.50, encounterR:.13, entainment:.58, eventRate:.72,
-    reverbAmt:.52, delayAmt:.25, delayTime:.333, masterGain:.78,
-    harmonyMode:'consonant',
-    particleGlow:1.3, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#ccddff', secondary:'#040608', accent:'#ffddaa',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 59. Future Bass Euphoria ──────────────────────────────────────────────
-  // 150bpm future bass — supersaw pads, emotional buildup, spiral
-  {
-    id:'future-bass', name:'Future Bass Euphoria', intensity:5,
-    description:'150bpm future bass — supersaw pads, emotional drops, brostep wobble spiral.',
-    vibe:'Supersaw, Euphoria, Drop',
-    tags:['Electronic','Club','Dynamic','Arpeggios'],
-    bpm:150, scale:'major', root:40, quantaCount:124,
-    motionStyle:'spiral',
-    roles:{
-      KICK:    role(.16,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',200,.5,.92,0,.25,5,.40),
-      BASS:    role(.20,[30,50],Q(.003,.22,.72,.18),'sawtooth','lowpass',220,8,.85,-7,.3,4,.22),
-      PAD:     role(.25,[46,68],Q(.4,.35,.82,1.2),'sawtooth','lowpass',900,2,.62,0,.9,3,.72),
-      ARP:     role(.22,[62,90],Q(.002,.06,.30,.08),'square','bandpass',3000,10,.62,16,.8,6,.10),
-      LEAD:    role(.12,[55,80],Q(.008,.10,.48,.14),'sawtooth','lowpass',2200,6,.68,7,.65,4,.25),
-      CHOIR:   role(.05,[58,72],Q(.4,.28,.72,1.2),'sine','lowpass',2600,.8,.42,0,.85,2,.9),
-    },
-    syncThreshold:.42, encounterR:.11, entainment:.48, eventRate:1.4,
-    reverbAmt:.28, delayAmt:.20, delayTime:.20, masterGain:.88,
-    harmonyMode:'consonant',
-    particleGlow:1.8, trailLen:5, lens:'Notes', bgPulse:true, cinematic:true,
-    primary:'#ff44cc', secondary:'#0a0010', accent:'#00ffff',
-    gateCount:5, attractorCount:3,
-  },
-
-  // ── 60. GRAND FINALE — All Tools, All Voices ──────────────────────────────
-  // 120bpm epic showcase — every voice maxed, sequencer+gates+attractors+zones
-  {
-    id:'grand-finale', name:'Grand Finale', intensity:5,
-    description:'120bpm — ALL 8 voices, ALL tools armed. Ultimate tool showcase at full power.',
-    vibe:'Epic, All-Tools, Maximum',
-    tags:['Electronic','Orchestral','Experimental','Dynamic'],
-    bpm:120, scale:'lydian', root:48, quantaCount:160,
-    motionStyle:'orbit',
-    roles:{
-      KICK:    role(.12,[24,36],Q(.001,.09,.0,.06),'kick','lowpass',200,.5,.92,0,.3,5,.40),
-      BASS:    role(.14,[30,50],Q(.003,.20,.72,.15),'sawtooth','lowpass',250,3,.85,-6,.3,4,.25),
-      PERC:    role(.12,[55,82],Q(.001,.04,.0,.025),'noise','bandpass',3500,1,.68,0,.95,6,.13),
-      PAD:     role(.14,[44,66],Q(.45,.35,.80,1.4),'sawtooth','lowpass',700,2,.55,0,.85,3,.88),
-      LEAD:    role(.12,[52,78],Q(.010,.14,.55,.18),'sawtooth','lowpass',2000,5,.68,6,.7,4,.28),
-      ARP:     role(.12,[62,90],Q(.002,.06,.32,.08),'square','bandpass',3000,8,.60,14,.8,5,.11),
-      STRINGS: role(.12,[50,72],Q(.18,.22,.68,.82),'triangle','lowpass',1800,1.5,.58,0,.9,4,.45),
-      CHOIR:   role(.12,[55,72],Q(.5,.35,.80,1.8),'sine','lowpass',2200,.8,.52,0,1.0,3,.88),
-    },
-    syncThreshold:.55, encounterR:.13, entainment:.65, eventRate:1.0,
-    reverbAmt:.42, delayAmt:.25, delayTime:.333, masterGain:.85,
-    harmonyMode:'consonant',
-    particleGlow:2.0, trailLen:9, lens:'Harmony', bgPulse:true, cinematic:true,
-    primary:'#ffdd44', secondary:'#080600', accent:'#44aaff',
-    gateCount:5, attractorCount:3,
-  },
-
-  // ── 42. Jazz Guitar Voicings ─────────────────────────────────────────────
-  {
-    id:'jazz-guitar', name:'Jazz Guitar Voicings', intensity:3,
-    description:'Guitarra jazz com chord voicings 7th/9th/13th. Soft picking.',
-    vibe:'7ths, Comping, Warm',
-    tags:['Jazz','Strings','Modal','Improvisation'],
-    bpm:110, scale:'dorian', root:38, quantaCount:92,
-    motionStyle:'orbit',
-    roles:{
-      LEAD:    role(.35,[52,76],Q(.008,.15,.5,.22),'triangle','lowpass',2200,2.5,.6,0,.6,4,.28),
-      STRINGS: role(.35,[48,67],Q(.12,.18,.55,.4),'triangle','lowpass',1800,1.5,.52,0,.8,3,.42),
-      BASS:    role(.25,[33,50],Q(.008,.2,.62,.18),'triangle','lowpass',320,2,.68,0,.3,3,.32),
-      PAD:     role(.05,[46,62],Q(.35,.28,.68,.85),'sine','lowpass',900,1.5,.38,0,.75,2,.75),
-    },
-    syncThreshold:.48, encounterR:.13, entainment:.52, eventRate:.7,
-    reverbAmt:.28, delayAmt:.18, delayTime:.25, masterGain:.8,
-    harmonyMode:'consonant',
-    particleGlow:1.1, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#cc8844', secondary:'#0c0600', accent:'#66aaff',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 43. Bebop Saxophone Lines ─────────────────────────────────────────────
-  {
-    id:'bebop-sax', name:'Bebop Saxophone Lines', intensity:4,
-    description:'Sax alto/tenor com linhas bebop rápidas. Charlie Parker-inspired.',
-    vibe:'Bebop, Alto Sax, Blazing',
-    tags:['Jazz','Improvisation','Free Jazz','Dynamic'],
-    bpm:220, scale:'blues', root:41, quantaCount:96,
-    motionStyle:'swarm',
-    roles:{
-      LEAD:    role(.50,[55,84],Q(.005,.12,.48,.15),'triangle','lowpass',2600,3.5,.65,0,.65,5,.18),
-      BASS:    role(.25,[33,50],Q(.008,.18,.62,.15),'triangle','lowpass',300,2,.7,0,.3,3,.3),
-      PERC:    role(.15,[52,72],Q(.001,.05,.0,.035),'snare','bandpass',2500,.8,.5,0,.85,4,.22),
-      PAD:     role(.10,[46,62],Q(.3,.25,.65,.8),'sine','lowpass',850,1.5,.35,0,.75,2,.8),
-    },
-    syncThreshold:.38, encounterR:.11, entainment:.4, eventRate:1.4,
-    reverbAmt:.18, delayAmt:.12, delayTime:.18, masterGain:.82,
-    harmonyMode:'modal',
-    particleGlow:1.3, trailLen:4, lens:'Rhythm', bgPulse:false, cinematic:false,
-    primary:'#ff9933', secondary:'#0a0500', accent:'#3388ff',
-    gateCount:4, attractorCount:1,
-  },
-
-  // ── 44. Shakuhachi Wind ───────────────────────────────────────────────────
-  {
-    id:'shakuhachi', name:'Shakuhachi Wind', intensity:1,
-    description:'Flauta japonesa com respiração. Minimalista e meditativo.',
-    vibe:'Zen, Breath, Japanese',
-    tags:['Meditative','Ambient','Modal','Soft'],
-    bpm:54, scale:'pentatonic', root:50, quantaCount:56,
-    motionStyle:'drift',
-    roles:{
-      LEAD:    role(.60,[50,74],Q(.08,.15,.45,.65),'sine','lowpass',1800,2,.55,0,.5,3,.55),
-      PAD:     role(.30,[42,62],Q(.6,.4,.75,1.8),'sine','lowpass',600,1.5,.4,0,.8,2,1.2),
-      BASS:    role(.10,[30,46],Q(.12,.3,.65,.8),'sine','lowpass',250,1,.5,0,.3,2,.9),
-    },
-    syncThreshold:.65, encounterR:.18, entainment:.72, eventRate:.3,
-    reverbAmt:.55, delayAmt:.35, delayTime:.5, masterGain:.72,
-    harmonyMode:'consonant',
-    particleGlow:0.8, trailLen:12, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#8899aa', secondary:'#040506', accent:'#ccaa88',
-    gateCount:1, attractorCount:1,
-  },
-
-  // ── 45. Prepared Piano Cage ───────────────────────────────────────────────
-  {
-    id:'prepared-piano', name:'Prepared Piano Cage', intensity:2,
-    description:'Piano preparado com objetos nas cordas. Sons percussivos e harmônicos.',
-    vibe:'Metallic, Percussive, Experimental',
-    tags:['Experimental','Cage','Acoustic','Minimalist'],
-    bpm:76, scale:'chromatic', root:48, quantaCount:72,
-    motionStyle:'drift',
-    roles:{
-      PERC:    role(.45,[48,84],Q(.001,.08,.15,.25),'triangle','bandpass',2200,4,.58,0,.9,5,.3),
-      STRINGS: role(.30,[40,64],Q(.05,.15,.42,.5),'triangle','lowpass',1200,2,.48,0,.75,3,.45),
-      PAD:     role(.25,[36,60],Q(.5,.35,.7,1.5),'sine','lowpass',700,1.5,.38,0,.8,2,1.0),
-    },
-    syncThreshold:.6, encounterR:.16, entainment:.45, eventRate:.45,
-    reverbAmt:.48, delayAmt:.4, delayTime:.45, masterGain:.75,
-    harmonyMode:'free',
-    particleGlow:1.0, trailLen:8, lens:'Events', bgPulse:false, cinematic:true,
-    primary:'#999999', secondary:'#050505', accent:'#cccccc',
-    gateCount:2, attractorCount:1,
-  },
-
-  // ── 46. Cello Bach Suite ──────────────────────────────────────────────────
-  {
-    id:'cello-bach', name:'Cello Bach Suite', intensity:3,
-    description:'Violoncelo solo estilo Bach. Linhas contrapontísticas profundas.',
-    vibe:'Baroque, Cello, Profound',
-    tags:['Classical','Baroque','Strings','Generative'],
-    bpm:92, scale:'harmonic_minor', root:40, quantaCount:80,
-    motionStyle:'lattice',
-    roles:{
-      BASS:    role(.65,[28,55],Q(.015,.22,.58,.45),'triangle','lowpass',800,1.8,.65,0,.45,5,.35),
-      STRINGS: role(.25,[40,67],Q(.08,.18,.52,.4),'triangle','lowpass',1400,1.5,.52,0,.75,3,.42),
-      PAD:     role(.10,[48,62],Q(.4,.3,.68,1.0),'sine','lowpass',600,1,.35,0,.7,2,.85),
-    },
-    syncThreshold:.5, encounterR:.14, entainment:.55, eventRate:.68,
-    reverbAmt:.42, delayAmt:.18, delayTime:.32, masterGain:.78,
-    harmonyMode:'consonant',
-    particleGlow:1.0, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#996633', secondary:'#0a0600', accent:'#ccaa77',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 47. Sitar Raga Meditation ─────────────────────────────────────────────
-  {
-    id:'sitar-raga', name:'Sitar Raga Meditation', intensity:2,
-    description:'Sitar indiano com drone tampura. Raga Bhairavi emergente.',
-    vibe:'Raga, Drone, Tanpura',
-    tags:['Modal','Meditative','Strings','Ambient'],
-    bpm:68, scale:'phrygian', root:45, quantaCount:88,
-    motionStyle:'orbit',
-    roles:{
-      LEAD:    role(.40,[50,76],Q(.008,.18,.5,.35),'sawtooth','lowpass',2400,8,.62,14,.6,4,.32),
-      BASS:    role(.35,[33,45],Q(2.5,.8,.92,5.0),'triangle','lowpass',180,1.5,.58,0,.25,2,3.5),
-      STRINGS: role(.15,[48,64],Q(.12,.2,.55,.6),'triangle','lowpass',1400,2,.45,0,.8,2,.55),
-      PAD:     role(.10,[45,60],Q(1.8,.6,.85,3.5),'sine','lowpass',500,1,.38,0,.7,2,2.5),
-    },
-    syncThreshold:.6, encounterR:.15, entainment:.68, eventRate:.4,
-    reverbAmt:.52, delayAmt:.3, delayTime:.4, masterGain:.75,
-    harmonyMode:'modal',
-    particleGlow:1.1, trailLen:10, lens:'Tension', bgPulse:false, cinematic:true,
-    primary:'#cc6600', secondary:'#0a0400', accent:'#ffcc88',
-    gateCount:2, attractorCount:1,
-  },
-
-  // ── 48. Miles Davis Trumpet ───────────────────────────────────────────────
-  {
-    id:'miles-trumpet', name:'Miles Davis Trumpet', intensity:3,
-    description:'Trompete modal à la Miles. Frases cool jazz, mute Harmon.',
-    vibe:'Cool, Modal, Miles',
-    tags:['Jazz','Modal','Improvisation','Soft'],
-    bpm:98, scale:'dorian', root:38, quantaCount:84,
-    motionStyle:'flow',
-    roles:{
-      LEAD:    role(.45,[52,76],Q(.01,.15,.5,.25),'triangle','lowpass',2000,4,.62,0,.55,4,.3),
-      BASS:    role(.28,[33,50],Q(.008,.2,.65,.18),'triangle','lowpass',300,2,.68,0,.3,3,.32),
-      STRINGS: role(.18,[48,64],Q(.2,.22,.58,.65),'triangle','lowpass',1500,1.5,.48,0,.8,2,.55),
-      PAD:     role(.09,[46,62],Q(.35,.28,.7,.9),'sine','lowpass',850,1.5,.38,0,.75,2,.8),
-    },
-    syncThreshold:.5, encounterR:.13, entainment:.55, eventRate:.62,
-    reverbAmt:.32, delayAmt:.2, delayTime:.28, masterGain:.78,
-    harmonyMode:'modal',
-    particleGlow:1.1, trailLen:7, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#4477aa', secondary:'#050810', accent:'#ffaa55',
+    syncThreshold:.35, encounterR:.14, entainment:.35, eventRate:.4,
+    reverbAmt:.7, delayAmt:.55, delayTime:.5, masterGain:.68,
+    harmonyMode:'dissonant',
+    particleGlow:2.2, trailLen:10, lens:'Tension', bgPulse:false, cinematic:true,
+    primary:'#ff3333', secondary:'#080004', accent:'#880066',
     gateCount:3, attractorCount:1,
   },
 
-  // ── 49. Granular Clouds ───────────────────────────────────────────────────
-  {
-    id:'granular-clouds', name:'Granular Clouds', intensity:2,
-    description:'Texturas granulares com reverse/freeze zones. Atmosfera etérea.',
-    vibe:'Granular, Reverse, Ethereal',
-    tags:['Experimental','Ambient','Electronic','Soft'],
-    bpm:60, scale:'whole_tone', root:48, quantaCount:96,
-    motionStyle:'drift',
-    roles:{
-      PAD:     role(.50,[36,64],Q(.8,.5,.82,2.5),'sine','lowpass',600,2,.52,0,.9,4,1.5),
-      STRINGS: role(.30,[48,72],Q(.5,.4,.75,1.8),'triangle','lowpass',1200,1.5,.45,0,.85,3,1.2),
-      CHOIR:   role(.20,[55,70],Q(.6,.35,.7,2.0),'sine','lowpass',1800,.8,.38,0,.9,2,1.6),
-    },
-    syncThreshold:.7, encounterR:.18, entainment:.75, eventRate:.28,
-    reverbAmt:.72, delayAmt:.55, delayTime:.65, masterGain:.7,
-    harmonyMode:'consonant',
-    particleGlow:1.8, trailLen:14, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#6688cc', secondary:'#030508', accent:'#ccaaff',
-    gateCount:2, attractorCount:2,
-  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── XI. ADVANCED SHOWCASES ─────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // ── 50. Doppler Highways ──────────────────────────────────────────────────
-  {
-    id:'doppler-highways', name:'Doppler Highways', intensity:4,
-    description:'Partículas em alta velocidade com doppler shift. Gravitational zones.',
-    vibe:'Speed, Doppler, Sci-Fi',
-    tags:['Electronic','Experimental','Dynamic','Space'],
-    bpm:142, scale:'chromatic', root:36, quantaCount:120,
-    motionStyle:'spiral',
-    roles:{
-      LEAD:    role(.35,[48,84],Q(.005,.1,.45,.12),'sawtooth','lowpass',2400,6,.65,12,.7,5,.15),
-      BASS:    role(.25,[30,50],Q(.003,.18,.6,.14),'sawtooth','lowpass',280,4,.72,0,.35,4,.22),
-      PERC:    role(.25,[55,80],Q(.001,.04,.0,.025),'noise','bandpass',3500,.8,.6,0,.9,5,.12),
-      ARP:     role(.15,[60,88],Q(.002,.06,.3,.08),'square','bandpass',3200,7,.55,14,.8,4,.1),
-    },
-    syncThreshold:.35, encounterR:.09, entainment:.3, eventRate:1.6,
-    reverbAmt:.15, delayAmt:.2, delayTime:.12, masterGain:.85,
-    harmonyMode:'dissonant',
-    particleGlow:1.6, trailLen:3, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#00ffaa', secondary:'#000a08', accent:'#ff00ff',
-    gateCount:6, attractorCount:3,
-  },
-
-  // ── 51. Phase Distortion Lab ──────────────────────────────────────────────
-  {
-    id:'phase-distortion', name:'Phase Distortion Lab', intensity:4,
-    description:'Bitcrush + ring modulation zones. Distorção digital controlada.',
-    vibe:'Bitcrush, Ring Mod, Digital',
-    tags:['Electronic','Glitch','Experimental','Club'],
-    bpm:128, scale:'minor', root:36, quantaCount:112,
-    motionStyle:'lattice',
-    roles:{
-      BASS:    role(.30,[30,48],Q(.003,.18,.65,.12),'sawtooth','lowpass',350,8,.75,0,.4,4,.25),
-      LEAD:    role(.30,[52,76],Q(.008,.1,.48,.14),'square','lowpass',2000,10,.68,7,.6,4,.22),
-      PERC:    role(.25,[55,78],Q(.001,.04,.0,.025),'noise','bandpass',4000,1.5,.62,0,.9,5,.15),
-      ARP:     role(.15,[64,84],Q(.002,.05,.28,.06),'square','bandpass',3500,8,.55,16,.75,4,.1),
-    },
-    syncThreshold:.4, encounterR:.10, entainment:.38, eventRate:1.3,
-    reverbAmt:.12, delayAmt:.18, delayTime:.14, masterGain:.88,
-    harmonyMode:'modal',
-    particleGlow:1.4, trailLen:3, lens:'Tension', bgPulse:true, cinematic:false,
-    primary:'#ff00cc', secondary:'#0a000a', accent:'#00ffff',
-    gateCount:5, attractorCount:2,
-  },
-
-  // ── 52. Spectral Morph ────────────────────────────────────────────────────
-  {
-    id:'spectral-morph', name:'Spectral Morph', intensity:3,
-    description:'Morphing espectral com freeze zones. Transformações tímbricas contínuas.',
-    vibe:'Spectral, Morphing, Transform',
-    tags:['Experimental','Ambient','Electronic','Meditative'],
-    bpm:72, scale:'harmonic_minor', root:45, quantaCount:88,
-    motionStyle:'orbit',
-    roles:{
-      PAD:     role(.40,[42,66],Q(.6,.45,.78,2.0),'sawtooth','lowpass',700,3,.52,0,.85,3,1.2),
-      STRINGS: role(.35,[48,70],Q(.3,.35,.7,1.5),'triangle','lowpass',1400,2,.48,0,.9,3,.9),
-      CHOIR:   role(.15,[55,72],Q(.45,.3,.72,1.8),'sine','lowpass',2000,.8,.4,0,.9,2,1.4),
-      BASS:    role(.10,[33,48],Q(.08,.25,.68,.5),'sine','lowpass',220,1.5,.58,0,.3,2,.65),
-    },
-    syncThreshold:.55, encounterR:.14, entainment:.62, eventRate:.5,
-    reverbAmt:.48, delayAmt:.35, delayTime:.42, masterGain:.76,
-    harmonyMode:'consonant',
-    particleGlow:1.5, trailLen:10, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#9966ff', secondary:'#050408', accent:'#ffcc66',
-    gateCount:3, attractorCount:2,
-  },
-
-  // ── 53. Orbital Mechanics ─────────────────────────────────────────────────
-  {
-    id:'orbital-mechanics', name:'Orbital Mechanics', intensity:3,
-    description:'Órbitas gravitacionais precisas. Física newtoniana musical.',
-    vibe:'Orbital, Gravity, Celestial',
-    tags:['Ambient','Space','Generative','Electronic'],
-    bpm:86, scale:'lydian', root:48, quantaCount:96,
-    motionStyle:'orbit',
-    roles:{
-      LEAD:    role(.35,[55,79],Q(.01,.15,.5,.25),'sine','lowpass',2200,3,.58,0,.6,4,.35),
-      PAD:     role(.30,[48,67],Q(.5,.4,.75,1.5),'triangle','lowpass',900,1.5,.48,0,.85,3,1.0),
-      STRINGS: role(.25,[52,70],Q(.2,.25,.62,.75),'triangle','lowpass',1600,1.5,.45,0,.8,3,.55),
-      BASS:    role(.10,[36,50],Q(.015,.28,.68,.4),'sine','lowpass',250,1,.6,0,.3,2,.5),
-    },
-    syncThreshold:.58, encounterR:.15, entainment:.65, eventRate:.58,
-    reverbAmt:.45, delayAmt:.3, delayTime:.38, masterGain:.78,
-    harmonyMode:'consonant',
-    particleGlow:1.3, trailLen:9, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#4488cc', secondary:'#040810', accent:'#ffaa66',
-    gateCount:2, attractorCount:3,
-  },
-
-  // ── 54. Ballistic Particles ───────────────────────────────────────────────
-  {
-    id:'ballistic-particles', name:'Ballistic Particles', intensity:4,
-    description:'Física balística com arcos parabólicos. Gravity zones realistas.',
-    vibe:'Ballistic, Parabolic, Physics',
-    tags:['Electronic','Experimental','Dynamic','Generative'],
-    bpm:110, scale:'pentatonic', root:40, quantaCount:108,
-    motionStyle:'swarm',
-    roles:{
-      PERC:    role(.30,[52,80],Q(.001,.06,.0,.04),'snare','bandpass',3000,1,.6,0,.9,5,.18),
-      LEAD:    role(.28,[55,76],Q(.008,.12,.48,.15),'triangle','lowpass',2000,4,.62,0,.65,4,.25),
-      BASS:    role(.22,[33,50],Q(.008,.2,.65,.18),'sawtooth','lowpass',300,3,.7,0,.35,3,.3),
-      ARP:     role(.20,[60,84],Q(.003,.07,.35,.1),'square','bandpass',2800,5,.55,10,.7,5,.15),
-    },
-    syncThreshold:.45, encounterR:.12, entainment:.48, eventRate:1.0,
-    reverbAmt:.22, delayAmt:.18, delayTime:.22, masterGain:.82,
-    harmonyMode:'modal',
-    particleGlow:1.4, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#ff8833', secondary:'#0a0500', accent:'#33ccff',
-    gateCount:4, attractorCount:2,
-  },
-
-  // ── 55. Magnetic Fields ───────────────────────────────────────────────────
-  {
-    id:'magnetic-fields', name:'Magnetic Fields', intensity:3,
-    description:'Campos magnéticos com attractors/repulsors. Força e contra-força.',
-    vibe:'Magnetic, Push-Pull, Force',
-    tags:['Electronic','Ambient','Generative','Space'],
-    bpm:94, scale:'dorian', root:38, quantaCount:100,
-    motionStyle:'flow',
-    roles:{
-      PAD:     role(.40,[42,64],Q(.45,.38,.75,1.4),'sawtooth','lowpass',800,2,.52,0,.85,3,.95),
-      LEAD:    role(.30,[52,74],Q(.01,.14,.52,.2),'sawtooth','lowpass',1900,5,.6,5,.6,4,.28),
-      STRINGS: role(.20,[48,66],Q(.22,.25,.6,.7),'triangle','lowpass',1500,1.5,.48,0,.8,3,.6),
-      BASS:    role(.10,[33,48],Q(.01,.22,.68,.25),'triangle','lowpass',280,2,.65,0,.3,2,.4),
-    },
-    syncThreshold:.52, encounterR:.13, entainment:.58, eventRate:.7,
-    reverbAmt:.35, delayAmt:.25, delayTime:.32, masterGain:.8,
-    harmonyMode:'consonant',
-    particleGlow:1.2, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#6633cc', secondary:'#060410', accent:'#ff6688',
-    gateCount:3, attractorCount:4,
-  },
-
-  // ── 56. Quantum Tunneling ─────────────────────────────────────────────────
+  // 47 ── Quantum Tunneling ───────────────────────────────────────────────────
+  // Fast particles with many gates. Every crossing = note. Portal physics.
   {
     id:'quantum-tunneling', name:'Quantum Tunneling', intensity:4,
-    description:'Partículas tunelam através de barreiras. Física quântica musical.',
-    vibe:'Quantum, Tunnel, Non-Local',
-    tags:['Experimental','Electronic','Space','Generative'],
-    bpm:120, scale:'whole_tone', root:48, quantaCount:112,
-    motionStyle:'lattice',
-    roles:{
-      LEAD:    role(.32,[52,80],Q(.006,.11,.45,.14),'sawtooth','lowpass',2400,7,.65,9,.65,5,.2),
-      ARP:     role(.28,[60,88],Q(.002,.06,.32,.08),'square','bandpass',3200,8,.58,14,.75,5,.12),
-      PAD:     role(.25,[44,66],Q(.4,.35,.72,1.2),'sine','lowpass',750,1.5,.48,0,.8,3,.85),
-      BASS:    role(.15,[30,48],Q(.005,.2,.65,.15),'sawtooth','lowpass',260,4,.7,0,.35,3,.28),
-    },
-    syncThreshold:.42, encounterR:.11, entainment:.45, eventRate:1.1,
-    reverbAmt:.28, delayAmt:.22, delayTime:.25, masterGain:.84,
-    harmonyMode:'consonant',
-    particleGlow:1.6, trailLen:6, lens:'Notes', bgPulse:true, cinematic:true,
-    primary:'#00ccee', secondary:'#000a0c', accent:'#ff66cc',
-    gateCount:5, attractorCount:2,
-  },
-
-  // ── 57. Orchestral AI ──────────────────────────────────────────────────────
-  {
-    id:'orchestral-ai', name:'Orchestral AI', intensity:4,
-    description:'Orquestra completa generativa. Todos os roles em harmonia épica.',
-    vibe:'Symphonic, Epic, Cinematic',
-    tags:['Orchestral','Classical','Dynamic','Choral'],
-    bpm:104, scale:'major', root:48, quantaCount:128,
+    description:'Partículas rápidas atravessando portais de gate. Cascatas quânticas.',
+    vibe:'Portal, Speed, Quantum',
+    tags:['Experimental','Electronic','Generative'],
+    bpm:128, scale:'whole_tone', root:48, quantaCount:96,
     motionStyle:'swarm',
     roles:{
-      STRINGS: role(.25,[50,74],Q(.15,.22,.65,.8),'triangle','lowpass',1800,1.5,.55,0,.9,5,.45),
-      CHOIR:   role(.20,[55,72],Q(.35,.28,.72,1.2),'sine','lowpass',2200,.8,.48,0,.95,4,.85),
-      LEAD:    role(.18,[48,70],Q(.12,.18,.58,.6),'sawtooth','lowpass',1400,3,.58,0,.7,4,.5),
-      PAD:     role(.15,[44,64],Q(.5,.38,.78,1.5),'sawtooth','lowpass',700,2,.45,0,.85,3,.95),
-      BASS:    role(.12,[33,50],Q(.01,.25,.7,.25),'triangle','lowpass',300,2,.68,0,.3,3,.35),
-      PERC:    role(.10,[48,72],Q(.001,.08,.0,.06),'snare','bandpass',2400,.8,.52,0,.8,4,.3),
+      LEAD:    role(.25,[52,96],Q(.002,.06,.25,.06),'triangle','lowpass',3000,2,.48,5,.6,3,.1),
+      ARP:     role(.25,[60,96],Q(.001,.04,.10,.05),'triangle','highpass',2500,1.5,.42,12,.7,4,.06),
+      PERC:    role(.20,[48,84],Q(.001,.03,.0,.02),'noise','bandpass',4000,.5,.40,0,.7,5,.08),
+      BASS:    role(.15,[36,52],Q(.003,.12,.45,.08),'square','lowpass',350,3,.55,-5,.3,3,.18),
+      PAD:     role(.15,[42,66],Q(.2,.15,.45,.3),'sine','lowpass',700,1,.32,0,.6,2,.5),
     },
-    syncThreshold:.6, encounterR:.15, entainment:.68, eventRate:.75,
-    reverbAmt:.48, delayAmt:.25, delayTime:.35, masterGain:.8,
-    harmonyMode:'consonant',
-    particleGlow:1.2, trailLen:9, lens:'Harmony', bgPulse:true, cinematic:true,
-    primary:'#cc8844', secondary:'#0a0600', accent:'#4488cc',
-    gateCount:3, attractorCount:2,
+    syncThreshold:.55, encounterR:.08, entainment:.7, eventRate:.95,
+    reverbAmt:.25, delayAmt:.3, delayTime:.12, masterGain:.8,
+    harmonyMode:'free',
+    particleGlow:1.2, trailLen:3, lens:'Notes', bgPulse:true, cinematic:false,
+    primary:'#00e5ff', secondary:'#000a0c', accent:'#ff88cc',
+    gateCount:8, attractorCount:2,
   },
 
-  // ── 58. Cyberpunk Blade Runner ────────────────────────────────────────────
+  // 48 ── Ambient Cosmos ──────────────────────────────────────────────────────
+  // Meditation physics — barely moving. 9 harmonic layers. Infinite reverb.
   {
-    id:'cyberpunk-blade', name:'Cyberpunk Blade Runner', intensity:4,
-    description:'Vangelis-inspired. Synths densos, sax etéreo, reverb infinito.',
-    vibe:'Vangelis, Neon, Rain',
-    tags:['Electronic','Ambient','Cinematic','Dark'],
-    bpm:88, scale:'minor', root:40, quantaCount:104,
+    id:'ambient-cosmos', name:'Ambient Cosmos', intensity:1,
+    description:'38bpm mega-ambient — 9 camadas harmônicas, whole_tone, reverb infinito.',
+    vibe:'Infinite, Vast, Breathing',
+    tags:['Ambient','Space','Drone','Meditative'],
+    bpm:38, scale:'whole_tone', root:48, quantaCount:64,
+    motionStyle:'meditation',
+    roles:{
+      PAD:     role(.25,[36,60],Q(3.0,1.0,.88,5.0),'sine','lowpass',500,.7,.38,0,.9,3,3.5),
+      CHOIR:   role(.20,[48,72],Q(2.5,.8,.82,4.0),'sine','lowpass',600,.9,.32,0,1.,2,3.0),
+      STRINGS: role(.20,[42,72],Q(1.5,.6,.72,3.0),'triangle','lowpass',900,1,.35,5,.8,2,2.5),
+      LEAD:    role(.15,[55,84],Q(.3,.2,.50,.8),'triangle','lowpass',1400,1,.28,0,.5,2,.8),
+      BASS:    role(.10,[24,42],Q(.8,.5,.80,3.0),'sine','lowpass',150,.6,.45,0,.2,2,2.0),
+      ARP:     role(.10,[60,96],Q(.1,.15,.20,.5),'triangle','highpass',2200,1.2,.22,12,.7,2,1.0),
+    },
+    syncThreshold:.20, encounterR:.22, entainment:.15, eventRate:.10,
+    reverbAmt:.98, delayAmt:.75, delayTime:.85, masterGain:.55,
+    harmonyMode:'consonant',
+    particleGlow:3.0, trailLen:24, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#8888ff', secondary:'#020208', accent:'#ffddaa',
+    gateCount:1, attractorCount:0,
+  },
+
+  // 49 ── Polyrhythm Engine ───────────────────────────────────────────────────
+  // Carnival physics — 3 vortices at different speeds. Complex rhythmic ratios.
+  {
+    id:'polyrhythm', name:'Polyrhythm Engine', intensity:4,
+    description:'3 vórtices em velocidades diferentes. Polirritmia emergente 3:4:5.',
+    vibe:'Complex, Layered, Polyrhythm',
+    tags:['Groove','Experimental','Dynamic','Generative'],
+    bpm:110, scale:'dorian', root:45, quantaCount:96,
+    motionStyle:'carnival',
+    roles:{
+      KICK:    role(.15,[24,36],Q(.001,.07,.0,.05),'kick','lowpass',200,.5,.82,0,.2,4,.38),
+      PERC:    role(.25,[48,84],Q(.001,.04,.0,.02),'snare','bandpass',3000,.6,.48,0,.8,5,.12),
+      BASS:    role(.18,[28,52],Q(.008,.15,.52,.1),'triangle','lowpass',300,2,.58,0,.3,3,.2),
+      LEAD:    role(.18,[55,84],Q(.005,.08,.38,.12),'triangle','lowpass',2000,1.5,.45,0,.5,3,.16),
+      ARP:     role(.14,[60,96],Q(.002,.06,.12,.08),'square','lowpass',2600,2,.40,0,.6,3,.1),
+      PAD:     role(.10,[42,60],Q(.3,.2,.55,.6),'sine','lowpass',600,1,.32,0,.6,2,.7),
+    },
+    syncThreshold:.48, encounterR:.10, entainment:.65, eventRate:.75,
+    reverbAmt:.25, delayAmt:.3, delayTime:.18, masterGain:.8,
+    harmonyMode:'modal',
+    particleGlow:1.3, trailLen:5, lens:'Rhythm', bgPulse:true, cinematic:false,
+    primary:'#ffcc00', secondary:'#0a0800', accent:'#ff3366',
+    gateCount:5, attractorCount:3,
+  },
+
+  // 50 ── All 8 Voices ────────────────────────────────────────────────────────
+  // Murmuration — showcases every single voice role in harmony. The full palette.
+  {
+    id:'all-voices', name:'All 8 Voices', intensity:3,
+    description:'Todas as 8 roles em equilíbrio. A paleta completa do Music Lab.',
+    vibe:'Complete, Balanced, Showcase',
+    tags:['Generative','Orchestral','Groove'],
+    bpm:96, scale:'major', root:48, quantaCount:112,
+    motionStyle:'murmuration',
+    roles:{
+      KICK:    role(.12,[24,36],Q(.001,.08,.0,.05),'kick','lowpass',180,.4,.78,0,.2,3,.45),
+      BASS:    role(.12,[28,52],Q(.01,.2,.55,.15),'sine','lowpass',260,1,.52,0,.3,3,.32),
+      PERC:    role(.12,[48,84],Q(.001,.05,.0,.03),'hihat','highpass',5000,.5,.42,0,.7,4,.16),
+      PAD:     role(.14,[48,72],Q(.5,.3,.72,1.2),'sine','lowpass',800,1,.38,0,.8,3,.9),
+      LEAD:    role(.14,[55,84],Q(.008,.1,.42,.15),'triangle','lowpass',2000,1.5,.45,0,.5,3,.22),
+      ARP:     role(.12,[60,96],Q(.003,.08,.15,.1),'triangle','lowpass',2800,1,.40,0,.6,3,.14),
+      STRINGS: role(.12,[48,76],Q(.35,.2,.62,1.0),'triangle','lowpass',1400,1,.36,3,.8,2,.7),
+      CHOIR:   role(.12,[48,72],Q(1.0,.5,.72,2.0),'sine','lowpass',650,1,.30,0,.9,2,1.5),
+    },
+    syncThreshold:.40, encounterR:.11, entainment:.50, eventRate:.55,
+    reverbAmt:.45, delayAmt:.35, delayTime:.22, masterGain:.78,
+    harmonyMode:'consonant',
+    particleGlow:1.3, trailLen:6, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#88aaff', secondary:'#060810', accent:'#ffcc88',
+    gateCount:4, attractorCount:1,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── XII. EXTREME & EDGE CASES ──────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 51 ── Solo Particle ───────────────────────────────────────────────────────
+  // One single particle wandering. Each gate crossing is a solo performance.
+  {
+    id:'solo-particle', name:'Solo Particle', intensity:1,
+    description:'Uma única partícula. Cada gate crossing é uma performance solo.',
+    vibe:'Solitude, Focus, Pure',
+    tags:['Minimalist','Experimental','Soft'],
+    bpm:64, scale:'pentatonic', root:60, quantaCount:1,
     motionStyle:'drift',
     roles:{
-      PAD:     role(.35,[40,64],Q(.6,.45,.82,2.0),'sawtooth','lowpass',650,2.5,.55,0,.9,4,1.3),
-      LEAD:    role(.25,[55,76],Q(.015,.18,.55,.35),'sawtooth','lowpass',2000,6,.62,7,.6,4,.4),
-      STRINGS: role(.20,[48,68],Q(.3,.3,.7,1.2),'triangle','lowpass',1500,1.5,.48,0,.85,3,.8),
-      CHOIR:   role(.12,[58,72],Q(.5,.35,.75,1.8),'sine','lowpass',2400,.8,.42,0,.9,2,1.2),
-      BASS:    role(.08,[33,48],Q(.01,.25,.7,.3),'sawtooth','lowpass',250,3,.7,0,.3,2,.45),
+      LEAD:    role(1.0,[48,84],Q(.01,.12,.45,.3),'triangle','lowpass',2000,1.5,.55,0,.5,2,.3),
     },
-    syncThreshold:.55, encounterR:.14, entainment:.62, eventRate:.55,
-    reverbAmt:.68, delayAmt:.45, delayTime:.5, masterGain:.76,
-    harmonyMode:'modal',
-    particleGlow:1.6, trailLen:11, lens:'Harmony', bgPulse:true, cinematic:true,
-    primary:'#ff0088', secondary:'#080010', accent:'#00ccff',
-    gateCount:2, attractorCount:2,
+    syncThreshold:.20, encounterR:.20, entainment:.1, eventRate:.3,
+    reverbAmt:.8, delayAmt:.6, delayTime:.5, masterGain:.7,
+    harmonyMode:'consonant',
+    particleGlow:3.0, trailLen:20, lens:'Notes', bgPulse:false, cinematic:true,
+    primary:'#ffffff', secondary:'#020204', accent:'#88aaff',
+    gateCount:3, attractorCount:0,
   },
 
-  // ── 59. Afrofuturism ──────────────────────────────────────────────────────
+  // 52 ── Maximum Density ─────────────────────────────────────────────────────
+  // 256 particles in swarm. Pure noise and texture. Not music — sonification.
   {
-    id:'afrofuturism', name:'Afrofuturism', intensity:5,
-    description:'Polirritmos africanos + synths futuristas. Sun Ra meets Flying Lotus.',
-    vibe:'Polyrhythm, Future, Africa',
-    tags:['Electronic','Groove','Experimental','Dynamic'],
-    bpm:135, scale:'pentatonic', root:40, quantaCount:124,
+    id:'max-density', name:'Maximum Density', intensity:5,
+    description:'256 partículas em swarm. Textura pura. Som como fenômeno coletivo.',
+    vibe:'Mass, Texture, Swarm',
+    tags:['Experimental','Drone','Electronic'],
+    bpm:120, scale:'chromatic', root:36, quantaCount:256,
     motionStyle:'swarm',
     roles:{
-      PERC:    role(.28,[52,80],Q(.001,.05,.0,.03),'snare','bandpass',3400,1,.62,0,.95,6,.14),
-      BASS:    role(.22,[33,50],Q(.006,.18,.65,.14),'sawtooth','lowpass',300,4,.75,0,.35,4,.25),
-      LEAD:    role(.22,[55,79],Q(.008,.12,.5,.15),'sawtooth','lowpass',2200,8,.65,10,.65,4,.22),
-      ARP:     role(.18,[62,86],Q(.003,.06,.35,.08),'square','bandpass',3000,9,.58,16,.8,5,.12),
-      PAD:     role(.10,[44,62],Q(.4,.32,.75,1.0),'sawtooth','lowpass',800,2,.45,0,.8,2,.8),
+      PERC:    role(.25,[36,96],Q(.001,.03,.0,.02),'noise','bandpass',3000,2,.40,0,.8,6,.06),
+      LEAD:    role(.25,[48,96],Q(.001,.04,.10,.04),'square','lowpass',2500,4,.35,0,.6,4,.08),
+      ARP:     role(.20,[60,96],Q(.001,.03,.05,.03),'triangle','highpass',3500,2,.30,0,.7,4,.05),
+      BASS:    role(.15,[24,48],Q(.002,.1,.35,.05),'sawtooth','lowpass',250,3,.50,-7,.3,3,.12),
+      PAD:     role(.15,[36,60],Q(.1,.1,.30,.2),'sawtooth','lowpass',500,2,.28,5,.5,2,.3),
     },
-    syncThreshold:.42, encounterR:.11, entainment:.45, eventRate:1.4,
-    reverbAmt:.22, delayAmt:.2, delayTime:.2, masterGain:.88,
-    harmonyMode:'modal',
-    particleGlow:1.5, trailLen:4, lens:'Rhythm', bgPulse:true, cinematic:false,
-    primary:'#ff6600', secondary:'#0a0400', accent:'#00ff88',
-    gateCount:6, attractorCount:2,
+    syncThreshold:.65, encounterR:.06, entainment:.8, eventRate:1.2,
+    reverbAmt:.15, delayAmt:.1, delayTime:.08, masterGain:.7,
+    harmonyMode:'free',
+    particleGlow:.8, trailLen:2, lens:'Events', bgPulse:true, cinematic:true,
+    primary:'#ff0055', secondary:'#0a0004', accent:'#00ff88',
+    gateCount:8, attractorCount:3,
   },
 
-  // ── 60. Celestial Cathedral ───────────────────────────────────────────────
+  // 53 ── Gravity Falls ───────────────────────────────────────────────────────
+  // Ballistic with strong gravity. Particles bounce off gates like a xylophone.
   {
-    id:'celestial-cathedral', name:'Celestial Cathedral', intensity:2,
-    description:'Drone massivo + choir celestial + strings épicas. Infinito vertical.',
-    vibe:'Cathedral, Infinite, Divine',
-    tags:['Ambient','Drone','Choral','Space'],
-    bpm:48, scale:'lydian', root:42, quantaCount:80,
-    motionStyle:'orbit',
+    id:'gravity-falls', name:'Gravity Falls', intensity:3,
+    description:'Gravidade forte. Partículas ricocheteiam em gates como xilofone.',
+    vibe:'Bounce, Playful, Percussive',
+    tags:['Experimental','Generative','Dynamic'],
+    bpm:90, scale:'major', root:60, quantaCount:48,
+    motionStyle:'ballistic',
     roles:{
-      CHOIR:   role(.40,[52,72],Q(1.5,.7,.85,3.5),'sine','lowpass',2000,.8,.5,0,1.0,4,2.2),
-      PAD:     role(.30,[36,60],Q(2.0,.8,.9,4.5),'sawtooth','lowpass',500,2,.48,0,.9,3,3.0),
-      STRINGS: role(.20,[48,70],Q(.8,.5,.78,2.5),'triangle','lowpass',1600,1.5,.45,0,.85,3,1.8),
-      BASS:    role(.10,[28,42],Q(.2,.5,.85,2.0),'sine','lowpass',160,1,.6,0,.25,2,2.5),
+      LEAD:    role(.35,[60,96],Q(.002,.12,.15,.2),'triangle','bandpass',3000,2,.50,0,.6,3,.16),
+      PERC:    role(.25,[48,84],Q(.001,.05,.0,.03),'noise','bandpass',2500,.5,.45,0,.7,4,.14),
+      BASS:    role(.20,[36,52],Q(.01,.2,.50,.15),'triangle','lowpass',350,1.5,.52,0,.3,3,.3),
+      ARP:     role(.20,[60,88],Q(.002,.08,.12,.1),'triangle','lowpass',2800,1,.42,0,.5,3,.12),
     },
-    syncThreshold:.75, encounterR:.20, entainment:.85, eventRate:.22,
-    reverbAmt:.85, delayAmt:.6, delayTime:.75, masterGain:.68,
+    syncThreshold:.42, encounterR:.10, entainment:.50, eventRate:.6,
+    reverbAmt:.45, delayAmt:.35, delayTime:.22, masterGain:.75,
     harmonyMode:'consonant',
-    particleGlow:2.2, trailLen:16, lens:'Harmony', bgPulse:false, cinematic:true,
-    primary:'#aaccff', secondary:'#020508', accent:'#ffddaa',
-    gateCount:1, attractorCount:1,
+    particleGlow:1.2, trailLen:5, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#44aaff', secondary:'#040810', accent:'#ffcc44',
+    gateCount:6, attractorCount:0,
+  },
+
+  // 54 ── Noise Meditation ────────────────────────────────────────────────────
+  // Meditation physics — noise and texture as meditation. Anti-music zen.
+  {
+    id:'noise-meditation', name:'Noise Meditation', intensity:2,
+    description:'Texturas de ruído como meditação. Anti-música zen. Escuta profunda.',
+    vibe:'Noise, Zen, Deep Listening',
+    tags:['Experimental','Drone','Meditative'],
+    bpm:40, scale:'chromatic', root:36, quantaCount:48,
+    motionStyle:'meditation',
+    roles:{
+      PAD:     role(.40,[24,60],Q(2.0,.8,.82,4.0),'sawtooth','lowpass',300,2,.40,5,.8,3,2.5),
+      PERC:    role(.30,[36,84],Q(.5,.3,.10,1.0),'noise','bandpass',1500,1,.35,0,.6,3,1.0),
+      BASS:    role(.15,[24,36],Q(1.0,.5,.80,3.0),'sine','lowpass',120,.6,.48,0,.2,2,2.0),
+      STRINGS: role(.15,[42,72],Q(.8,.4,.55,1.5),'sawtooth','bandpass',800,3,.30,12,.7,2,1.5),
+    },
+    syncThreshold:.22, encounterR:.20, entainment:.15, eventRate:.15,
+    reverbAmt:.92, delayAmt:.7, delayTime:.8, masterGain:.55,
+    harmonyMode:'free',
+    particleGlow:2.5, trailLen:18, lens:'Tension', bgPulse:false, cinematic:true,
+    primary:'#aaaaaa', secondary:'#040404', accent:'#ff4400',
+    gateCount:1, attractorCount:0,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── XIII. BONUS: FULL SHOWCASES ────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 55 ── Dance of Atoms ──────────────────────────────────────────────────────
+  // Dance physics — every pair is a musical duo. Waltz in harmonic minor.
+  {
+    id:'dance-atoms', name:'Dance of Atoms', intensity:3,
+    description:'Cada par de partículas é um dueto. Valsa atômica em minor harmônica.',
+    vibe:'Waltz, Pairs, Intimate',
+    tags:['Generative','Classical','Experimental'],
+    bpm:88, scale:'harmonic_minor', root:48, quantaCount:64,
+    motionStyle:'dance',
+    roles:{
+      STRINGS: role(.30,[48,76],Q(.1,.12,.55,1.0),'triangle','lowpass',1400,1.5,.45,3,.7,3,.25),
+      LEAD:    role(.22,[55,84],Q(.008,.10,.42,.15),'triangle','lowpass',2000,1.5,.45,0,.5,3,.2),
+      PAD:     role(.20,[42,66],Q(.5,.3,.70,1.2),'sine','lowpass',700,1,.38,0,.8,2,.9),
+      BASS:    role(.15,[28,48],Q(.015,.2,.55,.15),'sine','lowpass',250,1,.50,0,.3,2,.35),
+      CHOIR:   role(.13,[48,72],Q(.8,.4,.70,1.5),'sine','lowpass',600,1,.30,0,.9,2,1.2),
+    },
+    syncThreshold:.38, encounterR:.13, entainment:.42, eventRate:.5,
+    reverbAmt:.55, delayAmt:.4, delayTime:.3, masterGain:.72,
+    harmonyMode:'consonant',
+    particleGlow:1.6, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#ff88cc', secondary:'#080408', accent:'#88ccff',
+    gateCount:3, attractorCount:1,
+  },
+
+  // 56 ── Storm Chaser ────────────────────────────────────────────────────────
+  // Chaos + explosion alternating. Musical thunderstorm.
+  {
+    id:'storm-chaser', name:'Storm Chaser', intensity:5,
+    description:'Tempestade musical. Caos browniano + explosões cíclicas. Trovão.',
+    vibe:'Storm, Thunder, Power',
+    tags:['Experimental','Dynamic','Electronic','Dark'],
+    bpm:144, scale:'minor', root:36, quantaCount:128,
+    motionStyle:'explosion',
+    roles:{
+      KICK:    role(.18,[24,36],Q(.001,.06,.0,.03),'kick','lowpass',240,.5,.92,0,.2,6,.28),
+      PERC:    role(.25,[36,84],Q(.001,.04,.0,.02),'snare','bandpass',3500,.8,.55,0,.8,6,.1),
+      BASS:    role(.18,[28,48],Q(.003,.12,.50,.06),'sawtooth','lowpass',320,4,.70,-5,.3,4,.15),
+      LEAD:    role(.18,[48,88],Q(.002,.06,.30,.06),'sawtooth','lowpass',2200,3,.52,7,.5,3,.12),
+      ARP:     role(.12,[60,96],Q(.001,.04,.08,.04),'square','highpass',2800,2,.40,0,.7,4,.06),
+      PAD:     role(.09,[36,60],Q(.15,.15,.40,.3),'sawtooth','lowpass',500,2,.30,0,.5,2,.4),
+    },
+    syncThreshold:.60, encounterR:.08, entainment:.8, eventRate:1.1,
+    reverbAmt:.2, delayAmt:.15, delayTime:.1, masterGain:.85,
+    harmonyMode:'dissonant',
+    particleGlow:1.5, trailLen:3, lens:'Events', bgPulse:true, cinematic:true,
+    primary:'#ff4400', secondary:'#0a0200', accent:'#00ccff',
+    gateCount:7, attractorCount:2,
+  },
+
+  // 57 ── Silk Road ───────────────────────────────────────────────────────────
+  // Migration — long journey through modal scales. All 8 voices traveling.
+  {
+    id:'silk-road', name:'Silk Road', intensity:3,
+    description:'Viagem pela Rota da Seda. 8 vozes migrando em harmonic minor.',
+    vibe:'Journey, Caravan, Horizon',
+    tags:['Modal','Orchestral','Dynamic','Ambient'],
+    bpm:86, scale:'harmonic_minor', root:40, quantaCount:96,
+    motionStyle:'migration',
+    roles:{
+      KICK:    role(.08,[24,36],Q(.001,.1,.0,.06),'kick','lowpass',160,.3,.68,0,.2,2,.5),
+      BASS:    role(.12,[28,48],Q(.02,.25,.60,.2),'sine','lowpass',220,1,.50,0,.3,2,.4),
+      PERC:    role(.12,[48,72],Q(.001,.06,.0,.04),'noise','bandpass',2500,.4,.38,0,.6,4,.2),
+      PAD:     role(.18,[36,60],Q(.8,.4,.72,1.5),'sine','lowpass',600,1,.38,0,.8,3,1.0),
+      STRINGS: role(.18,[42,72],Q(.2,.15,.58,1.0),'triangle','lowpass',1400,1.5,.42,5,.8,3,.5),
+      LEAD:    role(.14,[52,84],Q(.01,.10,.42,.15),'triangle','bandpass',1800,2,.45,0,.5,3,.22),
+      CHOIR:   role(.10,[48,72],Q(1.0,.5,.72,2.0),'sine','lowpass',600,1,.30,0,.9,2,1.5),
+      ARP:     role(.08,[60,88],Q(.005,.08,.15,.12),'triangle','lowpass',2400,1,.35,0,.6,2,.18),
+    },
+    syncThreshold:.38, encounterR:.12, entainment:.42, eventRate:.5,
+    reverbAmt:.55, delayAmt:.45, delayTime:.32, masterGain:.72,
+    harmonyMode:'modal',
+    particleGlow:1.5, trailLen:8, lens:'Harmony', bgPulse:false, cinematic:true,
+    primary:'#cc8844', secondary:'#0a0604', accent:'#88ccff',
+    gateCount:4, attractorCount:0,
+  },
+
+  // 58 ── Cells of Life ───────────────────────────────────────────────────────
+  // Cells physics — breathing clusters. Life simulation as music.
+  {
+    id:'cells-life', name:'Cells of Life', intensity:3,
+    description:'Simulação de vida como música. Células respiram, dividem, cantam.',
+    vibe:'Life, Breath, Organic',
+    tags:['Generative','Experimental','Organic Instruments'],
+    bpm:80, scale:'lydian', root:48, quantaCount:104,
+    motionStyle:'cells',
+    roles:{
+      KICK:    role(.08,[24,36],Q(.001,.1,.0,.06),'kick','lowpass',160,.3,.65,0,.2,2,.55),
+      BASS:    role(.12,[28,48],Q(.02,.25,.58,.18),'sine','lowpass',220,1,.48,0,.3,2,.38),
+      PAD:     role(.22,[42,66],Q(.8,.4,.75,1.5),'sine','lowpass',700,1,.38,0,.8,3,1.0),
+      LEAD:    role(.18,[55,84],Q(.008,.1,.40,.15),'triangle','lowpass',2000,1.5,.42,0,.5,3,.22),
+      STRINGS: role(.15,[48,76],Q(.3,.2,.58,.8),'triangle','lowpass',1200,1,.35,3,.7,2,.7),
+      CHOIR:   role(.13,[48,72],Q(1.0,.5,.72,2.0),'sine','lowpass',600,1,.30,0,.9,2,1.5),
+      ARP:     role(.07,[60,88],Q(.003,.08,.15,.1),'triangle','lowpass',2600,1,.35,0,.6,2,.14),
+      PERC:    role(.05,[48,72],Q(.001,.05,.0,.03),'noise','highpass',4500,.4,.32,0,.5,3,.2),
+    },
+    syncThreshold:.38, encounterR:.13, entainment:.42, eventRate:.48,
+    reverbAmt:.5, delayAmt:.38, delayTime:.28, masterGain:.75,
+    harmonyMode:'consonant',
+    particleGlow:1.6, trailLen:7, lens:'Events', bgPulse:false, cinematic:true,
+    primary:'#44ffcc', secondary:'#040a08', accent:'#ff88aa',
+    gateCount:3, attractorCount:1,
+  },
+
+  // 59 ── Revolution Waltz ────────────────────────────────────────────────────
+  // Revolution — musical tension builds and releases in 3/4 feel.
+  {
+    id:'revolution-waltz', name:'Revolution Waltz', intensity:4,
+    description:'Espiral valsa. Tensão cresce até colapsar em resolução harmônica.',
+    vibe:'Waltz, Spiral, Climax',
+    tags:['Classical','Dynamic','Experimental'],
+    bpm:102, scale:'minor', root:45, quantaCount:80,
+    motionStyle:'revolution',
+    roles:{
+      STRINGS: role(.28,[42,76],Q(.1,.12,.58,1.0),'sawtooth','lowpass',1400,1.5,.48,5,.8,3,.4),
+      LEAD:    role(.22,[55,88],Q(.008,.08,.42,.12),'triangle','lowpass',2200,2,.48,0,.5,3,.18),
+      PAD:     role(.18,[42,60],Q(.5,.3,.68,1.2),'sine','lowpass',700,1,.38,0,.7,2,.8),
+      BASS:    role(.15,[28,48],Q(.01,.2,.55,.15),'sine','lowpass',280,1,.52,0,.3,2,.3),
+      PERC:    role(.10,[48,72],Q(.001,.05,.0,.03),'snare','bandpass',2800,.5,.42,0,.6,4,.18),
+      CHOIR:   role(.07,[48,66],Q(.8,.4,.68,1.5),'sine','lowpass',550,.9,.28,0,.8,2,1.2),
+    },
+    syncThreshold:.48, encounterR:.11, entainment:.58, eventRate:.68,
+    reverbAmt:.42, delayAmt:.35, delayTime:.22, masterGain:.78,
+    harmonyMode:'modal',
+    particleGlow:1.5, trailLen:7, lens:'Tension', bgPulse:false, cinematic:true,
+    primary:'#cc44ff', secondary:'#0a0210', accent:'#ffd700',
+    gateCount:4, attractorCount:1,
+  },
+
+  // 60 ── The Blank Canvas ────────────────────────────────────────────────────
+  // Empty starting point — no particles, no gates. You build everything.
+  {
+    id:'blank-canvas', name:'The Blank Canvas', intensity:0,
+    description:'Tela em branco. 0 partículas, 0 gates. Construa tudo do zero.',
+    vibe:'Empty, Your Creation, Freedom',
+    tags:['Experimental','Minimalist','Generative'],
+    bpm:90, scale:'major', root:48, quantaCount:0,
+    motionStyle:'drift',
+    roles:{
+      PAD:     role(.25,[48,72],Q(.5,.3,.70,1.2),'sine','lowpass',800,1,.38,0,.8,2,.9),
+      LEAD:    role(.25,[55,84],Q(.008,.1,.42,.15),'triangle','lowpass',2000,1.5,.45,0,.5,3,.22),
+      BASS:    role(.25,[28,52],Q(.01,.2,.55,.15),'sine','lowpass',250,1,.50,0,.3,2,.35),
+      ARP:     role(.25,[60,96],Q(.003,.08,.15,.1),'triangle','lowpass',2800,1,.40,0,.6,3,.14),
+    },
+    syncThreshold:.35, encounterR:.12, entainment:.40, eventRate:.5,
+    reverbAmt:.5, delayAmt:.4, delayTime:.25, masterGain:.75,
+    harmonyMode:'consonant',
+    particleGlow:1.5, trailLen:8, lens:'Notes', bgPulse:false, cinematic:false,
+    primary:'#ffffff', secondary:'#080808', accent:'#37b2da',
+    gateCount:0, attractorCount:0,
   },
 ];
 

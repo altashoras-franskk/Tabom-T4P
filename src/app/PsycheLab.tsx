@@ -138,9 +138,11 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
   const [running,        setRunning]        = useState(true);
 
   const [rastrosOn, setRastrosOn] = useState(false);
-  const [campoOn,   setCampoOn]   = useState(false);   // ← OFF by default
+  const [campoOn,   setCampoOn]   = useState(false);
   const [fieldOn,   setFieldOn]   = useState(false);
   const [bondsOn,   setBondsOn]   = useState(true);
+  const [overlayOn, setOverlayOn] = useState(true);
+  const [bgColor,   setBgColor]   = useState('#000000');
 
   // Trail config
   const [trailFade,    setTrailFade]    = useState(0.06);
@@ -525,7 +527,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
         renderPsyche(
           canvasRef.current, state, config.lens, cinematicMode,
           getPresetName(presetId),
-          { rastrosOn, campoOn, fieldOn, bondsOn, trailFade, trailOpacity, trailWidth, soulVis, bondWidth, bondOpacity },
+          { rastrosOn, campoOn, fieldOn, bondsOn, overlayOn, trailFade, trailOpacity, trailWidth, soulVis, bondWidth, bondOpacity, bgColor },
           camera2dRef.current,
         );
       }
@@ -540,7 +542,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, cinematicMode, presetId, rastrosOn, campoOn, fieldOn, bondsOn, trailFade, trailOpacity, trailWidth, viewMode, render3DPsyche]);
+  }, [active, cinematicMode, presetId, rastrosOn, campoOn, fieldOn, bondsOn, overlayOn, trailFade, trailOpacity, trailWidth, viewMode, render3DPsyche, bgColor]);
 
   // ── Sync lens ─────────────────────────────────────────────────────────────
   useEffect(() => { configRef.current.lens = lens; }, [lens]);
@@ -687,7 +689,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
         ref={canvasRef}
         className="w-full h-full block"
         style={{
-          background: '#07050e',
+          background: bgColor,
           display: viewMode === '3D' ? 'none' : 'block',
           cursor: drag2dRef.current.active ? 'grabbing' : 'grab',
         }}
@@ -701,7 +703,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
           display: viewMode === '3D' ? 'block' : 'none',
           pointerEvents: viewMode === '3D' ? 'auto' : 'none',
           cursor: 'grab',
-          background: '#070514',
+          background: '#000',
         }}
       />
 
@@ -724,32 +726,40 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
 
       {/* ── 2D Viewport controls (zoom/pan HUD) ─────────────────────────── */}
       {viewMode !== '3D' && (
-        <div className="fixed bottom-4 right-4 z-30 flex flex-col items-end gap-1.5 pointer-events-none select-none">
-          {/* Zoom + pan info pill */}
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md
-            bg-black/60 border border-purple-400/15 backdrop-blur-sm pointer-events-none">
-            <span className="text-[8px] font-mono text-white/25 uppercase tracking-widest">zoom</span>
-            <span className="text-[9px] font-mono text-purple-300/60">{camZoom.toFixed(2)}×</span>
-            {camPanned && (
-              <span className="text-[8px] font-mono text-white/25">pan</span>
-            )}
+        <div style={{
+          position: 'fixed', bottom: 14, right: 14, zIndex: 30,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5,
+          pointerEvents: 'none', userSelect: 'none',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '3px 10px',
+            background: 'rgba(0,0,0,0.92)',
+            border: '1px dashed rgba(255,255,255,0.06)',
+          }}>
+            <span style={{ fontFamily: "'Doto', monospace", fontSize: 8, color: 'rgba(255,255,255,0.22)', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>zoom</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: '#8b5cf690' }}>{camZoom.toFixed(2)}×</span>
+            {camPanned && <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.22)' }}>pan</span>}
           </div>
-          {/* Reset button — only show when not at default */}
           {(Math.abs(camZoom - 1) > 0.02 || camPanned) && (
-            <button
-              onClick={resetCamera2D}
-              className="pointer-events-auto px-2.5 py-1 rounded-md text-[8px] font-mono
-                uppercase tracking-widest transition-all
-                bg-purple-900/40 border border-purple-400/20 text-purple-300/70
-                hover:bg-purple-800/50 hover:text-purple-200/90 hover:border-purple-400/40"
-            >
+            <button onClick={resetCamera2D} style={{
+              pointerEvents: 'auto', padding: '3px 10px',
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 8,
+              letterSpacing: '0.08em', textTransform: 'uppercase' as const,
+              background: 'rgba(139,92,246,0.06)',
+              border: '1px dashed rgba(139,92,246,0.22)',
+              color: 'rgba(139,92,246,0.65)',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}>
               [R] reset view
             </button>
           )}
-          {/* Controls hint */}
-          <div className="px-2 py-0.5 rounded
-            bg-black/40 border border-white/5 pointer-events-none">
-            <span className="text-[7px] font-mono text-white/18">
+          <div style={{
+            padding: '2px 8px',
+            background: 'rgba(0,0,0,0.80)',
+            border: '1px dashed rgba(255,255,255,0.04)',
+          }}>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 7, color: 'rgba(255,255,255,0.14)' }}>
               scroll=zoom · drag=pan · wasd=navegar
             </span>
           </div>
@@ -800,6 +810,10 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
           onFieldToggle={() => setFieldOn(v => !v)}
           bondsOn={bondsOn}
           onBondsToggle={() => setBondsOn(v => !v)}
+          overlayOn={overlayOn}
+          onOverlayToggle={() => setOverlayOn(v => !v)}
+          bgColor={bgColor}
+          onBgColorChange={setBgColor}
           trailFade={trailFade}
           trailOpacity={trailOpacity}
           trailWidth={trailWidth}
@@ -831,25 +845,36 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
 
       {/* 3D overlay: minimal info strip ─────────────────────────────────── */}
       {viewMode === '3D' && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none
-          flex items-center gap-3 px-4 py-1.5 rounded-lg border border-purple-400/15
-          bg-black/50 backdrop-blur-sm">
-          <span className="text-[8px] uppercase tracking-widest text-white/30 font-mono">Psyche 3D</span>
-          <span className="text-[8px] font-mono" style={{ color: PHASE_COLORS[phase] + 'cc' }}>
+        <div style={{
+          position: 'fixed', top: 50, left: '50%', transform: 'translateX(-50%)', zIndex: 20,
+          pointerEvents: 'none',
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '5px 16px',
+          background: 'rgba(0,0,0,0.92)',
+          border: '1px dashed rgba(255,255,255,0.06)',
+        }}>
+          <span style={{ fontFamily: "'Doto', monospace", fontSize: 8, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Psyche 3D</span>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: PHASE_COLORS[phase] + 'aa' }}>
             {phase} · {stateRef.current.count} quanta
           </span>
-          <span className="text-[8px] text-white/20 font-mono">
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.18)' }}>
             Z: {view3DConfig?.zVar ?? 'coherence'}
           </span>
-          <span className="text-[8px] text-white/18 font-mono italic">
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.14)', fontStyle: 'italic' }}>
             drag=órbita · shift+drag=pan · roda=zoom
           </span>
         </div>
       )}
 
       {cinematicMode && viewMode !== '3D' && (
-        <button onClick={() => setCinematicMode(false)}
-          className="fixed top-14 right-3 z-30 text-[9px] text-white/20 hover:text-white/50 transition-colors font-mono">
+        <button onClick={() => setCinematicMode(false)} style={{
+          position: 'fixed', top: 50, right: 10, zIndex: 30,
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
+          color: 'rgba(255,255,255,0.18)',
+          background: 'none', border: 'none', cursor: 'pointer',
+          letterSpacing: '0.08em', textTransform: 'uppercase' as const,
+          transition: 'color 0.15s',
+        }}>
           [H] show HUD
         </button>
       )}

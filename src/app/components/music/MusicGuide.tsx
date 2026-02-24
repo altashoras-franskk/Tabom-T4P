@@ -2,6 +2,10 @@
 import React, { useState } from 'react';
 import { X, ChevronRight, ChevronLeft } from 'lucide-react';
 
+const DOTO = "'Doto', monospace";
+const MONO = "'IBM Plex Mono', monospace";
+const ACCENT = '#37b2da';
+
 interface Step {
   title:   string;
   icon:    string;
@@ -9,28 +13,33 @@ interface Step {
   content: React.ReactNode;
 }
 
+const sLabel: React.CSSProperties = { fontFamily: MONO, fontSize: 7, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.50)' };
+const sHint: React.CSSProperties  = { fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.30)', lineHeight: 1.7 };
+const sKey: React.CSSProperties   = { fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.55)', background: 'rgba(255,255,255,0.06)', padding: '1px 5px', border: '1px dashed rgba(255,255,255,0.08)' };
+const sSection: React.CSSProperties = { padding: '8px 10px', border: '1px dashed rgba(255,255,255,0.05)' };
+
 const STEPS: Step[] = [
   {
     title: 'Iniciando',
-    icon:  '▶',
-    color: '#00d4ff',
+    icon:  '◈',
+    color: ACCENT,
     content: (
-      <div className="flex flex-col gap-2.5">
-        <p className="text-[8px] font-mono text-white/55 leading-relaxed">
-          O Music Lab é um <em className="text-cyan-300/80">instrumento generativo</em> — partículas físicas produzem som ao cruzar
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        <p style={{...sHint,fontSize:8,color:'rgba(255,255,255,0.45)'}}>
+          O Music Lab é um <em style={{color:`${ACCENT}cc`,fontStyle:'normal'}}>instrumento generativo</em> — partículas físicas produzem som ao cruzar
           linhas de gate ou serem acionadas pelo sequencer.
         </p>
-        <div className="flex flex-col gap-1.5">
+        <div style={{display:'flex',flexDirection:'column',gap:6}}>
           {[
-            ['1', 'Clique em', '"▶ Start"', 'no canto superior esquerdo para ativar o áudio.'],
-            ['2', 'Use', 'W + clique no canvas', 'para spawnar partículas (bolinhas).'],
-            ['3', 'Use', 'E + arraste', 'para desenhar Gate Lines — as bolinhas disparam notas ao cruzar.'],
-            ['4', 'Ative o', 'Studio Seq ↓', 'para fazer padrões rítmicos precisos.'],
+            ['1', 'Clique em', '▶ Start', 'no topo para ativar o áudio.'],
+            ['2', 'Use', 'W + clique', 'para spawnar partículas.'],
+            ['3', 'Use', 'E + arraste', 'para desenhar Gate Lines.'],
+            ['4', 'Ative o', 'Studio Seq ↓', 'para padrões rítmicos.'],
           ].map(([n, a, b, c]) => (
-            <div key={n} className="flex gap-2 items-start">
-              <span className="text-[8px] font-mono text-cyan-400/60 flex-shrink-0 w-4 text-right">{n}.</span>
-              <p className="text-[7.5px] font-mono text-white/40 leading-relaxed">
-                {a} <span className="text-white/75 bg-white/[0.07] px-1 rounded font-mono">{b}</span> {c}
+            <div key={n} style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+              <span style={{fontFamily:MONO,fontSize:8,color:`${ACCENT}66`,width:14,textAlign:'right',flexShrink:0}}>{n}.</span>
+              <p style={sHint}>
+                {a} <span style={sKey}>{b}</span> {c}
               </p>
             </div>
           ))}
@@ -43,28 +52,28 @@ const STEPS: Step[] = [
     icon:  '♩',
     color: '#39ff70',
     content: (
-      <div className="flex flex-col gap-2.5">
-        <p className="text-[8px] font-mono text-white/55 leading-relaxed">
-          O <em className="text-green-300/80">Studio Sequencer</em> (painel inferior) é um step sequencer determinístico — toca
-          exatamente nos beats que você armar, independente das partículas.
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        <p style={{...sHint,fontSize:8,color:'rgba(255,255,255,0.45)'}}>
+          O <em style={{color:'rgba(57,255,112,0.75)',fontStyle:'normal'}}>Studio Sequencer</em> (painel inferior) é um step sequencer determinístico —
+          toca exatamente nos beats que você armar.
         </p>
-        <div className="flex flex-col gap-1.5 bg-white/[0.03] rounded-lg p-2.5 border border-white/[0.06]">
-          <div className="text-[6.5px] font-mono uppercase tracking-widest text-green-400/50 mb-0.5">Workflow rápido para 4/4</div>
+        <div style={sSection}>
+          <div style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',textTransform:'uppercase',color:'rgba(57,255,112,0.35)',marginBottom:6}}>Workflow rápido</div>
           {[
             ['Padrões ▾', '→ escolha "4 on 4" para começar'],
             ['Clique nos steps', '→ ative/desative cada célula'],
             ['M = mute, S = solo', '→ controle quais roles tocam'],
             ['BPM no topo', '→ ajuste o tempo global'],
           ].map(([a, b]) => (
-            <div key={a} className="flex gap-1.5 items-start">
-              <span className="text-[6.5px] font-mono text-white/60 bg-white/[0.06] rounded px-1 py-px flex-shrink-0">{a}</span>
-              <span className="text-[6.5px] font-mono text-white/30">{b}</span>
+            <div key={a} style={{display:'flex',gap:6,alignItems:'flex-start',marginBottom:4}}>
+              <span style={sKey}>{a}</span>
+              <span style={sHint}>{b}</span>
             </div>
           ))}
         </div>
-        <p className="text-[7px] font-mono text-white/30 leading-relaxed">
-          Dica: use <span className="text-white/55">KICK + BASS no beat 1</span>, <span className="text-white/55">PERC no beat 3</span>,
-          e <span className="text-white/55">ARP nos off-beats</span> para groove natural.
+        <p style={sHint}>
+          Dica: use <span style={{color:'rgba(255,255,255,0.50)'}}>KICK + BASS no beat 1</span>, <span style={{color:'rgba(255,255,255,0.50)'}}>PERC no 3</span>,
+          e <span style={{color:'rgba(255,255,255,0.50)'}}>ARP nos off-beats</span>.
         </p>
       </div>
     ),
@@ -74,32 +83,28 @@ const STEPS: Step[] = [
     icon:  '⊿',
     color: '#ff8c00',
     content: (
-      <div className="flex flex-col gap-2.5">
-        <p className="text-[8px] font-mono text-white/55 leading-relaxed">
-          Cada partícula tem um <em className="text-orange-300/80">timbre individual</em>. O painel direito (aba Timbre)
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        <p style={{...sHint,fontSize:8,color:'rgba(255,255,255,0.45)'}}>
+          Cada partícula tem um <em style={{color:'rgba(255,140,0,0.75)',fontStyle:'normal'}}>timbre individual</em>. O painel direito (aba Timbre)
           controla o som por role.
         </p>
-        <div className="grid grid-cols-2 gap-1.5">
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
           {[
-            ['Sub Bass ◉',  'Sine filtrado → graves profundos'],
-            ['Acid 303 ⌇',  'Sawtooth+Q alto → clássico acid'],
+            ['Sub Bass ◉',  'Sine → graves profundos'],
+            ['Acid 303 ⌇',  'Sawtooth → acid clássico'],
             ['Hard Kick ●', 'Kick sintético → percussão'],
-            ['FM Bell ∆',   'Triangle+bandpass → brilhante'],
-            ['Saw Lead ⊿',  'Sawtooth → melodias agressivas'],
+            ['FM Bell ∆',   'Triangle → brilhante'],
+            ['Saw Lead ⊿',  'Sawtooth → melodias'],
             ['Warm Pad ~',  'Attack longo → atmosfera'],
-            ['Glitch ⌗',    'Square+gate → eletrônico'],
-            ['Hi-Hat ×',    'Highpass noise → chapas'],
+            ['Glitch ⌗',    'Square → eletrônico'],
+            ['Hi-Hat ×',    'Highpass → chapas'],
           ].map(([name, desc]) => (
-            <div key={name} className="bg-white/[0.03] rounded px-2 py-1.5 border border-white/[0.05]">
-              <div className="text-[7px] font-mono text-white/65">{name}</div>
-              <div className="text-[5.5px] font-mono text-white/28 mt-0.5">{desc}</div>
+            <div key={name} style={{...sSection,padding:'6px 8px'}}>
+              <div style={{fontFamily:MONO,fontSize:7,color:'rgba(255,255,255,0.55)'}}>{name}</div>
+              <div style={{fontFamily:MONO,fontSize:6,color:'rgba(255,255,255,0.22)',marginTop:2}}>{desc}</div>
             </div>
           ))}
         </div>
-        <p className="text-[7px] font-mono text-white/30 leading-relaxed">
-          Selecione uma partícula com <span className="text-white/55">Q</span> para trocar o timbre individualmente.
-          Use o painel Timbre (→) para editar o timbre de toda uma role.
-        </p>
       </div>
     ),
   },
@@ -108,55 +113,50 @@ const STEPS: Step[] = [
     icon:  '♪',
     color: '#9b59ff',
     content: (
-      <div className="flex flex-col gap-2.5">
-        <p className="text-[8px] font-mono text-white/55 leading-relaxed">
-          Todas as notas são <em className="text-purple-300/80">quantizadas automaticamente</em> para a escala do preset.
-          O Studio Seq usa a escala para gerar arpejos e melodias coerentes.
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        <p style={{...sHint,fontSize:8,color:'rgba(255,255,255,0.45)'}}>
+          Todas as notas são <em style={{color:'rgba(155,89,255,0.75)',fontStyle:'normal'}}>quantizadas automaticamente</em> para a escala do preset.
         </p>
-        <div className="flex flex-col gap-1.5">
-          <div className="text-[6.5px] font-mono uppercase tracking-widest text-purple-400/50 mb-0.5">Como os pitches funcionam</div>
+        <div style={{display:'flex',flexDirection:'column',gap:5}}>
+          <div style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',textTransform:'uppercase',color:'rgba(155,89,255,0.35)',marginBottom:2}}>Pitches por role</div>
           {[
             ['KICK / PERC', 'Pitch fixo — apenas ritmo'],
-            ['BASS',        'Nota raiz da escala (root)'],
+            ['BASS',        'Nota raiz da escala'],
             ['LEAD',        'Cicla pelos graus da escala'],
             ['ARP',         'Arpejo rápido na escala ativa'],
             ['PAD / STRINGS','Nota raiz + cores harmônicas'],
           ].map(([role, desc]) => (
-            <div key={role} className="flex gap-2 items-center">
-              <span className="text-[6px] font-mono text-white/50 bg-white/[0.06] rounded px-1.5 py-px w-24 flex-shrink-0 text-center">{role}</span>
-              <span className="text-[6.5px] font-mono text-white/30">{desc}</span>
+            <div key={role} style={{display:'flex',gap:8,alignItems:'center'}}>
+              <span style={{...sKey,width:80,textAlign:'center',flexShrink:0,fontSize:6}}>{role}</span>
+              <span style={sHint}>{desc}</span>
             </div>
           ))}
         </div>
-        <p className="text-[7px] font-mono text-white/30 leading-relaxed">
-          Mude a escala escolhendo outro preset — cada um tem root + escala diferente
-          (minor, dorian, pentatonic, lydian…).
-        </p>
       </div>
     ),
   },
   {
-    title: 'Q. Sequencer',
+    title: 'Quantum Sequencer',
     icon:  'ψ',
     color: '#cc44ff',
     content: (
-      <div className="flex flex-col gap-2.5">
-        <p className="text-[8px] font-mono text-white/55 leading-relaxed">
-          O <em className="text-purple-300/80">Quantum Sequencer</em> (painel esquerdo) é um anel giratório no canvas.
-          É probabilístico — dispara notas das partículas mais próximas de cada step.
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        <p style={{...sHint,fontSize:8,color:'rgba(255,255,255,0.45)'}}>
+          O <em style={{color:'rgba(204,68,255,0.75)',fontStyle:'normal'}}>Quantum Sequencer</em> é um anel giratório no canvas.
+          Probabilístico — dispara notas das partículas mais próximas.
         </p>
-        <div className="flex flex-col gap-1.5 bg-white/[0.03] rounded-lg p-2.5 border border-white/[0.06]">
-          <div className="text-[6.5px] font-mono uppercase tracking-widest text-purple-400/50 mb-0.5">Uso ideal</div>
+        <div style={sSection}>
+          <div style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',textTransform:'uppercase',color:'rgba(204,68,255,0.35)',marginBottom:6}}>Uso ideal</div>
           {[
-            'Use o Studio Seq para o ritmo (kick, bass, perc)',
-            'Use o Q.Seq para melodias emergentes (lead, arp)',
-            'Varie posição e raio do anel para texturas diferentes',
+            'Studio Seq para ritmo (kick, bass, perc)',
+            'Q.Seq para melodias emergentes (lead, arp)',
+            'Varie posição e raio do anel',
             'Steps armados + partículas perto = notas',
-            'Sem partícula perto = silêncio (incerteza quântica)',
+            'Sem partícula perto = silêncio',
           ].map((t, i) => (
-            <div key={i} className="flex gap-1.5 items-start">
-              <span className="text-[6px] font-mono text-purple-400/40 flex-shrink-0">{i + 1}.</span>
-              <span className="text-[6.5px] font-mono text-white/35 leading-snug">{t}</span>
+            <div key={i} style={{display:'flex',gap:6,alignItems:'flex-start',marginBottom:3}}>
+              <span style={{fontFamily:MONO,fontSize:6,color:'rgba(204,68,255,0.35)',flexShrink:0}}>{i + 1}.</span>
+              <span style={sHint}>{t}</span>
             </div>
           ))}
         </div>
@@ -166,19 +166,19 @@ const STEPS: Step[] = [
   {
     title: 'Atalhos',
     icon:  '⌨',
-    color: '#00e5ff',
+    color: ACCENT,
     content: (
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 16px'}}>
         {[
-          ['Q', 'Select (timbre individual)'],
+          ['Q', 'Select'],
           ['W', 'Spawn partículas'],
-          ['E', 'Gate Line (triggers)'],
-          ['R', 'Attractor'],
+          ['E', 'Gate Line'],
+          ['A', 'Attractor'],
           ['T', 'Repulsor'],
           ['Y', 'Vortex'],
-          ['U', 'Excite (acelera)'],
-          ['I', 'Freeze (desacelera)'],
-          ['O', 'Mutate (troca role)'],
+          ['U', 'Excite'],
+          ['I', 'Freeze'],
+          ['O', 'Mutate'],
           ['P', 'Erase'],
           ['1', 'Q.Channel'],
           ['2', 'Gravity Rail'],
@@ -189,9 +189,9 @@ const STEPS: Step[] = [
           ['Space', 'Play / Pause'],
           ['Del', 'Deletar selecionado'],
         ].map(([key, desc]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <span className="text-[6.5px] font-mono text-white/60 bg-white/[0.08] rounded px-1.5 py-px min-w-[20px] text-center flex-shrink-0">{key}</span>
-            <span className="text-[6.5px] font-mono text-white/30">{desc}</span>
+          <div key={key} style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{...sKey,minWidth:20,textAlign:'center',flexShrink:0}}>{key}</span>
+            <span style={sHint}>{desc}</span>
           </div>
         ))}
       </div>
@@ -206,61 +206,61 @@ export const MusicGuide: React.FC<MusicGuideProps> = ({ onClose }) => {
   const step = STEPS[page];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+    <div className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{background:'rgba(0,0,0,0.85)'}}
       onClick={onClose}>
-      <div className="w-[560px] max-w-[96vw] rounded-xl border border-white/[0.09] overflow-hidden shadow-2xl"
-        style={{ background: '#060912' }}
+      <div style={{width:560,maxWidth:'96vw',background:'rgba(0,0,0,0.96)',border:'1px dashed rgba(255,255,255,0.06)',overflow:'hidden'}}
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
-          <div className="flex items-center gap-3">
-            <span className="text-base" style={{ color: step.color }}>{step.icon}</span>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 20px',borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <span style={{ fontSize: 14, color: step.color + '88' }}>{step.icon}</span>
             <div>
-              <div className="text-[6px] font-mono uppercase tracking-widest text-white/25">Guia · {page + 1}/{STEPS.length}</div>
-              <div className="text-[10px] font-mono" style={{ color: step.color + 'dd' }}>{step.title}</div>
+              <div style={{fontFamily:MONO,fontSize:7,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(255,255,255,0.20)'}}>Guia · {page + 1}/{STEPS.length}</div>
+              <div style={{fontFamily:DOTO,fontSize:11,color: step.color + 'cc',letterSpacing:'0.04em'}}>{step.title}</div>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/25 hover:text-white/60 transition-colors"><X size={13}/></button>
+          <button onClick={onClose} style={{color:'rgba(255,255,255,0.20)'}} className="hover:opacity-70 transition-opacity"><X size={13}/></button>
         </div>
 
         {/* Dots */}
-        <div className="flex items-center gap-1.5 px-5 pt-3">
-          {STEPS.map((s, i) => (
+        <div style={{display:'flex',alignItems:'center',gap:4,padding:'12px 20px 0'}}>
+          {STEPS.map((_, i) => (
             <button key={i} onClick={() => setPage(i)}
-              className="transition-all rounded-full"
+              className="transition-all"
               style={{
-                width:   i === page ? 20 : 7,
-                height:  7,
-                background: i === page ? step.color : i < page ? step.color + '44' : 'rgba(255,255,255,0.1)',
+                width:   i === page ? 18 : 6,
+                height:  3,
+                background: i === page ? step.color + '88' : i < page ? step.color + '30' : 'rgba(255,255,255,0.06)',
               }}
             />
           ))}
         </div>
 
         {/* Content */}
-        <div className="px-5 py-4 min-h-[200px]">
+        <div style={{padding:'16px 20px',minHeight:200}}>
           {step.content}
         </div>
 
         {/* Footer nav */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.05]">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 20px',borderTop:'1px dashed rgba(255,255,255,0.04)'}}>
           <button onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="flex items-center gap-1 text-[7.5px] font-mono uppercase tracking-widest transition-all disabled:opacity-0"
-            style={{ color: step.color + '88' }}>
+            className="flex items-center gap-1 transition-all disabled:opacity-0"
+            style={{fontFamily:MONO,fontSize:8,letterSpacing:'0.10em',textTransform:'uppercase',color: step.color + '66'}}>
             <ChevronLeft size={10}/> Anterior
           </button>
           {page < STEPS.length - 1 ? (
             <button onClick={() => setPage(p => p + 1)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[7.5px] font-mono uppercase tracking-widest transition-all"
-              style={{ borderColor: step.color + '55', color: step.color, background: step.color + '0f' }}>
+              className="flex items-center gap-1 transition-all"
+              style={{fontFamily:MONO,fontSize:8,letterSpacing:'0.10em',textTransform:'uppercase',padding:'4px 12px',color:step.color,background:step.color+'0a',border:`1px dashed ${step.color}30`}}>
               Próximo <ChevronRight size={10}/>
             </button>
           ) : (
             <button onClick={onClose}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[7.5px] font-mono uppercase tracking-widest transition-all"
-              style={{ borderColor: step.color + '55', color: step.color, background: step.color + '0f' }}>
+              className="flex items-center gap-1 transition-all"
+              style={{fontFamily:MONO,fontSize:8,letterSpacing:'0.10em',textTransform:'uppercase',padding:'4px 12px',color:step.color,background:step.color+'0a',border:`1px dashed ${step.color}30`}}>
               Começar ▶
             </button>
           )}

@@ -18,6 +18,7 @@ import { LifeStats } from '../sim/life/lifeStats'; // PATCH 04.5
 import { SigilConfig } from '../sim/sigils/sigilState'; // PATCH 04.5-SIGILS
 import { ArchetypeArtifact } from '../sim/sigils/archetypeDetector'; // PATCH 04.5-SIGILS
 
+const DOTO = "'Doto', monospace";
 const MONO = "'IBM Plex Mono', monospace";
 
 interface RightDockProps {
@@ -202,15 +203,11 @@ const HUDSlider: React.FC<{
             [&::-webkit-slider-thumb]:appearance-none
             [&::-webkit-slider-thumb]:w-1.5
             [&::-webkit-slider-thumb]:h-3
-            [&::-webkit-slider-thumb]:rounded-[1px]
-            [&::-webkit-slider-thumb]:bg-white/60
-            [&::-webkit-slider-thumb]:hover:bg-white
+            [&::-webkit-slider-thumb]:bg-white/50
             [&::-webkit-slider-thumb]:transition-colors
             [&::-moz-range-thumb]:w-1.5
             [&::-moz-range-thumb]:h-3
-            [&::-moz-range-thumb]:rounded-[1px]
-            [&::-moz-range-thumb]:bg-white/60
-            [&::-moz-range-thumb]:hover:bg-white
+            [&::-moz-range-thumb]:bg-white/50
             [&::-moz-range-thumb]:border-0
             [&::-moz-range-thumb]:transition-colors"
           style={{ zIndex: 1 }}
@@ -239,12 +236,12 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
             onClick={() => setCollapsed(false)}
             className="pointer-events-auto p-2 transition-all"
             style={{
-              background: 'rgba(0,0,0,0.5)',
-              borderLeft: '1px dashed rgba(255,255,255,0.08)',
-              borderTop: '1px dashed rgba(255,255,255,0.08)',
-              borderBottom: '1px dashed rgba(255,255,255,0.08)',
-              borderRadius: '4px 0 0 4px',
-              color: 'rgba(255,255,255,0.4)',
+              background: 'rgba(0,0,0,0.92)',
+              borderLeft: '1px dashed rgba(255,255,255,0.06)',
+              borderTop: '1px dashed rgba(255,255,255,0.06)',
+              borderBottom: '1px dashed rgba(255,255,255,0.06)',
+              borderRight: 'none',
+              color: 'rgba(255,255,255,0.35)',
             }}
           >
             <ChevronLeft size={12} strokeWidth={1.5} />
@@ -274,9 +271,8 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
             className="p-1.5 transition-colors"
             title="Minimizar painel"
             style={{
-              color: 'rgba(255,255,255,0.3)',
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '3px 0 0 3px',
+              color: 'rgba(255,255,255,0.25)',
+              background: 'rgba(0,0,0,0.80)',
               border: '1px dashed rgba(255,255,255,0.06)',
               borderRight: 'none',
             }}
@@ -288,7 +284,7 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
         {/* ── Vertical Tabs ────────────────────────────────────── */}
         <div className="flex flex-col gap-0 py-2"
           style={{
-            background: 'rgba(0,0,0,0.6)',
+            background: 'rgba(0,0,0,0.94)',
             borderLeft: '1px dashed rgba(255,255,255,0.06)',
           }}>
           {tabs.map((t) => {
@@ -300,18 +296,19 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
                 className="relative px-1.5 py-3 transition-all whitespace-nowrap"
                 style={{
                   writingMode: 'vertical-rl',
+                  fontFamily: MONO,
                   fontSize: '8px',
                   fontWeight: isActive ? 400 : 200,
                   letterSpacing: '1.5px',
                   textTransform: 'uppercase',
-                  color: isActive ? '#ffd400' : 'rgba(255,255,255,0.25)',
+                  color: isActive ? '#ffd400' : 'rgba(255,255,255,0.20)',
                   background: isActive ? 'rgba(255,212,0,0.04)' : 'transparent',
-                  borderRight: isActive ? '1px solid rgba(255,212,0,0.3)' : '1px solid transparent',
+                  borderRight: isActive ? '1px dashed rgba(255,212,0,0.25)' : '1px dashed transparent',
                 }}
               >
                 {t.label}
                 {firstLoad && t.id === 'patchboard' && (
-                  <div className="absolute top-1 right-0.5 w-1 h-1 rounded-full animate-pulse" style={{ background: '#ffd400' }} />
+                  <div className="absolute top-1 right-0.5 w-1 h-1 animate-pulse" style={{ background: '#ffd400' }} />
                 )}
               </button>
             );
@@ -321,22 +318,21 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
         {/* ── Content Panel ────────────────────────────────────── */}
         <div className="flex-1 flex flex-col overflow-hidden"
           style={{
-            background: 'rgba(0,0,0,0.65)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(0,0,0,0.94)',
             borderLeft: '1px dashed rgba(255,255,255,0.06)',
           }}>
           {/* Panel header */}
           <div className="px-3 py-2 flex items-center justify-between"
             style={{ borderBottom: '1px dashed rgba(255,255,255,0.06)' }}>
             <div className="flex items-center gap-2">
-              <span style={{ fontSize: '8px', fontWeight: 200, color: 'rgba(255,255,255,0.2)' }}>
+              <span style={{ fontFamily: MONO, fontSize: '8px', fontWeight: 200, color: 'rgba(255,255,255,0.18)' }}>
                 {tabs.find(t => t.id === tab)?.num}.
               </span>
-              <span style={{ fontSize: '10px', fontWeight: 300, color: 'rgba(255,255,255,0.6)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+              <span style={{ fontFamily: DOTO, fontSize: '10px', fontWeight: 400, color: 'rgba(255,255,255,0.55)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                 {tabs.find(t => t.id === tab)?.label}
               </span>
             </div>
-            <span style={{ fontSize: '7px', fontWeight: 200, color: 'rgba(255,255,255,0.15)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+            <span style={{ fontFamily: MONO, fontSize: '7px', fontWeight: 200, color: 'rgba(255,255,255,0.12)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               COMPLEXITY LAB
             </span>
           </div>
@@ -446,10 +442,9 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
                                   title={p.label + ' — ' + p.desc}
                                   className="flex flex-col items-center justify-center py-2 px-0.5 transition-all"
                                   style={{
-                                    borderRadius: '2px',
-                                    border: `1px ${isActive ? 'solid' : 'dashed'} ${isActive ? p.color + '60' : 'rgba(255,255,255,0.06)'}`,
-                                    background: isActive ? p.color + '10' : 'transparent',
-                                    color: isActive ? p.color : 'rgba(255,255,255,0.35)',
+                                    border: `1px dashed ${isActive ? p.color + '50' : 'rgba(255,255,255,0.05)'}`,
+                                    background: isActive ? p.color + '08' : 'transparent',
+                                    color: isActive ? p.color : 'rgba(255,255,255,0.30)',
                                   }}
                                 >
                                   <span style={{ fontSize: '14px', lineHeight: 1, marginBottom: '3px' }}>{p.icon}</span>
@@ -463,9 +458,8 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
                           {active && (
                             <div className="flex items-start gap-2 px-2 py-1.5"
                               style={{
-                                borderRadius: '2px',
-                                border: `1px dashed ${active.color}30`,
-                                background: `${active.color}05`,
+                                border: `1px dashed ${active.color}25`,
+                                background: `${active.color}04`,
                               }}>
                               <span style={{ fontSize: '16px', lineHeight: 1, color: active.color, marginTop: '2px' }}>{active.icon}</span>
                               <div>
@@ -518,12 +512,11 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
                             style={{
                               width: '20px',
                               height: '20px',
-                              borderRadius: '2px',
                               border: props.selectedType === i
-                                ? '1px solid rgba(255,255,255,0.7)'
-                                : '1px dashed rgba(255,255,255,0.15)',
+                                ? '1px solid rgba(255,255,255,0.65)'
+                                : '1px dashed rgba(255,255,255,0.12)',
                               backgroundColor: `hsl(${(i * 360) / props.microConfig.typesCount}, 70%, 60%)`,
-                              transform: props.selectedType === i ? 'scale(1.15)' : 'scale(1)',
+                              transform: props.selectedType === i ? 'scale(1.10)' : 'scale(1)',
                             }}
                           />
                         ))}

@@ -7,8 +7,12 @@ import { ARCHETYPES, ARCHETYPE_POSITIONS } from '../sim/psyche/archetypes';
 import { sampleFlowField } from '../sim/psyche/flowField';
 
 const MANDALA_FRAC = 0.43;
-const BG_COLOR     = '#07050e';
-const BG_R = 7, BG_G = 5, BG_B = 14;
+const DEFAULT_BG   = '#000000';
+
+function parseBgHex(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
 
 // ── Soul color helper ─────────────────────────────────────────────────────────
 // Converts HSL (h: 0-360, s/l: 0-1) to [r,g,b] 0-255
@@ -58,12 +62,14 @@ export interface PsycheRenderOpts {
   campoOn?:      boolean;   // default false
   fieldOn?:      boolean;   // default false
   bondsOn?:      boolean;   // default true
+  overlayOn?:    boolean;   // topology labels + region glows, default true
   trailFade?:    number;    // 0.02–0.18, default 0.06
   trailOpacity?: number;    // 0..1, default 0.65
   trailWidth?:   number;    // 1..8, default 3  — controls tail length
   soulVis?:      number;    // 0 = pure state colors, 1 = full soul identity, default 0
   bondWidth?:    number;    // 0.3..4.0, default 1.0
   bondOpacity?:  number;    // 0..1, default 0.8
+  bgColor?:      string;    // hex bg color, default '#000000'
 }
 
 interface Ctx { cx: number; cy: number; R: number }
@@ -683,13 +689,14 @@ function updateTrailCanvas(
   trailWidth: number,
   dpr:        number,
   soulVis:    number,
+  bgRgb:      [number, number, number] = [0, 0, 0],
 ): void {
   const W = tc.canvas.width, H = tc.canvas.height;
 
   // ── Fade previous frame (creates the tail's gradient-in-time effect) ─────
   tc.setTransform(1, 0, 0, 1, 0, 0);
   tc.globalAlpha = Math.min(0.99, Math.max(0.01, trailFade));
-  tc.fillStyle   = `rgb(${BG_R},${BG_G},${BG_B})`;
+  tc.fillStyle   = `rgb(${bgRgb[0]},${bgRgb[1]},${bgRgb[2]})`;
   tc.fillRect(0, 0, W, H);
   tc.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -782,13 +789,17 @@ export function renderPsyche(
     campoOn      = false,
     fieldOn      = false,
     bondsOn      = true,
+    overlayOn    = true,
     trailFade    = 0.06,
     trailOpacity = 0.65,
     trailWidth   = 3,
     soulVis      = 0,
     bondWidth    = 1.0,
     bondOpacity  = 0.8,
+    bgColor      = DEFAULT_BG,
   } = opts;
+
+  const [BG_R, BG_G, BG_B] = parseBgHex(bgColor);
 
   const now = performance.now();
   const dt  = Math.min(0.05, (now - lastRenderTime) / 1000);
@@ -826,7 +837,7 @@ export function renderPsyche(
 
   // 1. Background
   c.clearRect(0, 0, W, H);
-  c.fillStyle = BG_COLOR;
+  c.fillStyle = bgColor;
   c.fillRect(0, 0, W, H);
 
   // 2. CAMPO — density heat-map
@@ -848,7 +859,7 @@ export function renderPsyche(
   if (rastrosOn) {
     const tc = getTrailCtx(W, H, dpr);
     if (tc) {
-      updateTrailCanvas(tc, ctxL, state, lens, trailFade, trailWidth, dpr, soulVis);
+      updateTrailCanvas(tc, ctxL, state, lens, trailFade, trailWidth, dpr, soulVis, [BG_R, BG_G, BG_B]);
       c.save(); c.globalAlpha = trailOpacity;
       c.drawImage(_trailCvs!, 0, 0, W, H); c.restore();
     }
@@ -858,14 +869,14 @@ export function renderPsyche(
   if (fieldOn) drawFlowVectors(c, ctxL, state);
 
   // 5. Region overlays
-  drawRegionOverlays(c, ctxL, state, state.elapsed);
+  if (overlayOn) drawRegionOverlays(c, ctxL, state, state.elapsed);
 
   // 6. Topology geometry
-  drawTopology(c, ctxL, state.elapsed);
+  if (overlayOn) drawTopology(c, ctxL, state.elapsed);
 
   // 7. Theory overlays
-  if (lens === 'LACAN') drawLacanOverlay(c, ctxL, state.elapsed);
-  if (lens === 'FREUD') drawFreudOverlay(c, ctxL, state, state.elapsed);
+  if (overlayOn && lens === 'LACAN') drawLacanOverlay(c, ctxL, state.elapsed);
+  if (overlayOn && lens === 'FREUD') drawFreudOverlay(c, ctxL, state, state.elapsed);
 
   // 8. Bonds / Links
   if (bondsOn) drawLinks(c, ctxL, state, false, bondWidth, bondOpacity);

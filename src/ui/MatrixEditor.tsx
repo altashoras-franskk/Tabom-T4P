@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { InteractionMatrix } from '../sim/micro/matrix';
 
+const MONO = "'IBM Plex Mono', monospace";
+
 interface MatrixEditorProps {
   matrix: InteractionMatrix;
   typesCount: number;
@@ -59,17 +61,37 @@ export const MatrixEditor: React.FC<MatrixEditorProps> = ({
     return `rgb(${intensity}, ${intensity}, 255)`;
   };
 
+  const btnStyle = (active: boolean): React.CSSProperties => ({
+    fontFamily: MONO,
+    fontSize: 9,
+    padding: '3px 10px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    border: active ? '1px dashed rgba(255,212,0,0.25)' : '1px dashed rgba(255,255,255,0.06)',
+    color: active ? '#ffd400' : 'rgba(255,255,255,0.40)',
+    background: active ? 'rgba(255,212,0,0.04)' : 'transparent',
+  });
+
+  const actionBtnStyle: React.CSSProperties = {
+    fontFamily: MONO,
+    fontSize: 9,
+    padding: '6px 10px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    border: '1px dashed rgba(255,255,255,0.06)',
+    color: 'rgba(255,255,255,0.40)',
+    background: 'transparent',
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
         {(['attract', 'radius', 'falloff'] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`px-3 py-1 rounded text-xs transition-colors ${
-              mode === m ? 'bg-white/20 text-white' : 'text-white/50 hover:bg-white/10'
-            }`}
-          >
+          <button key={m} onClick={() => setMode(m)} style={btnStyle(mode === m)}>
             {m}
           </button>
         ))}
@@ -87,18 +109,14 @@ export const MatrixEditor: React.FC<MatrixEditorProps> = ({
               return (
                 <div
                   key={`${i}-${j}`}
-                  className="aspect-square rounded cursor-pointer border border-white/10 hover:border-white/30 transition-all"
-                  style={{ backgroundColor: getCellColor(value) }}
+                  className="aspect-square cursor-pointer transition-all"
+                  style={{ backgroundColor: getCellColor(value), border: '1px dashed rgba(255,255,255,0.08)' }}
                   onMouseDown={() => setIsDragging(true)}
                   onMouseUp={() => setIsDragging(false)}
                   onMouseEnter={(e) => {
-                    if (isDragging) {
-                      handleCellChange(i, j, e.shiftKey ? -0.1 : 0.1);
-                    }
+                    if (isDragging) handleCellChange(i, j, e.shiftKey ? -0.1 : 0.1);
                   }}
-                  onClick={(e) => {
-                    handleCellChange(i, j, e.shiftKey ? -0.1 : 0.1);
-                  }}
+                  onClick={(e) => handleCellChange(i, j, e.shiftKey ? -0.1 : 0.1)}
                   title={`${i} → ${j}: ${value.toFixed(2)}`}
                 />
               );
@@ -108,36 +126,11 @@ export const MatrixEditor: React.FC<MatrixEditorProps> = ({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={onRandomize}
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs transition-colors"
-        >
-          Randomize
-        </button>
-        <button
-          onClick={onSoften}
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs transition-colors"
-        >
-          Soften
-        </button>
-        <button
-          onClick={onSymmetrize}
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs transition-colors"
-        >
-          Symmetrize
-        </button>
-        <button
-          onClick={onInvert}
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs transition-colors"
-        >
-          Invert
-        </button>
-        <button
-          onClick={onNormalize}
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs transition-colors col-span-2"
-        >
-          Normalize
-        </button>
+        <button onClick={onRandomize} style={actionBtnStyle}>Randomize</button>
+        <button onClick={onSoften} style={actionBtnStyle}>Soften</button>
+        <button onClick={onSymmetrize} style={actionBtnStyle}>Symmetrize</button>
+        <button onClick={onInvert} style={actionBtnStyle}>Invert</button>
+        <button onClick={onNormalize} style={{ ...actionBtnStyle, gridColumn: 'span 2' }}>Normalize</button>
       </div>
     </div>
   );

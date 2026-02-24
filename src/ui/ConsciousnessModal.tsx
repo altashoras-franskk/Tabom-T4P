@@ -1,12 +1,15 @@
-// ── Psyche Lab — Gerar Nova Consciência Modal ─────────────────────────────────
+// ── Psyche Lab — Gerar Nova Consciência Modal (DOTO/MONO design system) ──────
 import React, { useState, useEffect } from 'react';
-import { X, Shuffle, Zap } from 'lucide-react';
 import {
   ConsciousnessProfile, Complexo, COMPLEXOS,
   generateRandomProfile, generateComposedProfile,
 } from '../sim/psyche/consciousnessGen';
 import { ARCHETYPES } from '../sim/psyche/archetypes';
 import { ArchetypeId } from '../sim/psyche/psycheTypes';
+
+const DOTO = "'Doto', monospace";
+const MONO = "'IBM Plex Mono', monospace";
+const ACCENT = '#8b5cf6';
 
 interface Props {
   onClose:  () => void;
@@ -32,100 +35,105 @@ export const ConsciousnessModal: React.FC<Props> = ({ onClose, onInvoke }) => {
   const handleInvoke = () => {
     if (!activeProfile) return;
     setInvoking(true);
-    setTimeout(() => {
-      onInvoke(activeProfile);
-      onClose();
-    }, 320);
+    setTimeout(() => { onInvoke(activeProfile); onClose(); }, 320);
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(3,1,10,0.90)', backdropFilter: 'blur(16px)' }}
       onClick={e => e.target === e.currentTarget && onClose()}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        background: 'rgba(0,0,0,0.92)',
+      }}
     >
-      <div
-        className="relative w-full max-w-[640px] rounded-2xl overflow-hidden flex flex-col"
-        style={{
-          maxHeight: '90vh',
-          background: 'linear-gradient(145deg, rgba(14,9,28,0.99) 0%, rgba(7,5,14,0.99) 100%)',
-          border: '1px solid rgba(180,160,255,0.10)',
-          boxShadow: '0 0 80px rgba(100,60,200,0.08)',
-        }}
-      >
+      <div style={{
+        position: 'relative', width: '100%', maxWidth: 640, maxHeight: '90vh',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        background: 'rgba(0,0,0,0.98)',
+        border: '1px dashed rgba(255,255,255,0.08)',
+      }}>
         {/* Header */}
-        <div className="shrink-0 px-6 pt-5 pb-4 border-b border-white/[0.07] flex items-start justify-between">
+        <div style={{
+          flexShrink: 0, padding: '18px 24px 14px',
+          borderBottom: '1px dashed rgba(255,255,255,0.06)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        }}>
           <div>
-            <div className="text-[8px] uppercase tracking-widest text-white/20 mb-1.5 font-mono">
+            <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
               PSYCHE LAB · CONSCIÊNCIA
             </div>
-            <h2 className="text-[17px] text-white/80 tracking-wide">Gerar Nova Consciência</h2>
-            <p className="text-[9px] text-white/25 mt-1 italic">
+            <h2 style={{ fontFamily: DOTO, fontSize: 17, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.04em', margin: 0 }}>
+              Gerar Nova Consciência
+            </h2>
+            <p style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.22)', marginTop: 4, fontStyle: 'italic' }}>
               Cada invocação reinicia a psique com novos padrões iniciais.
             </p>
           </div>
-          <button onClick={onClose}
-            className="text-white/15 hover:text-white/50 transition-colors mt-0.5">
-            <X size={16} />
-          </button>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'rgba(255,255,255,0.15)', fontSize: 16, padding: '0 2px',
+          }}>✕</button>
         </div>
 
         {/* Tabs */}
-        <div className="shrink-0 flex border-b border-white/[0.06]">
+        <div style={{
+          flexShrink: 0, display: 'flex',
+          borderBottom: '1px dashed rgba(255,255,255,0.05)',
+        }}>
           {(['random', 'compose'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 text-[9px] uppercase tracking-widest transition-all relative ${
-                tab === t ? 'text-purple-300' : 'text-white/20 hover:text-white/45'
-              }`}>
+            <button key={t} onClick={() => setTab(t)} style={{
+              flex: 1, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: tab === t ? `${ACCENT}cc` : 'rgba(255,255,255,0.18)',
+              borderBottom: tab === t ? `1px solid ${ACCENT}55` : '1px solid transparent',
+              transition: 'all 0.15s',
+            }}>
               {t === 'random' ? '✦ Aleatório' : '◈ Compor'}
-              {tab === t && (
-                <span className="absolute bottom-0 left-1/4 right-1/4 h-px bg-purple-400/60" />
-              )}
             </button>
           ))}
         </div>
 
-        {/* Body — scrollable */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
           {tab === 'random' && (
-            <div className="p-5 space-y-4">
-              <div className="flex gap-2 items-center">
-                <button onClick={() => setProfile(generateRandomProfile())}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10
-                    text-white/35 hover:text-white/65 hover:border-white/20 transition-all text-[9px] uppercase tracking-widest">
-                  <Shuffle size={11} /> Gerar Outro
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => setProfile(generateRandomProfile())} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', background: 'none',
+                  border: '1px dashed rgba(255,255,255,0.10)',
+                  color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+                  fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  transition: 'all 0.15s',
+                }}>
+                  ↻ Gerar Outro
                 </button>
-                <span className="text-[8px] text-white/18 italic">
+                <span style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.15)', fontStyle: 'italic' }}>
                   Seed aleatório baseado em complexos junguianos
                 </span>
               </div>
-
               {profile && <ProfileCard profile={profile} />}
             </div>
           )}
 
           {tab === 'compose' && (
-            <div className="p-5 space-y-4">
-              <p className="text-[8px] text-white/22 italic">
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <p style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.20)', fontStyle: 'italic', margin: 0 }}>
                 Selecione até 3 complexos. Os campos se fundirão num perfil único.
-                {selected.length > 0 && (
-                  <span className="ml-1 text-purple-400/60">{selected.length}/3 selecionados.</span>
-                )}
+                {selected.length > 0 && <span style={{ marginLeft: 4, color: `${ACCENT}55` }}>{selected.length}/3 selecionados.</span>}
               </p>
-
-              <div className="grid grid-cols-2 gap-2">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {COMPLEXOS.map(c => <ComplexoCard key={c.id} c={c} selected={selected.includes(c.id)} onToggle={() => toggle(c.id)} />)}
               </div>
-
               {composedProfile && (
-                <div className="pt-2 border-t border-white/[0.06] space-y-3">
-                  <div className="text-[8px] text-white/25 uppercase tracking-widest">↓ Fusão resultante</div>
+                <div style={{ paddingTop: 8, borderTop: '1px dashed rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.22)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>↓ Fusão resultante</div>
                   <ProfileCard profile={composedProfile} />
                 </div>
               )}
-
               {selected.length === 0 && (
-                <div className="py-6 text-center text-[9px] text-white/18 italic">
+                <div style={{ padding: '24px 0', textAlign: 'center', fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.15)', fontStyle: 'italic' }}>
                   Nenhum complexo selecionado ainda.
                 </div>
               )}
@@ -134,20 +142,19 @@ export const ConsciousnessModal: React.FC<Props> = ({ onClose, onInvoke }) => {
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 px-5 py-4 border-t border-white/[0.06]">
-          <button
-            onClick={handleInvoke}
-            disabled={!activeProfile || invoking}
-            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl
-              border text-[10px] uppercase tracking-widest font-mono transition-all duration-300
-              disabled:opacity-30 disabled:cursor-not-allowed ${
-                invoking
-                  ? 'border-purple-400/60 text-purple-300 bg-purple-500/12 scale-[0.98]'
-                  : 'border-purple-400/35 text-purple-300/80 hover:border-purple-400/70 hover:bg-purple-500/08 hover:text-purple-200'
-              }`}
-          >
-            <Zap size={12} className={invoking ? 'animate-pulse' : ''} />
-            {invoking ? 'Invocando...' : 'Invocar Consciência'}
+        <div style={{ flexShrink: 0, padding: '14px 20px', borderTop: '1px dashed rgba(255,255,255,0.05)' }}>
+          <button onClick={handleInvoke} disabled={!activeProfile || invoking} style={{
+            width: '100%', padding: '12px 0',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            background: invoking ? `${ACCENT}0c` : `${ACCENT}06`,
+            border: `1px dashed ${invoking ? `${ACCENT}50` : `${ACCENT}25`}`,
+            color: invoking ? `${ACCENT}cc` : `${ACCENT}90`,
+            fontFamily: MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
+            cursor: !activeProfile || invoking ? 'not-allowed' : 'pointer',
+            opacity: !activeProfile ? 0.3 : 1,
+            transition: 'all 0.2s',
+          }}>
+            ◈ {invoking ? 'Invocando...' : 'Invocar Consciência'}
           </button>
         </div>
       </div>
@@ -155,8 +162,7 @@ export const ConsciousnessModal: React.FC<Props> = ({ onClose, onInvoke }) => {
   );
 };
 
-// ── ProfileCard ───────────────────────────────────────────────────────────────
-
+// ── ProfileCard ─────────────────────────────────────────────────────────────
 const ProfileCard: React.FC<{ profile: ConsciousnessProfile }> = ({ profile }) => {
   const arch  = ARCHETYPES.find(a => a.id === profile.dominantArchetype);
   const color = profile.color;
@@ -166,66 +172,65 @@ const ProfileCard: React.FC<{ profile: ConsciousnessProfile }> = ({ profile }) =
     .slice(0, 6);
 
   return (
-    <div className="rounded-xl p-4 border transition-all"
-      style={{ background: color + '09', borderColor: color + '25' }}>
-
-      {/* Title row */}
-      <div className="flex items-start gap-3 mb-3">
-        <span className="text-[32px] leading-none shrink-0 mt-0.5" style={{ color }}>
-          {arch?.sigil ?? '✦'}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] text-white/85 tracking-wide mb-0.5">{profile.name}</div>
-          <div className="text-[8.5px] italic leading-snug" style={{ color: color + 'aa' }}>
+    <div style={{
+      padding: 16,
+      background: color + '06',
+      border: `1px dashed ${color}22`,
+      transition: 'all 0.2s',
+    }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
+        <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0, color }}>{arch?.sigil ?? '✦'}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: DOTO, fontSize: 15, color: 'rgba(255,255,255,0.80)', letterSpacing: '0.04em', marginBottom: 3 }}>
+            {profile.name}
+          </div>
+          <div style={{ fontFamily: MONO, fontSize: 8, fontStyle: 'italic', lineHeight: 1.5, color: color + '99' }}>
             "{profile.poeticLine}"
           </div>
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            <span className="text-[7.5px] px-1.5 py-0.5 rounded font-mono"
-              style={{ background: color + '1a', color: color + 'cc' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+            <span style={{ fontFamily: MONO, fontSize: 7, padding: '2px 6px', background: color + '12', color: color + 'bb' }}>
               ● {profile.dominantArchetype}
             </span>
-            <span className="text-[7.5px] px-1.5 py-0.5 rounded font-mono bg-white/[0.05] text-white/35">
-              Previsto: {profile.predictedPhase}
+            <span style={{ fontFamily: MONO, fontSize: 7, padding: '2px 6px', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.30)' }}>
+              {profile.predictedPhase}
             </span>
-            <span className="text-[7.5px] px-1.5 py-0.5 rounded font-mono bg-white/[0.05] text-white/35">
-              {profile.activeArchetypes.length} arquétipos ativos
+            <span style={{ fontFamily: MONO, fontSize: 7, padding: '2px 6px', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.30)' }}>
+              {profile.activeArchetypes.length} arquétipos
             </span>
           </div>
         </div>
       </div>
 
-      {/* Description */}
-      <p className="text-[8px] text-white/35 mb-3 leading-relaxed">{profile.description}</p>
+      <p style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.28)', marginBottom: 12, lineHeight: 1.6 }}>
+        {profile.description}
+      </p>
 
-      {/* Archetype bars */}
-      <div className="space-y-1.5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         {topArchs.map(([id, str]) => {
           const a = ARCHETYPES.find(x => x.id === id);
           if (!a) return null;
           return (
-            <div key={id} className="flex items-center gap-2">
-              <span className="text-[12px] w-4 shrink-0 text-center" style={{ color: a.color }}>{a.sigil}</span>
-              <span className="text-[7.5px] font-mono w-20 shrink-0 text-white/40">{a.id}</span>
-              <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${Math.round(str * 100)}%`, background: `linear-gradient(90deg, ${a.color}77, ${a.color}cc)` }} />
+            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, width: 16, flexShrink: 0, textAlign: 'center', color: a.color }}>{a.sigil}</span>
+              <span style={{ fontFamily: MONO, fontSize: 7, width: 70, flexShrink: 0, color: 'rgba(255,255,255,0.35)' }}>{a.id}</span>
+              <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.round(str * 100)}%`, background: `linear-gradient(90deg, ${a.color}55, ${a.color}aa)`, transition: 'width 0.7s' }} />
               </div>
-              <span className="text-[7px] font-mono text-white/25 w-7 text-right">{Math.round(str * 100)}%</span>
+              <span style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.20)', width: 26, textAlign: 'right' }}>{Math.round(str * 100)}%</span>
             </div>
           );
         })}
       </div>
 
-      {/* Config snapshot */}
-      <div className="mt-3 pt-3 border-t border-white/[0.05] flex flex-wrap gap-3">
+      <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed rgba(255,255,255,0.04)', display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         {profile.configMods.danceIntensity != null && (
-          <ConfigChip label="Velocidade" value={`${Math.round((profile.configMods.danceIntensity) * 100)}%`} />
+          <ConfigChip label="Velocidade" value={`${Math.round(profile.configMods.danceIntensity * 100)}%`} />
         )}
         {profile.configMods.breathPeriod != null && (
           <ConfigChip label="Respiração" value={`${Math.round(profile.configMods.breathPeriod)}s`} />
         )}
         {profile.configMods.maxSpeed != null && (
-          <ConfigChip label="Max Speed" value={(profile.configMods.maxSpeed).toFixed(2)} />
+          <ConfigChip label="Max Speed" value={profile.configMods.maxSpeed.toFixed(2)} />
         )}
       </div>
     </div>
@@ -233,56 +238,44 @@ const ProfileCard: React.FC<{ profile: ConsciousnessProfile }> = ({ profile }) =
 };
 
 const ConfigChip: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="flex flex-col items-center">
-    <span className="text-[6.5px] uppercase tracking-widest text-white/18">{label}</span>
-    <span className="text-[9px] font-mono text-white/40">{value}</span>
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <span style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.15)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
+    <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>{value}</span>
   </div>
 );
 
-// ── ComplexoCard ──────────────────────────────────────────────────────────────
-
-const ComplexoCard: React.FC<{ c: Complexo; selected: boolean; onToggle: () => void }> = ({
-  c, selected, onToggle,
-}) => {
+// ── ComplexoCard ─────────────────────────────────────────────────────────────
+const ComplexoCard: React.FC<{ c: Complexo; selected: boolean; onToggle: () => void }> = ({ c, selected, onToggle }) => {
   const topArchs = (Object.entries(c.archetypes) as [ArchetypeId, number][])
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3);
 
   return (
-    <button
-      onClick={onToggle}
-      className={`text-left p-3 rounded-xl border transition-all duration-200 ${
-        selected ? 'scale-[1.01]' : 'hover:scale-[1.005]'
-      }`}
-      style={{
-        background:   selected ? c.color + '0f' : 'rgba(255,255,255,0.02)',
-        borderColor:  selected ? c.color + '50' : 'rgba(255,255,255,0.06)',
-      }}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-[20px] leading-none shrink-0" style={{ color: c.color }}>{c.sigil}</span>
-        <div>
-          <div className="text-[9.5px] font-mono leading-tight" style={{ color: selected ? c.color : '#999' }}>
+    <button onClick={onToggle} style={{
+      textAlign: 'left', padding: 12, cursor: 'pointer',
+      background: selected ? c.color + '08' : 'rgba(255,255,255,0.01)',
+      border: `1px dashed ${selected ? c.color + '40' : 'rgba(255,255,255,0.05)'}`,
+      transition: 'all 0.15s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, color: c.color }}>{c.sigil}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: MONO, fontSize: 9, lineHeight: 1.3, color: selected ? c.color : 'rgba(255,255,255,0.50)' }}>
             {c.name}
           </div>
-          <div className="flex gap-1 mt-0.5 flex-wrap">
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 3 }}>
             {c.keywords.map(k => (
-              <span key={k} className="text-[6.5px] text-white/18">{k}</span>
+              <span key={k} style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.15)' }}>{k}</span>
             ))}
           </div>
         </div>
-        {selected && (
-          <span className="ml-auto text-[9px] shrink-0" style={{ color: c.color }}>✓</span>
-        )}
+        {selected && <span style={{ fontSize: 9, flexShrink: 0, color: c.color }}>✓</span>}
       </div>
-
-      {/* Archetype pills */}
-      <div className="flex gap-1 flex-wrap">
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {topArchs.map(([id, str]) => {
           const a = ARCHETYPES.find(x => x.id === id);
           return a ? (
-            <span key={id} className="text-[7px] px-1.5 py-0.5 rounded font-mono"
-              style={{ background: a.color + '18', color: a.color + 'bb' }}>
+            <span key={id} style={{ fontFamily: MONO, fontSize: 7, padding: '2px 6px', background: a.color + '12', color: a.color + '99' }}>
               {a.sigil} {Math.round(str * 100)}%
             </span>
           ) : null;

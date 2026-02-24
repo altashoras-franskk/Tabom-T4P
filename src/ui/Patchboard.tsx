@@ -127,15 +127,11 @@ const Knob: React.FC<{
             [&::-webkit-slider-thumb]:appearance-none
             [&::-webkit-slider-thumb]:w-1.5
             [&::-webkit-slider-thumb]:h-3
-            [&::-webkit-slider-thumb]:rounded-[1px]
-            [&::-webkit-slider-thumb]:bg-white/60
-            [&::-webkit-slider-thumb]:hover:bg-white
+            [&::-webkit-slider-thumb]:bg-white/50
             [&::-webkit-slider-thumb]:transition-colors
             [&::-moz-range-thumb]:w-1.5
             [&::-moz-range-thumb]:h-3
-            [&::-moz-range-thumb]:rounded-[1px]
-            [&::-moz-range-thumb]:bg-white/60
-            [&::-moz-range-thumb]:hover:bg-white
+            [&::-moz-range-thumb]:bg-white/50
             [&::-moz-range-thumb]:border-0
             [&::-moz-range-thumb]:transition-colors"
           style={{ zIndex: 1 }}
@@ -207,10 +203,10 @@ export const Patchboard: React.FC<PatchboardProps> = ({
       {/* Header - Descricao do Motor */}
       <div className="space-y-2 pb-3" style={{ borderBottom: '1px dashed rgba(255,255,255,0.08)' }}>
         <h2 style={{
-          fontFamily: MONO,
-          fontSize: '10px',
-          fontWeight: 300,
-          letterSpacing: '2px',
+          fontFamily: "'Doto', monospace",
+          fontSize: '11px',
+          fontWeight: 400,
+          letterSpacing: '0.1em',
           color: '#ffd400',
           textTransform: 'uppercase',
         }}>
@@ -231,7 +227,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
       {(onApplyRecipe || onNewUniverse || onChaosSeed || onSpawnPatternChange) && (
         <>
           <div className="space-y-3">
-            <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+            <h3 style={{ fontFamily: "'Doto', monospace", fontSize: 10, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', paddingBottom: 5, borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
               Ecossistema
             </h3>
             <p className="text-white/30 text-[9px] font-light italic leading-relaxed">
@@ -246,8 +242,8 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 <select
                   value={spawnPattern}
                   onChange={(e) => onSpawnPatternChange(e.target.value)}
-                  className="w-full bg-transparent border border-white/[0.08] text-white/70 text-[10px] py-1.5 px-2 rounded
-                    hover:border-white/20 focus:border-white/30 focus:outline-none transition-colors font-light"
+                  style={{ fontFamily: MONO, fontSize: 10, border: '1px dashed rgba(255,255,255,0.08)', background: 'transparent', color: 'rgba(255,255,255,0.55)', padding: '5px 8px' }}
+                  className="w-full focus:outline-none transition-colors"
                 >
                   <optgroup label="Básicos" className="bg-black">
                     <option value="random" className="bg-black">Random Chaos</option>
@@ -288,7 +284,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 {onNewUniverse && (
                   <button
                     onClick={onNewUniverse}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all tracking-wide uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.06em' }}
                   >
                     Novo Universo
                   </button>
@@ -296,7 +292,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 {onChaosSeed && (
                   <button
                     onClick={onChaosSeed}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all tracking-wide uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.06em' }}
                   >
                     Semente do Caos
                   </button>
@@ -312,63 +308,63 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 <div className="grid grid-cols-2 gap-1.5">
                   <button
                     onClick={() => onApplyRecipe('pollock')}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.40)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Chaotic streaking patterns"
                   >
                     Pollock
                   </button>
                   <button
                     onClick={() => onApplyRecipe('mitosis')}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.40)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Self-dividing clusters"
                   >
                     Mitosis
                   </button>
                   <button
                     onClick={() => onApplyRecipe('alliances')}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.40)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Symbiotic coalitions"
                   >
                     Alliances
                   </button>
                   <button
                     onClick={() => onApplyRecipe('planets')}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.40)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Orbital ring structures"
                   >
                     Planets
                   </button>
                   <button
                     onClick={() => onApplyRecipe('field')}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.40)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Sparse high-energy field"
                   >
                     Field
                   </button>
                   <button
                     onClick={() => onApplyRecipe('gems')}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.40)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Dense crystalline clusters"
                   >
                     Gems
                   </button>
                   <button
                     onClick={() => onApplyRecipe('drift')}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.40)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Flowing sparse patterns"
                   >
                     Drift
                   </button>
                   <button
                     onClick={() => onApplyRecipe('simplify')}
-                    className="border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.40)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Minimal stable structures"
                   >
                     Simplify
                   </button>
                   <button
                     onClick={() => onApplyRecipe('darwin')}
-                    className="border border-green-500/20 hover:border-green-500/40 text-green-400/80 hover:text-green-400 text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase"
+                    className="text-[10px] py-1.5 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(16,212,91,0.20)', color: 'rgba(16,212,91,0.70)', fontFamily: "'IBM Plex Mono', monospace" }}
                     title="Evolution with mutations and adaptations"
                   >
                     Darwin
@@ -398,7 +394,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                         <button
                           key={preset.id}
                           onClick={() => onLoadPreset(preset.id)}
-                          className={`w-full border ${catBorder} text-white/60 hover:text-white/90 text-left py-2 px-2.5 rounded transition-all group`}
+                          className={`w-full border ${catBorder} text-white/60 hover:text-white/90 text-left py-2 px-2.5 transition-all group`}
                         >
                           <div className="flex items-baseline justify-between gap-1">
                             <span className="text-[10px] font-medium text-white/80">{preset.name}</span>
@@ -408,7 +404,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                           {preset.tags && (
                             <div className="flex flex-wrap gap-0.5 mt-1">
                               {preset.tags.slice(0, 3).map(tag => (
-                                <span key={tag} className="text-[7px] px-1 py-px rounded-sm bg-white/5 text-white/30 border border-white/[0.06]">{tag}</span>
+                                <span key={tag} className="text-[7px] px-1 py-px bg-white/5 text-white/30 border border-white/[0.06]">{tag}</span>
                               ))}
                             </div>
                           )}
@@ -425,12 +421,12 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                   </summary>
                   <div className="mt-1.5 grid grid-cols-2 gap-1 max-h-[300px] overflow-y-auto pr-1
                     [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-white/5
-                    [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+                    [&::-webkit-scrollbar-thumb]:bg-white/20">
                     {CREATIVE_PRESETS.filter(p => !FEATURED_PRESETS.find(f => f.id === p.id)).map(preset => (
                       <button
                         key={preset.id}
                         onClick={() => onLoadPreset(preset.id)}
-                        className="border border-white/[0.06] hover:border-white/20 text-white/50 hover:text-white/80 text-[9px] font-light py-1.5 px-2 rounded transition-all text-left"
+                        className="text-white/50 hover:text-white/80 text-[9px] py-1.5 px-2 transition-all text-left" style={{ border: '1px dashed rgba(255,255,255,0.05)', fontFamily: "'IBM Plex Mono', monospace" }}
                         title={preset.description}
                       >
                         <div className="truncate font-medium">{preset.name}</div>
@@ -453,7 +449,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
           <div>
             <button
               onClick={onRandomizeAll}
-              className="w-full border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-[10px] font-light py-2 px-2 rounded transition-all tracking-wide uppercase"
+              className="w-full text-[10px] py-2 px-2 transition-all uppercase" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.06em' }}
             >
               Aleatorizar Tudo
             </button>
@@ -464,7 +460,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
 
       {/* Visual Controls */}
       <div className="space-y-3">
-        <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+        <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           Visual
         </h3>
         
@@ -475,7 +471,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
               id="enableTrails"
               checked={trails}
               onChange={onToggleTrails}
-              className="w-2.5 h-2.5 bg-transparent border border-white/20 checked:bg-white/20 rounded-sm cursor-pointer"
+              className="w-2.5 h-2.5 bg-transparent border border-white/15 checked:bg-white/20 cursor-pointer"
             />
             <label htmlFor="enableTrails" className="text-white/40 text-[10px] font-light cursor-pointer uppercase tracking-wide">
               Rastros (Trails)
@@ -490,7 +486,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
               id="enableFieldHeatmap"
               checked={fieldHeatmap}
               onChange={onToggleFieldHeatmap}
-              className="w-2.5 h-2.5 bg-transparent border border-white/20 checked:bg-white/20 rounded-sm cursor-pointer"
+              className="w-2.5 h-2.5 bg-transparent border border-white/15 checked:bg-white/20 cursor-pointer"
             />
             <label htmlFor="enableFieldHeatmap" className="text-white/40 text-[10px] font-light cursor-pointer uppercase tracking-wide">
               Campo (Heatmap)
@@ -503,7 +499,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
 
       {/* Population */}
       <div className="space-y-3">
-        <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+        <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           População
         </h3>
         <Knob
@@ -529,7 +525,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
             id="foodEnabled"
             checked={microConfig.foodEnabled}
             onChange={(e) => onMicroChange({ foodEnabled: e.target.checked })}
-            className="w-2.5 h-2.5 bg-transparent border border-white/20 checked:bg-white/20 rounded-sm cursor-pointer"
+            className="w-2.5 h-2.5 bg-transparent border border-white/15 checked:bg-white/20 cursor-pointer"
           />
           <label htmlFor="foodEnabled" className="text-white/40 text-[10px] font-light cursor-pointer uppercase tracking-wide">
             Ativar Partículas de Alimento
@@ -553,7 +549,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
 
       {/* Physics */}
       <div className="space-y-3">
-        <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+        <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           Física
         </h3>
         
@@ -563,7 +559,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
             id="wrapBoundaries"
             checked={microConfig.wrap}
             onChange={(e) => onMicroChange({ wrap: e.target.checked })}
-            className="w-2.5 h-2.5 bg-transparent border border-white/20 checked:bg-white/20 rounded-sm cursor-pointer"
+            className="w-2.5 h-2.5 bg-transparent border border-white/15 checked:bg-white/20 cursor-pointer"
           />
           <label htmlFor="wrapBoundaries" className="text-white/40 text-[10px] font-light cursor-pointer uppercase tracking-wide">
             {microConfig.wrap ? 'Universo Infinito (Wrap)' : 'Bordas Fechadas'}
@@ -626,7 +622,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
       {/* PATCH 04.5: SISTEMA VIDA (Unificado) */}
       {life && onLifeChange && (
         <div className="space-y-3">
-          <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+          <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
             VIDA (4.5)
           </h3>
           
@@ -642,7 +638,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
             <select
               value={life.mode}
               onChange={(e) => onLifeChange({ mode: e.target.value as any })}
-              className="w-full bg-black/40 border border-white/10 text-white/80 text-[10px] py-1.5 px-2 rounded focus:border-white/30 transition-colors"
+              className="w-full text-white/70 text-[10px] py-1.5 px-2 focus:outline-none transition-colors" style={{ background: 'rgba(0,0,0,0.4)', border: '1px dashed rgba(255,255,255,0.08)', fontFamily: "'IBM Plex Mono', monospace" }}
             >
               <option value="OFF">OFF (Estático)</option>
               <option value="METABOLIC">METABÓLICO (Apenas energia)</option>
@@ -659,7 +655,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 id="foodEnabled"
                 checked={life.foodEnabled}
                 onChange={(e) => onLifeChange({ foodEnabled: e.target.checked })}
-                className="w-2.5 h-2.5 bg-transparent border border-white/20 checked:bg-white/20 rounded-sm cursor-pointer"
+                className="w-2.5 h-2.5 bg-transparent border border-white/15 checked:bg-white/20 cursor-pointer"
               />
               <label htmlFor="foodEnabled" className="text-white/40 text-[10px] font-light cursor-pointer uppercase tracking-wide">
                 Comida Ativada
@@ -686,7 +682,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 id="energyEnabled"
                 checked={life.energyEnabled}
                 onChange={(e) => onLifeChange({ energyEnabled: e.target.checked })}
-                className="w-2.5 h-2.5 bg-transparent border border-white/20 checked:bg-white/20 rounded-sm cursor-pointer"
+                className="w-2.5 h-2.5 bg-transparent border border-white/15 checked:bg-white/20 cursor-pointer"
               />
               <label htmlFor="energyEnabled" className="text-white/40 text-[10px] font-light cursor-pointer uppercase tracking-wide">
                 Energia Ativada
@@ -735,7 +731,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
             />
             
             {/* Valores derivados (somente leitura) */}
-            <div className="space-y-0.5 p-2 bg-white/[0.02] rounded border border-white/[0.05]">
+            <div className="space-y-0.5 p-2 bg-white/[0.02]" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
               <div className="flex justify-between text-[9px]">
                 <span className="text-white/30">Taxa de Mutação:</span>
                 <span className="text-white/60 font-mono">{life.mutationRate.toFixed(5)}</span>
@@ -762,7 +758,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
               id="reconfigEnabled"
               checked={life.reconfigEnabled}
               onChange={(e) => onLifeChange({ reconfigEnabled: e.target.checked })}
-              className="w-2.5 h-2.5 bg-transparent border border-white/20 checked:bg-white/20 rounded-sm cursor-pointer"
+              className="w-2.5 h-2.5 bg-transparent border border-white/15 checked:bg-white/20 cursor-pointer"
             />
             <label htmlFor="reconfigEnabled" className="text-white/40 text-[10px] font-light cursor-pointer uppercase tracking-wide">
               Mutação Macro (Reconfig)
@@ -771,7 +767,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
           
           {/* Estatísticas ao Vivo */}
           {lifeStats && (
-            <div className="space-y-1 p-2 bg-green-500/[0.05] rounded border border-green-500/10">
+            <div className="space-y-1 p-2" style={{ background: 'rgba(16,212,91,0.04)', border: '1px dashed rgba(16,212,91,0.10)' }}>
               <div className="text-white/50 text-[9px] uppercase tracking-wide mb-1">Estatísticas ao Vivo</div>
               <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[9px]">
                 <span className="text-white/30">Nascimentos:</span>
@@ -795,7 +791,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
 
       {/* Field */}
       <div className="space-y-3">
-        <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+        <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           Campo
         </h3>
         <Knob
@@ -820,7 +816,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
 
       {/* Render */}
       <div className="space-y-3">
-        <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+        <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           Renderização
         </h3>
         
@@ -834,13 +830,13 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 <button
                   key={quality}
                   onClick={() => onSimQualityChange(quality)}
-                  className={`
-                    border text-[10px] font-light py-1 px-1.5 rounded transition-all uppercase
-                    ${simQuality === quality 
-                      ? 'border-white/20 text-white bg-white/[0.04]' 
-                      : 'border-white/[0.08] text-white/50 hover:border-white/20 hover:text-white/70'
-                    }
-                  `}
+                  className="text-[10px] py-1 px-1.5 transition-all uppercase"
+                  style={{
+                    fontFamily: MONO,
+                    border: simQuality === quality ? '1px dashed rgba(255,212,0,0.25)' : '1px dashed rgba(255,255,255,0.06)',
+                    color: simQuality === quality ? '#ffd400' : 'rgba(255,255,255,0.40)',
+                    background: simQuality === quality ? 'rgba(255,212,0,0.04)' : 'transparent',
+                  }}
                 >
                   {quality}
                 </button>
@@ -899,7 +895,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 console.log('[Patchboard] Randomizing palette:', { old: paletteIndex, new: newPalette });
                 onPaletteIndexChange(newPalette);
               }}
-              className="w-full border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.02] text-white/60 hover:text-white text-[10px] font-light py-2.5 px-2 rounded transition-all tracking-wide uppercase active:bg-white/[0.06] cursor-pointer"
+              className="w-full text-[10px] py-2.5 px-2 transition-all uppercase cursor-pointer" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', fontFamily: MONO, letterSpacing: '0.06em' }}
             >
               Randomizar Cores
             </button>
@@ -914,7 +910,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 onBackgroundClick();
               }
             }}
-            className="w-full border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.02] text-white/60 hover:text-white text-[10px] font-light py-2.5 px-2 rounded transition-all tracking-wide uppercase cursor-pointer"
+            className="w-full text-[10px] py-2.5 px-2 transition-all uppercase cursor-pointer" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', fontFamily: MONO, letterSpacing: '0.06em' }}
           >
             Fundo do Canvas
           </button>
@@ -925,7 +921,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
 
       {/* Bonds & Trails Overlay */}
       <div className="space-y-3">
-        <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+        <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           Overlays
         </h3>
         
@@ -938,7 +934,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 id="showBonds"
                 checked={showBonds}
                 onChange={(e) => onShowBondsChange?.(e.target.checked)}
-                className="w-3 h-3 rounded border-white/20 bg-white/[0.06] checked:bg-cyan-500/60 cursor-pointer"
+                className="w-3 h-3 border-white/15 bg-white/[0.05] checked:bg-cyan-500/50 cursor-pointer"
               />
               <label htmlFor="showBonds" className="text-white/70 text-[10px] font-light cursor-pointer">
                 Conexões (Bonds)
@@ -979,7 +975,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 id="showTrails"
                 checked={showTrails}
                 onChange={(e) => onShowTrailsChange?.(e.target.checked)}
-                className="w-3 h-3 rounded border-white/20 bg-white/[0.06] checked:bg-cyan-500/60 cursor-pointer"
+                className="w-3 h-3 border-white/15 bg-white/[0.05] checked:bg-cyan-500/50 cursor-pointer"
               />
               <label htmlFor="showTrails" className="text-white/70 text-[10px] font-light cursor-pointer">
                 Rastros (Trails)
@@ -1021,7 +1017,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
       {sigilConfig && onSigilConfigChange && (
         <>
           <div className="space-y-3">
-            <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+            <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
               SIGILS (RecursiveLab)
             </h3>
             
@@ -1036,7 +1032,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 id="sigilsEnabled"
                 checked={sigilConfig.enabled}
                 onChange={(e) => onSigilConfigChange({ enabled: e.target.checked })}
-                className="w-3 h-3 rounded border-white/20 bg-white/[0.06] checked:bg-cyan-500/60 cursor-pointer"
+                className="w-3 h-3 border-white/15 bg-white/[0.05] checked:bg-cyan-500/50 cursor-pointer"
               />
               <label htmlFor="sigilsEnabled" className="text-white/70 text-[10px] font-light cursor-pointer">
                 Sistema de Sigils Ativo
@@ -1052,7 +1048,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                     id="sigilsShowOverlay"
                     checked={sigilConfig.showOverlay}
                     onChange={(e) => onSigilConfigChange({ showOverlay: e.target.checked })}
-                    className="w-3 h-3 rounded border-white/20 bg-white/[0.06] checked:bg-cyan-500/60 cursor-pointer"
+                    className="w-3 h-3 border-white/15 bg-white/[0.05] checked:bg-cyan-500/50 cursor-pointer"
                   />
                   <label htmlFor="sigilsShowOverlay" className="text-white/70 text-[10px] font-light cursor-pointer">
                     Mostrar Overlay (Tecla: S)
@@ -1100,7 +1096,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                   <div className="pl-4 space-y-1.5">
                     <button
                       onClick={onClearSigils}
-                      className="w-full border border-white/[0.08] hover:border-red-400/30 text-white/50 hover:text-red-400/70 text-[10px] font-light py-1.5 px-2 rounded transition-all uppercase tracking-wide"
+                      className="w-full text-[10px] py-1.5 px-2 transition-all uppercase cursor-pointer" style={{ border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)', fontFamily: MONO, letterSpacing: '0.06em' }}
                     >
                       Limpar Sigils
                     </button>
@@ -1141,7 +1137,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
                 </div>
                 
                 {/* Info Card */}
-                <div className="pl-4 space-y-1.5 p-2 bg-white/[0.02] border border-white/[0.06] rounded text-[9px] text-white/40 leading-relaxed">
+                <div className="pl-4 space-y-1.5 p-2 text-[9px] text-white/40 leading-relaxed" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.04)' }}>
                   <div className="text-white/60 font-semibold uppercase tracking-wide text-[8px]">COMO FUNCIONA:</div>
                   <div>• <strong>Mutação:</strong> genes mudam com entropia (se metamorphosis on)</div>
                   <div>• <strong>Especiação:</strong> quando padrões divergem, arquétipo emerge</div>
@@ -1157,7 +1153,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
 
       {/* Reconfig */}
       <div className="space-y-3">
-        <h3 className="text-white/80 text-[9px] tracking-[0.15em] uppercase font-light border-b border-white/[0.06] pb-1.5">
+        <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           Reconfiguration
         </h3>
         <p className="text-white/30 text-[9px] font-light italic leading-relaxed">

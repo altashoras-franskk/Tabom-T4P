@@ -116,23 +116,27 @@ const TIMBRE_TEMPLATES: TimbreTemplate[] = [
 ];
 
 // ── Slider sub-component ─────────────────────────────────────────────────────
+const DOTO = "'Doto', monospace";
+const MONO = "'IBM Plex Mono', monospace";
+const ACCENT = '#37b2da';
+
 const S: React.FC<{
   label:string; value:number; min:number; max:number; step:number;
   display?:(v:number)=>string; color?:string; onChange:(v:number)=>void;
-}> = ({ label, value, min, max, step, display, color='#88aaff', onChange }) => {
+}> = ({ label, value, min, max, step, display, color=ACCENT, onChange }) => {
   const pct = ((value-min)/(max-min)*100).toFixed(1)+'%';
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex justify-between items-baseline">
-        <span className="text-[7px] font-mono uppercase tracking-widest" style={{color:color+'88'}}>{label}</span>
-        <span className="text-[7px] font-mono" style={{color:color+'cc'}}>
+        <span style={{fontFamily:MONO,fontSize:7,color:color+'66',letterSpacing:'0.08em',textTransform:'uppercase'}}>{label}</span>
+        <span style={{fontFamily:MONO,fontSize:7,color:color+'99'}}>
           {display?display(value):value}
         </span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={e=>onChange(parseFloat(e.target.value))}
         className="h-px w-full appearance-none cursor-pointer"
-        style={{background:`linear-gradient(90deg,${color}88 ${pct},rgba(255,255,255,.1) ${pct})`,borderRadius:1}}
+        style={{background:`linear-gradient(90deg,${color}55 ${pct},rgba(255,255,255,.06) ${pct})`}}
       />
     </div>
   );
@@ -152,14 +156,14 @@ const PresetGrid: React.FC<{currentId:string;onSelect:(id:string)=>void;onClose:
   const allTags=useMemo(()=>Array.from(new Set(MUSIC_PRESETS.flatMap(p=>p.tags))).sort(),[]);
   const shown=filter?MUSIC_PRESETS.filter(p=>p.tags.includes(filter)):MUSIC_PRESETS;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.88)'}} onClick={onClose}>
       <div className="w-[820px] max-w-[96vw] max-h-[88vh] flex flex-col border border-dashed border-white/[0.06] bg-black"
-        style={{fontFamily:"'IBM Plex Mono', monospace"}}
+        style={{fontFamily:MONO}}
         onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-dashed border-white/[0.06]">
           <div className="flex items-center gap-2">
-            <Music size={13} style={{color:'#37b2da',opacity:0.6}}/>
-            <span className="text-[9px] uppercase tracking-[0.16em] text-white/40" style={{fontFamily:"'IBM Plex Mono', monospace"}}>60 PRESETS</span>
+            <span style={{fontSize:12,color:`${ACCENT}40`}}>◈</span>
+            <span style={{fontFamily:DOTO,fontSize:10,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.30)'}}>60 PRESETS</span>
           </div>
           <button onClick={onClose} className="text-white/25 hover:text-white/60"><X size={13}/></button>
         </div>
@@ -168,12 +172,12 @@ const PresetGrid: React.FC<{currentId:string;onSelect:(id:string)=>void;onClose:
           <button onClick={()=>setFilter(null)}
             className={`text-[6px] uppercase tracking-[0.14em] px-2 py-0.5 border whitespace-nowrap transition-all
               ${!filter?'border-[#37b2da]/50 text-[#37b2da] bg-[#37b2da]/8':'border-white/[0.06] text-white/28 hover:text-white/55'}`}
-            style={{fontFamily:"'IBM Plex Mono', monospace",borderRadius:1}}>All</button>
+            style={{fontFamily:MONO,borderRadius:0}}>All</button>
           {allTags.map(t=>(
             <button key={t} onClick={()=>setFilter(filter===t?null:t)}
               className={`text-[6px] uppercase tracking-[0.14em] px-2 py-0.5 border whitespace-nowrap transition-all
                 ${filter===t?'border-current bg-current/10':'border-white/[0.06] text-white/28 hover:text-white/55'}`}
-              style={{fontFamily:"'IBM Plex Mono', monospace",borderRadius:1,...(filter===t?{color:TAG_COLORS[t]??'#aaa',borderColor:TAG_COLORS[t]??'#aaa'}:{})}}>
+              style={{fontFamily:MONO,borderRadius:0,...(filter===t?{color:TAG_COLORS[t]??'#aaa',borderColor:TAG_COLORS[t]??'#aaa'}:{})}}>
               {t}
             </button>
           ))}
@@ -184,23 +188,23 @@ const PresetGrid: React.FC<{currentId:string;onSelect:(id:string)=>void;onClose:
             <button key={p.id} onClick={()=>{onSelect(p.id);onClose();}}
               className={`text-left p-3 border transition-all
                 ${p.id===currentId?'border-[#37b2da]/40 bg-[#37b2da]/[0.04]':'border-white/[0.06] hover:border-white/15 hover:bg-white/[0.02]'}`}
-              style={{borderRadius:1,borderStyle:p.id===currentId?'solid':'dashed'}}>
+              style={{borderRadius:0,borderStyle:p.id===currentId?'solid':'dashed'}}>
               <div className="flex items-center gap-0.5 mb-1.5">
                 {Array.from({length:5}).map((_,i)=>(
-                  <div key={i} className="w-1.5 h-1.5" style={{background:i<p.intensity?p.primary:'rgba(255,255,255,.08)',borderRadius:1}}/>
+                  <div key={i} className="w-1.5 h-1.5" style={{background:i<p.intensity?p.primary:'rgba(255,255,255,.08)',borderRadius:0}}/>
                 ))}
-                <span className="ml-1 text-[6px] text-white/18" style={{fontFamily:"'IBM Plex Mono', monospace"}}>{p.bpm}bpm</span>
+                <span className="ml-1 text-[6px] text-white/18" style={{fontFamily:MONO}}>{p.bpm}bpm</span>
               </div>
               <div className="text-[9px] mb-0.5 leading-tight"
-                style={{color:p.id===currentId?p.primary:'rgba(255,255,255,.7)',fontFamily:"'IBM Plex Mono', monospace",fontWeight:300}}>
+                style={{color:p.id===currentId?p.primary:'rgba(255,255,255,.7)',fontFamily:MONO,fontWeight:300}}>
                 {p.name}
               </div>
-              <div className="text-[7px] text-white/25 mb-2 leading-snug line-clamp-1" style={{fontFamily:"'IBM Plex Mono', monospace"}}>{p.vibe}</div>
+              <div className="text-[7px] text-white/25 mb-2 leading-snug line-clamp-1" style={{fontFamily:MONO}}>{p.vibe}</div>
               <div className="flex flex-wrap gap-0.5">
                 {p.tags.slice(0,3).map(t=>(
                   <span key={t} className="text-[5px] uppercase tracking-[0.14em] px-1.5 py-0.5"
                     style={{color:TAG_COLORS[t]??'#aaa',background:(TAG_COLORS[t]??'#aaa')+'10',
-                      border:`1px solid ${TAG_COLORS[t]??'#aaa'}28`,fontFamily:"'IBM Plex Mono', monospace",borderRadius:1}}>{t}</span>
+                      border:`1px solid ${TAG_COLORS[t]??'#aaa'}28`,fontFamily:MONO,borderRadius:0}}>{t}</span>
                 ))}
               </div>
             </button>
@@ -236,15 +240,17 @@ function getStudioPitch(role: VoiceRole, stepIdx: number, root: number, scale: S
 // ═════════════════════════════════════════════════════════════════════════════
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 // ═════════════════════════════════════════════════════════════════════════════
+const INIT_PRESET = getPreset('eno-drift') ?? MUSIC_PRESETS[0];
+
 interface MusicLabProps { active: boolean; }
 export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const stateRef     = useRef<MusicState|null>(null);
-  const presetRef    = useRef<MusicPreset>(MUSIC_PRESETS[0]);
+  const presetRef    = useRef<MusicPreset>(INIT_PRESET);
   const rafRef       = useRef(0);
   const lastTRef     = useRef(0);
   const runningRef   = useRef(false);
-  const physRef      = useRef<PhysicsParams>({ ...DEFAULT_PHYSICS, motionStyle: MUSIC_PRESETS[0].motionStyle ?? 'swarm' });
+  const physRef      = useRef<PhysicsParams>({ ...DEFAULT_PHYSICS, motionStyle: INIT_PRESET.motionStyle ?? 'drift' });
   const roleOverRef  = useRef<Partial<Record<VoiceRole,Partial<RoleConfig>>>>({});
   const cursorRef    = useRef<{wx:number;wy:number;active:boolean}>({wx:0,wy:0,active:false});
 
@@ -260,15 +266,15 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const zoomPan = useZoomPan();
 
   // ── UI state ──────────────────────────────────────────────────────────────
-  const [presetId,    setPresetId]   = useState(MUSIC_PRESETS[0].id);
+  const [presetId,    setPresetId]   = useState(INIT_PRESET.id);
   const [audioOn,     setAudioOn]    = useState(false);
   const [running,     setRunning]    = useState(false);
   const [cinematic,   setCinematic]  = useState(false);
   const [showGrid,    setShowGrid]   = useState(false);
-  const [lens,        setLens]       = useState<MusicLens>('Harmony');
-  const [bpm,         setBpm]        = useState(MUSIC_PRESETS[0].bpm);
+  const [lens,        setLens]       = useState<MusicLens>(INIT_PRESET.lens);
+  const [bpm,         setBpm]        = useState(INIT_PRESET.bpm);
   const [fxAmount,    setFxAmount]   = useState(0.5);
-  const [masterVol,   setMasterVol]  = useState(0.82);
+  const [masterVol,   setMasterVol]  = useState(0.65);
   const [activeTool,  setActiveTool] = useState<MusicalTool>('gate');
   const [spawnRole,   setSpawnRole]  = useState<VoiceRole>('PAD');
   const [spawnCount,  setSpawnCount] = useState(1);
@@ -286,9 +292,9 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [rightTab,    setRightTab]   = useState<'timbre'|'harmony'|'physics'|'matrix'|'palette'>('harmony');
   const [editRole,    setEditRole]   = useState<VoiceRole>('PAD');
   const [showVel,     setShowVel]    = useState(false);
-  const [phys,        setPhys]       = useState<PhysicsParams>({ ...DEFAULT_PHYSICS, motionStyle: MUSIC_PRESETS[0].motionStyle ?? 'swarm' });
+  const [phys,        setPhys]       = useState<PhysicsParams>({ ...DEFAULT_PHYSICS, motionStyle: INIT_PRESET.motionStyle ?? 'drift' });
   const [behaviorId,  setBehaviorId] = useState<string>('');
-  const [quantaCount, setQuantaCount]= useState(MUSIC_PRESETS[0].quantaCount);
+  const [quantaCount, setQuantaCount]= useState(INIT_PRESET.quantaCount);
   // ── 3D Visualization (Patch 01.3) ──────────────────────────────────────────
   const [view3D,      setView3D]     = useState(false);
   const [camera3D,    setCamera3D]   = useState<'3d-orbital'|'3d-fpp'|'3d-top'|'3d-side'>('3d-orbital');
@@ -297,10 +303,10 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [show3DTrails, setShow3DTrails] = useState(true);
   const [color3DMode,  setColor3DMode]  = useState<'role'|'charge'|'velocity'>('role');
   // ── Live Harmonic Field (mirrors presetRef, updates engine in real time) ──
-  const [liveRoot,        setLiveRoot]       = useState(MUSIC_PRESETS[0].root);
-  const [liveScale,       setLiveScale]      = useState<Scale>(MUSIC_PRESETS[0].scale);
-  const [liveHarmonyMode, setLiveHarmonyMode]= useState<'consonant'|'any'|'dissonant'>((MUSIC_PRESETS[0] as any).harmonyMode ?? 'any');
-  const [liveEventRate,   setLiveEventRate]  = useState((MUSIC_PRESETS[0] as any).eventRate ?? 1.0);
+  const [liveRoot,        setLiveRoot]       = useState(INIT_PRESET.root);
+  const [liveScale,       setLiveScale]      = useState<Scale>(INIT_PRESET.scale);
+  const [liveHarmonyMode, setLiveHarmonyMode]= useState<'consonant'|'any'|'dissonant'>((INIT_PRESET as any).harmonyMode ?? 'consonant');
+  const [liveEventRate,   setLiveEventRate]  = useState((INIT_PRESET as any).eventRate ?? 0.25);
   const [, forceRender] = useState(0);
 
   // ── New quantum tool state ─────────────────────────────────────────────────
@@ -437,9 +443,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const p = MUSIC_PRESETS[0];
-    stateRef.current = createMusicState(p);
-    stateRef.current.bpm = p.bpm;
+    stateRef.current = createMusicState(INIT_PRESET);
+    stateRef.current.bpm = INIT_PRESET.bpm;
   }, []);
 
   // ── Apply preset ──────────────────────────────────────────────────────────
@@ -1864,7 +1869,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
           <div className="w-full h-full absolute top-0 left-0">
             <Suspense fallback={
               <div className="w-full h-full flex items-center justify-center bg-black">
-                <div className="text-[#37b2da] text-[9px] uppercase tracking-[0.2em] animate-pulse" style={{fontFamily:"'IBM Plex Mono', monospace"}}>LOADING 3D ENGINE...</div>
+                <div className="text-[#37b2da] text-[9px] uppercase tracking-[0.2em] animate-pulse" style={{fontFamily:MONO}}>LOADING 3D ENGINE...</div>
               </div>
             }>
               <Music3DRenderer
@@ -1881,24 +1886,28 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             </Suspense>
           </div>
           {/* 3D Controls Overlay */}
-          <div className="fixed bottom-4 right-4 z-30 flex flex-col gap-1.5 pointer-events-auto">
+          <div className="fixed bottom-4 right-4 z-30 flex flex-col gap-1.5 pointer-events-auto" style={{fontFamily:MONO}}>
             {/* Color mode */}
-            <div className="px-2.5 py-1.5 border border-dashed border-white/[0.06] bg-black/90" style={{borderRadius:1,fontFamily:"'IBM Plex Mono', monospace"}}>
-              <div className="text-[5px] uppercase tracking-[0.14em] text-[#37b2da]/50 mb-1">COLOR</div>
+            <div className="px-2.5 py-1.5" style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)'}}>
+              <div style={{fontSize:6,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(55,178,218,0.40)',marginBottom:3}}>COLOR</div>
               <div className="flex gap-1">
                 {(['role','charge','velocity'] as const).map(m=>(
                   <button key={m} onClick={()=>setColor3DMode(m)}
-                    className={`text-[5px] uppercase tracking-[0.1em] px-1.5 py-0.5 transition-all
-                      ${color3DMode===m?'text-[#37b2da] bg-[#37b2da]/10 border border-[#37b2da]/35':'text-white/25 hover:text-white/50 border border-white/[0.06]'}`}
-                    style={{borderRadius:1}}>
+                    className="transition-all"
+                    style={{
+                      fontSize:6,letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 6px',
+                      color:color3DMode===m?ACCENT:'rgba(255,255,255,0.22)',
+                      background:color3DMode===m?'rgba(55,178,218,0.06)':'transparent',
+                      border:color3DMode===m?`1px dashed ${ACCENT}30`:'1px dashed rgba(255,255,255,0.05)',
+                    }}>
                     {m}
                   </button>
                 ))}
               </div>
             </div>
             {/* Overlays */}
-            <div className="px-2.5 py-1.5 border border-dashed border-white/[0.06] bg-black/90" style={{borderRadius:1}}>
-              <div className="text-[5px] uppercase tracking-[0.14em] text-[#37b2da]/50 mb-1">OVERLAYS</div>
+            <div className="px-2.5 py-1.5" style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)'}}>
+              <div style={{fontSize:6,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(55,178,218,0.40)',marginBottom:3}}>OVERLAYS</div>
               <div className="flex gap-1 flex-wrap">
                 {[
                   {label:'Grid',   v:show3DGrid,   fn:()=>setShow3DGrid(x=>!x)},
@@ -1906,23 +1915,27 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   {label:'Trails', v:show3DTrails, fn:()=>setShow3DTrails(x=>!x)},
                 ].map(({label,v,fn})=>(
                   <button key={label} onClick={fn}
-                    className={`text-[5px] uppercase tracking-[0.1em] px-1.5 py-0.5 transition-all
-                      ${v?'text-[#37b2da] bg-[#37b2da]/10 border border-[#37b2da]/35':'text-white/25 hover:text-white/50 border border-white/[0.06]'}`}
-                    style={{borderRadius:1}}>
+                    className="transition-all"
+                    style={{
+                      fontSize:6,letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 6px',
+                      color:v?ACCENT:'rgba(255,255,255,0.22)',
+                      background:v?'rgba(55,178,218,0.06)':'transparent',
+                      border:v?`1px dashed ${ACCENT}30`:'1px dashed rgba(255,255,255,0.05)',
+                    }}>
                     {label}
                   </button>
                 ))}
               </div>
             </div>
             {/* Status */}
-            <div className="px-2.5 py-1.5 border border-[#37b2da]/20 bg-black/90" style={{borderRadius:1}}>
+            <div className="px-2.5 py-1.5" style={{background:'rgba(0,0,0,0.94)',border:`1px dashed ${ACCENT}18`}}>
               <div className="flex items-center gap-1.5 mb-0.5">
-                <div className="w-1.5 h-1.5 bg-[#37b2da] animate-pulse" style={{borderRadius:1}}/>
-                <span className="text-[6px] uppercase tracking-[0.14em] text-[#37b2da]">3D ACTIVE</span>
+                <div className="w-1.5 h-1.5 animate-pulse" style={{background:ACCENT}}/>
+                <span style={{fontSize:7,letterSpacing:'0.12em',textTransform:'uppercase',color:ACCENT}}>3D ACTIVE</span>
               </div>
-              <div className="text-[5.5px] text-white/30 space-y-0.5">
+              <div style={{fontSize:6,color:'rgba(255,255,255,0.25)'}}>
                 <div>{stateRef.current.count} parts · {camera3D.replace('3d-','').toUpperCase()}</div>
-                <div className="text-[5px] text-white/18">Drag orbit · Scroll zoom</div>
+                <div style={{fontSize:5,color:'rgba(255,255,255,0.15)',marginTop:2}}>Drag orbit · Scroll zoom</div>
               </div>
             </div>
           </div>
@@ -1979,128 +1992,146 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
       {/* ── TOP HUD ─────────────────────────────────────────────────────────── */}
       {!cinematic && (
-        <div className="fixed top-9 left-0 right-0 z-20 px-2 py-1 flex items-center gap-1.5 pointer-events-none"
-          style={{fontFamily:"'IBM Plex Mono', monospace"}}>
-          <div className="flex items-center gap-1.5 pointer-events-auto flex-wrap">
+        <div className="fixed top-9 left-0 right-0 z-20 pointer-events-none"
+          style={{fontFamily:MONO}}>
+          <div className="flex items-center gap-0 pointer-events-auto"
+            style={{background:'rgba(0,0,0,0.94)',borderBottom:'1px dashed rgba(255,255,255,0.06)'}}>
 
-            {/* Audio */}
+            {/* Audio — primary action */}
             <button onClick={handleAudioToggle}
-              className={`flex items-center gap-1 px-2.5 py-1 border text-[7px] uppercase tracking-[0.14em] transition-all
-                ${audioOn&&running?'border-[#37b2da]/50 text-[#37b2da] bg-[#37b2da]/8':'border-[#37b2da]/25 text-[#37b2da]/60 bg-black/80 hover:border-[#37b2da]/50'}`}
-              style={{borderRadius:1,fontFamily:"'IBM Plex Mono', monospace"}}>
-              {audioOn&&running?<><Pause size={8}/> Pause</>:<><Volume2 size={8}/>{audioOn?' Resume':' Start'}</>}
+              className="flex items-center gap-1.5 px-3 py-1.5 transition-all"
+              style={{
+                color:audioOn&&running?'#37b2da':'rgba(55,178,218,0.55)',
+                background:audioOn&&running?'rgba(55,178,218,0.06)':'transparent',
+                borderRight:'1px dashed rgba(255,255,255,0.06)',
+                fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',
+              }}>
+              {audioOn&&running?<><Pause size={9}/> Pause</>:<><Volume2 size={9}/>{audioOn?' Resume':' Start Audio'}</>}
             </button>
+
+            {/* Divider */}
+            <div style={{width:1,height:16,borderLeft:'1px dashed rgba(255,255,255,0.06)'}}/>
 
             {/* Preset */}
             <button onClick={()=>setShowGrid(true)}
-              className="flex items-center gap-1 px-2.5 py-1 border border-dashed border-white/[0.06] text-[7px] bg-black/80 hover:border-white/15 transition-all"
-              style={{borderRadius:1,fontFamily:"'IBM Plex Mono', monospace"}}>
-              <Music size={8} style={{color:currentPreset.primary+'aa'}}/>
-              <span style={{color:currentPreset.primary+'cc'}}>{currentPreset.name}</span>
+              className="flex items-center gap-1.5 px-3 py-1.5 transition-all"
+              style={{fontSize:8,borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              <Music size={9} style={{color:currentPreset.primary+'88'}}/>
+              <span style={{color:currentPreset.primary+'bb',letterSpacing:'0.06em'}}>{currentPreset.name}</span>
             </button>
 
             {/* BPM */}
-            <div className="flex items-center gap-1 px-2 py-1 border border-dashed border-white/[0.06] bg-black/80" style={{borderRadius:1}}>
-              <span className="text-[6px] text-white/25 uppercase tracking-[0.12em]">BPM</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              <span style={{fontSize:7,color:'rgba(255,255,255,0.22)',letterSpacing:'0.1em',textTransform:'uppercase'}}>BPM</span>
               <input type="range" min={30} max={180} step={1} value={bpm}
                 onChange={e=>setBpm(parseInt(e.target.value))}
-                className="w-14 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.1)',accentColor:'#37b2da'}}/>
-              <span className="text-[7px] text-white/40 w-7 text-right">{bpm}</span>
+                className="w-14 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:'#37b2da'}}/>
+              <span style={{fontSize:8,color:'rgba(255,255,255,0.35)',width:22,textAlign:'right'}}>{bpm}</span>
             </div>
 
             {/* FX */}
-            <div className="flex items-center gap-1 px-2 py-1 border border-dashed border-white/[0.06] bg-black/80" style={{borderRadius:1}}>
-              <span className="text-[6px] text-white/25 uppercase tracking-[0.12em]">FX</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              <span style={{fontSize:7,color:'rgba(255,255,255,0.22)',letterSpacing:'0.1em',textTransform:'uppercase'}}>FX</span>
               <input type="range" min={0} max={1} step={0.01} value={fxAmount}
                 onChange={e=>setFxAmount(parseFloat(e.target.value))}
-                className="w-12 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.1)',accentColor:'#37b2da'}}/>
-              <span className="text-[7px] text-white/30">{Math.round(fxAmount*100)}%</span>
+                className="w-12 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:'#37b2da'}}/>
+              <span style={{fontSize:7,color:'rgba(255,255,255,0.25)'}}>{Math.round(fxAmount*100)}%</span>
             </div>
 
             {/* Lens */}
-            <div className="flex items-center gap-0.5 px-1.5 py-1 border border-dashed border-white/[0.06] bg-black/80" style={{borderRadius:1}}>
+            <div className="flex items-center gap-0" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
               {(['Off','Notes','Harmony','Rhythm','Tension','Events'] as MusicLens[]).map(l=>(
                 <button key={l} onClick={()=>setLens(l)}
-                  className={`text-[6px] uppercase tracking-[0.12em] px-1.5 py-0.5 transition-all
-                    ${lens===l?'text-[#37b2da] bg-[#37b2da]/10':'text-white/22 hover:text-white/50'}`}
-                  style={{borderRadius:1,borderBottom:lens===l?'1px solid #37b2da':'1px solid transparent'}}>
+                  className="px-2 py-1.5 transition-all"
+                  style={{
+                    fontSize:7,letterSpacing:'0.08em',textTransform:'uppercase',
+                    color:lens===l?'#37b2da':'rgba(255,255,255,0.20)',
+                    background:lens===l?'rgba(55,178,218,0.05)':'transparent',
+                    borderBottom:lens===l?'1px solid #37b2da':'1px solid transparent',
+                  }}>
                   {l}
                 </button>
               ))}
             </div>
 
             {/* Vol */}
-            <div className="flex items-center gap-1 px-2 py-1 border border-dashed border-white/[0.06] bg-black/80" style={{borderRadius:1}}>
-              <Volume2 size={8} className="text-white/25"/>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              <Volume2 size={9} style={{color:'rgba(255,255,255,0.20)'}}/>
               <input type="range" min={0} max={1} step={0.01} value={masterVol}
                 onChange={e=>setMasterVol(parseFloat(e.target.value))}
-                className="w-10 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.1)',accentColor:'#37b2da'}}/>
+                className="w-10 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:'#37b2da'}}/>
             </div>
 
-            {/* Toggles */}
+            {/* View toggles */}
             <button onClick={()=>setCinematic(v=>!v)}
-              className={`p-1.5 border transition-all
-                ${cinematic?'border-[#37b2da]/40 text-[#37b2da] bg-[#37b2da]/8':'border-white/[0.06] text-white/25 hover:text-white/50 bg-black/80'}`}
-              style={{borderRadius:1,borderStyle:'dashed'}}>
+              className="p-1.5 transition-all"
+              style={{color:cinematic?'#37b2da':'rgba(255,255,255,0.20)',background:cinematic?'rgba(55,178,218,0.05)':'transparent',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
               <Film size={10}/>
             </button>
-            <button onClick={()=>setView3D(v=>!v)}
-              title="3D Visualization Mode"
-              className={`flex items-center gap-0.5 px-2 py-1 border text-[7px] uppercase tracking-[0.14em] transition-all
-                ${view3D?'border-[#37b2da]/50 text-[#37b2da] bg-[#37b2da]/8':'border-white/[0.06] text-white/28 bg-black/80 hover:border-white/15'}`}
-              style={{borderRadius:1,borderStyle:'dashed'}}>
+            <button onClick={()=>setView3D(v=>!v)} title="3D Visualization Mode"
+              className="flex items-center gap-1 px-2.5 py-1.5 transition-all"
+              style={{
+                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
+                color:view3D?'#37b2da':'rgba(255,255,255,0.22)',
+                background:view3D?'rgba(55,178,218,0.05)':'transparent',
+                borderRight:'1px dashed rgba(255,255,255,0.06)',
+              }}>
               <span style={{fontSize:10}}>◎</span> 3D
             </button>
             {view3D && (
-              <div className="flex items-center gap-0.5 px-1.5 py-1 border border-dashed border-white/[0.06] bg-black/80" style={{borderRadius:1}}>
+              <div className="flex items-center gap-0" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
                 {(['3d-orbital','3d-top','3d-side','3d-fpp'] as const).map((cam) => (
-                  <button 
-                    key={cam} 
-                    onClick={() => setCamera3D(cam)}
-                    className={`text-[6px] uppercase tracking-[0.12em] px-1.5 py-0.5 transition-all ${camera3D === cam ? 'text-[#37b2da] bg-[#37b2da]/10' : 'text-white/22 hover:text-white/50'}`}
-                    style={{borderRadius:1,borderBottom:camera3D===cam?'1px solid #37b2da':'1px solid transparent'}}>
+                  <button key={cam} onClick={() => setCamera3D(cam)}
+                    className="px-2 py-1.5 transition-all"
+                    style={{
+                      fontSize:7,letterSpacing:'0.08em',textTransform:'uppercase',
+                      color:camera3D===cam?'#37b2da':'rgba(255,255,255,0.20)',
+                      background:camera3D===cam?'rgba(55,178,218,0.05)':'transparent',
+                      borderBottom:camera3D===cam?'1px solid #37b2da':'1px solid transparent',
+                    }}>
                     {cam === '3d-orbital' ? 'ORB' : cam === '3d-top' ? 'TOP' : cam === '3d-side' ? 'SIDE' : 'FPP'}
                   </button>
                 ))}
               </div>
             )}
             <button onClick={()=>setShowVel(v=>!v)}
-              className={`p-1.5 border transition-all text-[6px]
-                ${showVel?'border-[#37b2da]/40 text-[#37b2da] bg-[#37b2da]/8':'border-white/[0.06] text-white/25 hover:text-white/50 bg-black/80'}`}
-              style={{borderRadius:1,borderStyle:'dashed'}}>
+              className="p-1.5 transition-all"
+              style={{fontSize:7,color:showVel?'#37b2da':'rgba(255,255,255,0.20)',background:showVel?'rgba(55,178,218,0.05)':'transparent'}}>
               V
             </button>
 
-            {/* Physics Sandbox */}
-            <button onClick={togglePhysicsMode}
-              title="Physics Sandbox — ballistic mode: elastic collisions, wall bounce, notes on gate only"
-              className={`flex items-center gap-1 px-2 py-1 border text-[7px] uppercase tracking-[0.14em] transition-all
-                ${physicsMode
-                  ? 'border-orange-400/45 text-orange-300 bg-orange-500/8'
-                  : 'border-white/[0.06] text-white/28 bg-black/80 hover:border-white/15'}`}
-              style={{borderRadius:1,borderStyle:'dashed'}}>
+            {/* Divider */}
+            <div style={{width:1,height:16,borderLeft:'1px dashed rgba(255,255,255,0.06)'}}/>
+
+            {/* Physics */}
+            <button onClick={togglePhysicsMode} title="Physics Sandbox"
+              className="flex items-center gap-1 px-2.5 py-1.5 transition-all"
+              style={{
+                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
+                color:physicsMode?'#ff9944':'rgba(255,255,255,0.22)',
+                background:physicsMode?'rgba(255,153,68,0.06)':'transparent',
+                borderRight:'1px dashed rgba(255,255,255,0.06)',
+              }}>
               ⚛ {physicsMode ? 'Ballistic' : 'Physics'}
             </button>
 
-            {/* Compose + Release */}
-            <button onClick={toggleComposeMode}
-              title="Compose Mode — pause and draw quanta with velocity drag, then Release. R = restore."
-              className={`flex items-center gap-1 px-2 py-1 border text-[7px] uppercase tracking-[0.14em] transition-all
-                ${composeMode
-                  ? 'border-amber-400/45 text-amber-300 bg-amber-500/8'
-                  : 'border-white/[0.06] text-white/28 bg-black/80 hover:border-white/15'}`}
-              style={{borderRadius:1,borderStyle:'dashed'}}>
+            {/* Compose */}
+            <button onClick={toggleComposeMode} title="Compose Mode"
+              className="flex items-center gap-1 px-2.5 py-1.5 transition-all"
+              style={{
+                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
+                color:composeMode?'#fbbf24':'rgba(255,255,255,0.22)',
+                background:composeMode?'rgba(251,191,36,0.06)':'transparent',
+                borderRight:'1px dashed rgba(255,255,255,0.06)',
+              }}>
               {composeMode
-                ? <><span className="w-1.5 h-1.5 bg-amber-400 animate-pulse inline-block" style={{borderRadius:1}}/><span>Composing</span></>
+                ? <><span className="w-1.5 h-1.5 inline-block animate-pulse" style={{background:'#fbbf24'}}/><span>Composing</span></>
                 : <><span>✏</span><span>Compose</span></>
               }
             </button>
             {composeMode && !running && (
               <button
                 onClick={() => {
-                  // ── Release: overwrite snapshot with the FINAL drawn state ──
-                  // (Compose already saved the pre-draw state; this saves the
-                  //  polished composition so Reset always restores this exact layout)
                   const st = stateRef.current;
                   if (st) {
                     compositionSnapshotRef.current = {
@@ -2124,63 +2155,56 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   if (audioEngine.ready)
                     audioEngine.restoreGains(p.reverbAmt * fxRef.current, p.delayAmt * fxRef.current, p.delayTime, p.masterGain * masterVolRef.current);
                 }}
-                className="flex items-center gap-1 px-2.5 py-1 border border-green-400/45 text-green-300 bg-green-500/8 text-[7px] uppercase tracking-[0.14em] animate-pulse"
-                style={{borderRadius:1}}>
+                className="flex items-center gap-1 px-2.5 py-1.5 animate-pulse transition-all"
+                style={{fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'#4ade80',background:'rgba(74,222,128,0.06)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
                 ▶ Release
               </button>
             )}
-            <button onClick={handleResetCompose}
-              title={hasSnapshot ? 'Restore Composition [R]' : 'Reset to Preset [R]'}
-              className={`flex items-center gap-1 px-2 py-1 border text-[7px] uppercase tracking-[0.14em] transition-all
-                ${hasSnapshot
-                  ? 'border-amber-400/35 text-amber-300/70 hover:text-amber-200 bg-black/80'
-                  : 'border-white/[0.06] text-white/25 hover:text-white/50 bg-black/80'}`}
-              style={{borderRadius:1,borderStyle:'dashed'}}>
+
+            {/* Reset */}
+            <button onClick={handleResetCompose} title={hasSnapshot ? 'Restore [R]' : 'Reset [R]'}
+              className="flex items-center gap-1 px-2 py-1.5 transition-all"
+              style={{
+                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
+                color:hasSnapshot?'rgba(251,191,36,0.65)':'rgba(255,255,255,0.22)',
+                borderRight:'1px dashed rgba(255,255,255,0.06)',
+              }}>
               <RotateCcw size={9}/><span>{hasSnapshot ? 'Restore' : 'Reset'}</span>
             </button>
 
-            {/* Random preset */}
-            <button onClick={macroRandom}
-              title="Preset aleatório"
-              className="flex items-center gap-1 px-2 py-1 border border-dashed border-white/[0.06] text-white/28 hover:text-[#37b2da] hover:border-[#37b2da]/30 bg-black/80 transition-all text-[7px] uppercase tracking-[0.14em]"
-              style={{borderRadius:1}}>
+            {/* Random */}
+            <button onClick={macroRandom} title="Preset aleatório"
+              className="flex items-center gap-1 px-2 py-1.5 transition-all"
+              style={{fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
               <Dice5 size={9}/>
-              <span>Rand</span>
             </button>
 
-            {/* Help guide */}
-            <button onClick={() => setShowGuide(true)}
-              title="Guia / Como usar"
-              className="flex items-center gap-1 px-2 py-1 border border-dashed border-white/[0.06] text-white/25 hover:text-[#37b2da] hover:border-[#37b2da]/30 bg-black/80 transition-all text-[7px] uppercase tracking-[0.14em]"
-              style={{borderRadius:1}}>
+            {/* Guia */}
+            <button onClick={() => setShowGuide(true)} title="Guia"
+              className="flex items-center gap-1 px-2 py-1.5 transition-all"
+              style={{fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(55,178,218,0.45)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
               <HelpCircle size={9}/>
-              <span>Guia</span>
             </button>
 
-            {/* Show/hide overlays */}
-            <button onClick={()=>setShowOverlays(v=>!v)}
-              title="Mostrar/ocultar overlays [V]"
-              className={`flex items-center gap-1 px-2 py-1 border text-[7px] uppercase tracking-[0.14em] transition-all
-                ${showOverlays
-                  ? 'border-white/[0.06] text-white/28 bg-black/80 hover:border-white/15'
-                  : 'border-amber-400/45 text-amber-300 bg-amber-500/8'}`}
-              style={{borderRadius:1,borderStyle:'dashed'}}>
-              {showOverlays ? '👁' : '🙈'}
+            {/* Overlays toggle */}
+            <button onClick={()=>setShowOverlays(v=>!v)} title="Overlays [V]"
+              className="px-2 py-1.5 transition-all"
+              style={{fontSize:8,color:showOverlays?'rgba(255,255,255,0.22)':'#fbbf24',background:showOverlays?'transparent':'rgba(251,191,36,0.06)'}}>
+              {showOverlays ? '◉' : '○'}
             </button>
 
-            {/* Clear All canvas */}
-            <button onClick={macroClearCanvas}
-              title="Limpar tudo do canvas"
-              className="flex items-center gap-1 px-2 py-1 border border-dashed border-white/[0.06] text-white/28 hover:text-red-400 hover:border-red-400/30 bg-black/80 transition-all text-[7px] uppercase tracking-[0.14em]"
-              style={{borderRadius:1}}>
+            {/* Clear */}
+            <button onClick={macroClearCanvas} title="Limpar tudo"
+              className="flex items-center gap-1 px-2 py-1.5 transition-all"
+              style={{fontSize:8,color:'rgba(255,255,255,0.18)'}}>
               <Trash2 size={9}/>
               <span>Clear</span>
             </button>
 
             {/* Quanta count */}
-            <div className="px-2 py-1 border border-dashed border-white/[0.06] bg-black/80" style={{borderRadius:1}}>
-              <span className="text-[6px] text-white/25 uppercase tracking-[0.12em]">Q </span>
-              <span className="text-[7px] text-white/40">{quantaCount}</span>
+            <div className="flex items-center gap-1 px-2.5 py-1.5" style={{borderLeft:'1px dashed rgba(255,255,255,0.06)'}}>
+              <span style={{fontSize:7,color:'rgba(255,255,255,0.20)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Q</span>
+              <span style={{fontSize:8,color:'rgba(255,255,255,0.35)'}}>{quantaCount}</span>
             </div>
 
             {/* Zoom controls */}
@@ -2200,35 +2224,37 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         <div className="fixed top-[68px] left-0 z-20 flex" style={{bottom: showStudioSeq ? 258 : 32}}>
           {/* Collapse toggle */}
           <button onClick={()=>setLeftOpen(v=>!v)}
-            className="absolute -right-4 top-4 z-30 w-4 h-8 flex items-center justify-center
-              bg-black border border-dashed border-white/[0.06] text-white/25 hover:text-white/55 transition-all"
-            style={{borderRadius:'0 1px 1px 0'}}>
+            className="absolute -right-4 top-4 z-30 w-4 h-8 flex items-center justify-center transition-all"
+            style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)',borderLeft:'none',color:'rgba(255,255,255,0.22)'}}>
             {leftOpen?<ChevronLeft size={9}/>:<ChevronRight size={9}/>}
           </button>
 
           {leftOpen && (
-            <div className="w-[148px] flex flex-col bg-black border-r border-dashed border-white/[0.06] overflow-y-auto"
-              style={{scrollbarWidth:'none',fontFamily:"'IBM Plex Mono', monospace"}}>
+            <div className="w-[148px] flex flex-col overflow-y-auto"
+              style={{scrollbarWidth:'none',fontFamily:MONO,background:'rgba(0,0,0,0.94)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
 
               {/* Tools */}
-              <div className="p-2 border-b border-dashed border-white/[0.06]">
-                <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/60 mb-1.5 px-0.5">TOOLS</div>
+              <div className="p-2" style={{borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
+                <div style={{fontFamily:DOTO,fontSize:8,color:'rgba(55,178,218,0.45)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:5,paddingLeft:2}}>TOOLS</div>
                 <div className="grid grid-cols-2 gap-1">
                   {TOOLS.map(t=>(
                     <button key={t.id} onClick={()=>setActiveTool(t.id)}
                       title={`${t.label} [${t.key}]`}
-                      className={`flex items-center gap-1.5 px-1.5 py-1.5 text-[7.5px] transition-all
-                        ${activeTool===t.id?'bg-white/10':'hover:bg-white/5'}`}
-                      style={{color:activeTool===t.id?t.color:'rgba(255,255,255,.35)',borderRadius:1}}>
+                      className="flex items-center gap-1.5 px-1.5 py-1.5 transition-all"
+                      style={{
+                        fontSize:7,
+                        color:activeTool===t.id?t.color:'rgba(255,255,255,.28)',
+                        background:activeTool===t.id?'rgba(255,255,255,0.06)':'transparent',
+                        border:activeTool===t.id?`1px dashed ${t.color}30`:'1px dashed transparent',
+                      }}>
                       {t.icon}
-                      <span className="hidden">{t.label}</span>
-                      <span style={{fontSize:6,opacity:.5}}>[{t.key}]</span>
+                      <span style={{fontSize:6,opacity:.4}}>[{t.key}]</span>
                     </button>
                   ))}
                 </div>
                 {/* Active tool label */}
-                <div className="mt-1.5 text-[7px] font-mono text-center"
-                  style={{color:TOOLS.find(t=>t.id===activeTool)?.color??'#aaa'}}>
+                <div className="mt-1.5 text-center"
+                  style={{fontFamily:MONO,fontSize:8,color:TOOLS.find(t=>t.id===activeTool)?.color??'#aaa'}}>
                   {TOOLS.find(t=>t.id===activeTool)?.label}
                 </div>
               </div>
@@ -2283,7 +2309,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                         <button key={ef.id} onClick={()=>setZoneEffect(ef.id)}
                           className={`text-[5px] py-0.5 px-0.5 transition-all
                             ${zoneEffect===ef.id?'bg-white/10 text-pink-200 border border-pink-400/35':'text-white/30 hover:text-white/60 border border-transparent hover:bg-white/5'}`}
-                          style={{borderRadius:1}}>
+                          style={{borderRadius:0}}>
                           <span style={{fontSize:8,lineHeight:1}}>{ef.icon}</span>{ef.label}
                         </button>
                       ))}
@@ -2328,7 +2354,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           className={`text-[5.5px] uppercase py-0.5 transition-all
                             ${spawnRole===r?'bg-white/10':'hover:bg-white/6'}`}
                           style={{color:spawnRole===r?ROLE_COLORS[r]:'rgba(255,255,255,.35)',
-                            borderBottom:`1px solid ${spawnRole===r?ROLE_COLORS[r]:'transparent'}`,borderRadius:1}}>
+                            borderBottom:`1px solid ${spawnRole===r?ROLE_COLORS[r]:'transparent'}`,borderRadius:0}}>
                           {r.slice(0,3)}
                         </button>
                       ))}
@@ -2357,7 +2383,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           borderColor: selectedQ.timbreIdx===-1?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.08)',
                           color: selectedQ.timbreIdx===-1?'#ffffff':'rgba(255,255,255,0.28)',
                           background: selectedQ.timbreIdx===-1?'rgba(255,255,255,0.08)':'transparent',
-                          borderRadius:1,
+                          borderRadius:0,
                         }}
                         title="Role default">
                         Role
@@ -2370,7 +2396,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             borderColor: selectedQ.timbreIdx===idx?tmpl.color+'aa':'rgba(255,255,255,0.06)',
                             color: selectedQ.timbreIdx===idx?tmpl.color:'rgba(255,255,255,0.25)',
                             background: selectedQ.timbreIdx===idx?tmpl.color+'18':'transparent',
-                            borderRadius:1,
+                            borderRadius:0,
                           }}
                           title={tmpl.name}>
                           {tmpl.icon}
@@ -2408,7 +2434,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   ].map(m=>(
                     <button key={m.label} onClick={m.fn}
                       className="text-left text-[7px] px-1.5 py-1 hover:bg-white/5 transition-all"
-                      style={{borderRadius:1}}
+                      style={{borderRadius:0}}
                       style={{color:m.color+'aa'}}>
                       {m.label}
                     </button>
@@ -2423,13 +2449,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   <button onClick={toggleSeq}
                     className={`text-[6px] px-1.5 py-0.5 border transition-all
                       ${seqActive?'border-[#37b2da]/50 text-[#37b2da] bg-[#37b2da]/10':'border-white/[0.06] text-white/25 hover:border-[#37b2da]/30'}`}
-                    style={{borderRadius:1}}>
+                    style={{borderRadius:0}}>
                     {seqActive?'◉ ON':'○ OFF'}
                   </button>
                 </div>
 
                 {/* Description */}
-                <div className="mb-2 text-[5.5px] text-white/22 leading-snug bg-white/[0.02] px-1.5 py-1 border border-dashed border-white/[0.06]" style={{borderRadius:1}}>
+                <div className="mb-2 text-[5.5px] text-white/22 leading-snug bg-white/[0.02] px-1.5 py-1 border border-dashed border-white/[0.06]" style={{borderRadius:0}}>
                   Um anel gira no canvas. Quando passa por um step armado, dispara a nota da bolinha mais próxima. Sem bolinha perto = silêncio (incerteza quântica).
                 </div>
 
@@ -2440,7 +2466,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <button key={n} onClick={()=>setSeqStepsFn(n)}
                       className={`text-[5.5px] px-1.5 py-0.5 border transition-all
                         ${seqSteps===n?'border-[#37b2da]/40 text-[#37b2da] bg-[#37b2da]/10':'border-white/[0.06] text-white/18 hover:text-white/40'}`}
-                      style={{borderRadius:1}}>
+                      style={{borderRadius:0}}>
                       {n}
                     </button>
                   ))}
@@ -2449,7 +2475,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <button key={m} onClick={()=>setSeqTempoMultFn(m)}
                       className={`text-[5.5px] px-1 py-0.5 border transition-all
                         ${seqTempoMult===m?'border-[#37b2da]/40 text-[#37b2da] bg-[#37b2da]/10':'border-white/[0.06] text-white/18 hover:text-white/40'}`}
-                      style={{borderRadius:1}}>
+                      style={{borderRadius:0}}>
                       {m}×
                     </button>
                   ))}
@@ -2469,9 +2495,9 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           ${armed
                             ?'bg-[#37b2da]/20 border border-[#37b2da]/50 text-[#37b2da]'
                             :'bg-white/[0.03] border border-white/[0.06] text-white/18 hover:bg-white/8 hover:text-white/40'}`}
-                        style={{borderRadius:1}}>
+                        style={{borderRadius:0}}>
                         {i+1}
-                        {isCurrent && <span className="absolute top-0 right-0 w-1 h-1 bg-white/70" style={{borderRadius:1}}/>}
+                        {isCurrent && <span className="absolute top-0 right-0 w-1 h-1 bg-white/70" style={{borderRadius:0}}/>}
                       </button>
                     );
                   })}
@@ -2479,7 +2505,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                 {seqActive&&(
                   <div className="mt-1.5 flex items-center gap-1 text-[5.5px] text-[#37b2da]/50">
-                    <span className="w-1.5 h-1.5 bg-[#37b2da]/60 animate-pulse" style={{borderRadius:1}}/>
+                    <span className="w-1.5 h-1.5 bg-[#37b2da]/60 animate-pulse" style={{borderRadius:0}}/>
                     Anel ativo · {seqSteps} steps · {seqTempoMult}× bar
                   </div>
                 )}
@@ -2489,7 +2515,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   </div>
                 )}
                 {tunnelFirst&&(
-                  <div className="mt-1 text-[5.5px] text-purple-400/60 text-center leading-tight bg-purple-900/15 px-1 py-0.5 border border-dashed border-purple-400/15" style={{borderRadius:1}}>
+                  <div className="mt-1 text-[5.5px] text-purple-400/60 text-center leading-tight bg-purple-900/15 px-1 py-0.5 border border-dashed border-purple-400/15" style={{borderRadius:0}}>
                     Portal A colocado · clique para Portal B
                   </div>
                 )}
@@ -2503,18 +2529,17 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {!cinematic && (
         <div className="fixed top-[68px] right-0 z-20 flex flex-row-reverse" style={{bottom: showStudioSeq ? 258 : 32}}>
           <button onClick={()=>setRightOpen(v=>!v)}
-            className="absolute -left-4 top-4 z-30 w-4 h-8 flex items-center justify-center
-              bg-black border border-dashed border-white/[0.06] text-white/25 hover:text-white/55 transition-all"
-            style={{borderRadius:'1px 0 0 1px'}}>
+            className="absolute -left-4 top-4 z-30 w-4 h-8 flex items-center justify-center transition-all"
+            style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)',borderRight:'none',color:'rgba(255,255,255,0.22)'}}>
             {rightOpen?<ChevronRight size={9}/>:<ChevronLeft size={9}/>}
           </button>
 
           {rightOpen && (
-            <div className="w-[220px] flex flex-col bg-black border-l border-dashed border-white/[0.06] overflow-y-auto"
-              style={{scrollbarWidth:'thin',scrollbarColor:'rgba(55,178,218,.1) transparent',fontFamily:"'IBM Plex Mono', monospace"}}>
+            <div className="w-[220px] flex flex-col overflow-y-auto"
+              style={{scrollbarWidth:'thin',scrollbarColor:'rgba(55,178,218,.08) transparent',fontFamily:MONO,background:'rgba(0,0,0,0.94)',borderLeft:'1px dashed rgba(255,255,255,0.06)'}}>
 
               {/* Tabs */}
-              <div className="flex border-b border-dashed border-white/[0.06]" style={{flexWrap:'wrap'}}>
+              <div className="flex" style={{flexWrap:'wrap',borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
                 {([
                   {id:'timbre',  label:'Timbre',  icon:<Sliders  size={7} className="inline mr-0.5"/>},
                   {id:'harmony', label:'Harmony', icon:<Music    size={7} className="inline mr-0.5"/>},
@@ -2523,9 +2548,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   {id:'palette', label:'Palette', icon:<span style={{fontSize:7,marginRight:2}}>◈</span>},
                 ] as const).map(tab=>(
                   <button key={tab.id} onClick={()=>setRightTab(tab.id)}
-                    className={`flex-1 py-1.5 text-[5.5px] uppercase tracking-[0.14em] transition-all min-w-[38px]
-                      ${rightTab===tab.id?'text-[#37b2da] bg-[#37b2da]/[0.04]':'text-white/25 hover:text-white/45'}`}
-                    style={{borderBottom:rightTab===tab.id?'1px solid #37b2da':'1px solid transparent'}}>
+                    className="flex-1 py-1.5 transition-all min-w-[38px]"
+                    style={{
+                      fontSize:6,letterSpacing:'0.12em',textTransform:'uppercase',
+                      color:rightTab===tab.id?ACCENT:'rgba(255,255,255,0.22)',
+                      background:rightTab===tab.id?'rgba(55,178,218,0.04)':'transparent',
+                      borderBottom:rightTab===tab.id?`1px solid ${ACCENT}`:'1px solid transparent',
+                    }}>
                     {tab.icon}{tab.label}
                   </button>
                 ))}
@@ -2536,7 +2565,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Timbre Templates ──────────────────────────────── */}
                   <div>
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1.5">
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>
                       TIMBRE TEMPLATES
                     </div>
                     <div className="grid grid-cols-3 gap-0.5">
@@ -2552,8 +2581,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             detune:      tpl.det,
                             cooldownMin: tpl.cd,
                           })}
-                          className="flex flex-col items-center gap-0.5 p-1 border border-white/[0.06] hover:border-white/15 bg-black hover:bg-white/[0.03] transition-all"
-                          style={{ color: tpl.color, borderRadius:1 }}
+                          className="flex flex-col items-center gap-0.5 p-1 transition-all"
+                          style={{ color: tpl.color, border:'1px dashed rgba(255,255,255,0.05)', background:'transparent' }}
                           title={tpl.name}>
                           <span className="text-[10px] leading-none">{tpl.icon}</span>
                           <span className="text-[5px] font-mono uppercase tracking-wider text-white/45 leading-none text-center">{tpl.name}</span>
@@ -2567,14 +2596,14 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* Role selector + per-role random */}
                   <div>
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1.5">EDIT ROLE</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>EDIT ROLE</div>
                     <div className="grid grid-cols-4 gap-0.5">
                       {VOICE_ROLES.map(r=>(
                         <button key={r} onClick={()=>setEditRole(r)}
                           className={`text-[6px] uppercase py-1 transition-all
                             ${editRole===r?'bg-white/10':'hover:bg-white/5'}`}
                           style={{color:editRole===r?ROLE_COLORS[r]:'rgba(255,255,255,.3)',
-                            borderBottom:`1px solid ${editRole===r?ROLE_COLORS[r]:'transparent'}`,borderRadius:1}}>
+                            borderBottom:`1px solid ${editRole===r?ROLE_COLORS[r]:'transparent'}`,borderRadius:0}}>
                           {r.slice(0,3)}
                         </button>
                       ))}
@@ -2589,14 +2618,14 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           onClick={() => randomizeRole(editRole)}
                           title="Random timbre para este role"
                           className="text-[5.5px] uppercase px-1.5 py-0.5 border border-white/[0.06] text-white/30 hover:text-[#37b2da] hover:border-[#37b2da]/30 bg-black transition-all flex items-center gap-0.5"
-                          style={{borderRadius:1}}>
+                          style={{borderRadius:0}}>
                           <RotateCcw size={6}/> Rand
                         </button>
                         <button
                           onClick={() => { roleOverRef.current[editRole] = {}; forceRender(n=>n+1); }}
                           title="Reset role ao padrão do preset"
                           className="text-[5.5px] uppercase px-1.5 py-0.5 border border-white/[0.06] text-white/20 hover:text-white/55 hover:border-white/15 bg-black transition-all"
-                          style={{borderRadius:1}}>
+                          style={{borderRadius:0}}>
                           Reset
                         </button>
                       </div>
@@ -2614,13 +2643,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* Waveform */}
                   <div>
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1">WAVEFORM</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:4}}>WAVEFORM</div>
                     <div className="grid grid-cols-4 gap-0.5">
                       {WAVES.map(w=>(
                         <button key={w.id} onClick={()=>setRoleParam(editRole,'waveform',w.id)}
                           className={`text-[10px] py-1 transition-all
                             ${getRoleVal(editRole,'waveform')===w.id?'bg-white/12 text-white/90':'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
-                          style={{borderRadius:1}}
+                          style={{borderRadius:0}}
                           title={String(w.id)}>
                           {w.label}
                         </button>
@@ -2640,7 +2669,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ADSR */}
                   <div className="flex flex-col gap-1.5">
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50">ENVELOPE</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>ENVELOPE</div>
                     {(['attack','decay','sustain','release'] as const).map(k=>{
                       const isS=k==='sustain';
                       const envVal=(getRoleVal(editRole,'envelope') as any)?.[k];
@@ -2676,7 +2705,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               {rightTab==='harmony' && (
                 <div className="flex flex-col gap-3 p-3">
                   <div>
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1.5">
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>
                       NOTA RAIZ — <span style={{color:'#88ffcc'}}>{NOTE_NAMES[liveRoot % 12]}</span>
                     </div>
                     <div className="grid grid-cols-6 gap-0.5">
@@ -2686,14 +2715,14 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             ${liveRoot===i?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
                               :(n.includes('#')||n.includes('b'))?'bg-white/[0.02] border border-white/[0.06] text-white/30 hover:bg-white/6 hover:text-white/55'
                               :'bg-white/[0.04] border border-white/[0.08] text-white/45 hover:bg-white/10 hover:text-white/70'}`}
-                          style={{borderRadius:1}}>
+                          style={{borderRadius:0}}>
                           {n}
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1.5">
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>
                       ESCALA — <span style={{color:'#88ffcc'}}>{SCALE_LABELS[liveScale]}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-0.5">
@@ -2701,22 +2730,22 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                         <button key={s} onClick={() => applyScale(s)}
                           className={`text-[5.5px] uppercase py-1.5 text-center transition-all
                             ${liveScale===s?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
-                              :'bg-black border border-white/[0.06] text-white/35 hover:border-white/15 hover:text-white/60'}`}
-                          style={{borderRadius:1}}>
+                              :'border border-dashed border-white/[0.04] text-white/30 hover:border-white/12 hover:text-white/55'}`}
+                          style={{background:'transparent'}}>
                           {SCALE_LABELS[s]}
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1.5">MODO HARMÔNICO</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>MODO HARMÔNICO</div>
                     <div className="flex gap-1">
                       {(['consonant','any','dissonant'] as const).map(m => (
                         <button key={m} onClick={() => applyHarmonyMode(m)}
                           className={`flex-1 text-[5.5px] uppercase py-1.5 transition-all
                             ${liveHarmonyMode===m?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
-                              :'bg-black border border-white/[0.06] text-white/30 hover:border-white/15 hover:text-white/55'}`}
-                          style={{borderRadius:1}}>
+                              :'border border-dashed border-white/[0.04] text-white/25 hover:border-white/12 hover:text-white/50'}`}
+                          style={{background:'transparent'}}>
                           {m==='consonant'?'Tonal':m==='dissonant'?'Clash':'Free'}
                         </button>
                       ))}
@@ -2731,7 +2760,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <div className="mt-0.5 text-[5px] font-mono text-white/18">Frequência de disparo de notas</div>
                   </div>
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1.5">NOTAS ATIVAS</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>NOTAS ATIVAS</div>
                     <div className="flex flex-wrap gap-0.5">
                       {SCALE_INTERVALS[liveScale].map(iv => {
                         const nn = NOTE_NAMES[(liveRoot + iv) % 12];
@@ -2739,7 +2768,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           <button key={iv} onClick={() => applyRoot((liveRoot + iv) % 12)}
                             title={`Raiz → ${nn}`}
                             className="text-[6px] px-1.5 py-0.5 bg-[#37b2da]/8 border border-[#37b2da]/20 text-[#37b2da]/70 hover:bg-[#37b2da]/15 hover:text-[#37b2da] transition-all"
-                            style={{borderRadius:1}}>
+                            style={{borderRadius:0}}>
                             {nn}
                           </button>
                         );
@@ -2757,8 +2786,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                         applyHarmonyMode(hm[Math.floor(Math.random()*hm.length)]);
                         applyEventRate(0.4+Math.random()*2.5);
                       }}
-                      className="w-full py-1.5 border border-dashed border-white/[0.06] text-[6px] uppercase tracking-[0.14em] text-white/30 hover:text-[#37b2da] hover:border-[#37b2da]/30 bg-black transition-all flex items-center justify-center gap-1"
-                      style={{borderRadius:1}}>
+                      className="w-full py-1.5 transition-all flex items-center justify-center gap-1"
+                      style={{fontSize:7,letterSpacing:'0.10em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',border:'1px dashed rgba(255,255,255,0.05)',background:'transparent'}}>
                       <RotateCcw size={8}/> Campo Harmônico Aleatório
                     </button>
                   </div>
@@ -2770,7 +2799,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── BALLISTIC PHYSICS PANEL ─────────────────────────── */}
                   {physicsMode && (
-                    <div className="border border-dashed border-orange-400/15 bg-orange-500/[0.02] p-2 flex flex-col gap-2" style={{borderRadius:1}}>
+                    <div className="border border-dashed border-orange-400/15 bg-orange-500/[0.02] p-2 flex flex-col gap-2" style={{borderRadius:0}}>
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="text-[6px] uppercase tracking-[0.16em] text-orange-300/70">⚛ BALLISTIC PHYSICS</span>
                         <span className="text-[5px] font-mono text-white/20 ml-auto">gravity only</span>
@@ -2811,7 +2840,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                                   ${Math.abs(phys.gravityY-planet.g)<0.004
                                     ?'text-yellow-300 border-yellow-400/40 bg-yellow-400/10'
                                     :'text-white/40 border-white/[0.06] hover:text-orange-300 hover:border-orange-400/30'}`}
-                                style={{borderRadius:1}}>
+                                style={{borderRadius:0}}>
                                 {planet.label}
                               </button>
                             ))}
@@ -2892,7 +2921,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             ${phys.bounceWalls
                               ? 'border-orange-400/40 text-orange-300/80 bg-orange-500/10'
                               : 'border-white/[0.06] text-white/30 hover:border-white/15'}`}
-                          style={{borderRadius:1}}>
+                          style={{borderRadius:0}}>
                           {phys.bounceWalls ? '◎ Wall Bounce ON' : '○ Wall Bounce OFF'}
                         </button>
                         <button
@@ -2905,7 +2934,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             ${phys.physicsOnly
                               ? 'border-orange-400/40 text-orange-300/80 bg-orange-500/10'
                               : 'border-[#37b2da]/25 text-[#37b2da]/60 hover:border-[#37b2da]/40'}`}
-                          style={{borderRadius:1}}>
+                          style={{borderRadius:0}}>
                           {phys.physicsOnly ? '⚛ Gate Only' : '♫ All Notes'}
                         </button>
                       </div>
@@ -2918,7 +2947,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Behavior Preset Picker ──────────────────────────── */}
                   <div>
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1.5">BEHAVIOR PRESETS</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>BEHAVIOR PRESETS</div>
                     <div className="grid grid-cols-4 gap-0.5">
                       {BEHAVIOR_PRESETS.map(b => (
                         <button key={b.id}
@@ -2929,12 +2958,12 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             physRef.current = newPhys;
                           }}
                           title={`${b.name} — ${b.description}`}
-                          className={`flex flex-col items-center gap-0.5 py-1 px-0.5 border transition-all
-                            ${behaviorId===b.id
-                              ? 'border-current bg-current/10'
-                              : 'border-white/[0.06] hover:border-white/15 bg-black hover:bg-white/[0.03]'}`}
-                          style={{ color: behaviorId===b.id ? b.color : 'rgba(255,255,255,0.35)',
-                                   borderColor: behaviorId===b.id ? b.color+'88' : undefined, borderRadius:1 }}>
+                          className="flex flex-col items-center gap-0.5 py-1 px-0.5 transition-all"
+                          style={{
+                            color: behaviorId===b.id ? b.color : 'rgba(255,255,255,0.30)',
+                            background: behaviorId===b.id ? b.color+'08' : 'transparent',
+                            border: behaviorId===b.id ? `1px dashed ${b.color}40` : '1px dashed rgba(255,255,255,0.04)',
+                          }}>
                           <span className="text-[10px] leading-none">{b.icon}</span>
                           <span className="text-[4.5px] font-mono uppercase tracking-wide leading-none text-center opacity-80">{b.name}</span>
                         </button>
@@ -2952,7 +2981,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Motion + Forces ─────────────────────────────────── */}
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-2">MOTION + FORCES</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:6}}>MOTION + FORCES</div>
                     <div className="flex flex-col gap-2">
                       <S label="Damping" value={phys.damping} min={0.90} max={0.999} step={0.001}
                         display={v=>v.toFixed(3)} color="#88aaff"
@@ -3002,7 +3031,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                                   ${Math.abs(phys.gravityY-g)<0.004
                                     ?'text-yellow-300 border-yellow-400/40 bg-yellow-400/10'
                                     :'text-white/35 border-white/[0.06] hover:text-white/65 hover:border-white/20'}`}
-                                style={{borderRadius:1}}>
+                                style={{borderRadius:0}}>
                                 {label}
                               </button>
                             ))}
@@ -3014,7 +3043,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Behavior Physics (novos params) ─────────────────── */}
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-2">BEHAVIOR PHYSICS</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:6}}>BEHAVIOR PHYSICS</div>
                     <div className="flex flex-col gap-2">
                       <S label="Alignment" value={phys.alignment} min={0} max={2} step={0.05}
                         display={v=>v.toFixed(2)} color="#aaeeff"
@@ -3045,7 +3074,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Emergent ─────────────────────────────────────────── */}
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-2">EMERGENT</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:6}}>EMERGENT</div>
                     <div className="flex flex-col gap-2">
                       <S label="Mutation Rate" value={phys.mutationRate} min={0} max={1} step={0.01}
                         display={v=>v.toFixed(2)} color="#ff88ff"
@@ -3063,7 +3092,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Sync info ────────────────────────────────────────── */}
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50 mb-1.5">SYNC</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>SYNC</div>
                     <div className="flex flex-col gap-0.5 text-[7px] font-mono text-white/35">
                       <div>Alignment: {((stateRef.current?.syncIntensity??0)*100).toFixed(0)}%</div>
                       <div>Beat: {((stateRef.current?.beatPhase??0)*100).toFixed(0)}%</div>
@@ -3083,8 +3112,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 const mat = stateRef.current.userMatrix;
                 return (
                   <div className="p-2 flex flex-col gap-2">
-                    <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50">INTERACTION MATRIX</div>
-                    <div className="text-[5.5px] text-white/18 leading-snug bg-white/[0.02] px-1.5 py-1 border border-dashed border-white/[0.06] mb-1" style={{borderRadius:1}}>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>INTERACTION MATRIX</div>
+                    <div className="text-[5.5px] text-white/18 leading-snug bg-white/[0.02] px-1.5 py-1 border border-dashed border-white/[0.06] mb-1" style={{borderRadius:0}}>
                       Click +0.1 · Shift -0.1 · Ctrl reset<br/>
                       Azul=atração · Vermelho=repulsão
                     </div>
@@ -3127,12 +3156,12 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <div className="flex gap-1 mt-1">
                       <button onClick={macroResetMatrix}
                         className="flex-1 text-[6px] text-white/25 hover:text-white/50 transition-all py-1 border border-dashed border-white/[0.06]"
-                        style={{borderRadius:1}}>
+                        style={{borderRadius:0}}>
                         ↺ Reset
                       </button>
                       <button onClick={macroRandomMatrix}
                         className="flex-1 text-[6px] text-[#37b2da]/45 hover:text-[#37b2da] transition-all py-1 border border-dashed border-[#37b2da]/20 hover:border-[#37b2da]/40"
-                        style={{borderRadius:1}}>
+                        style={{borderRadius:0}}>
                         ⚄ Random
                       </button>
                     </div>
@@ -3143,7 +3172,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               {/* ── PALETTE TAB ─────────────────────────────────────────────── */}
               {rightTab === 'palette' && (
                 <div className="p-2 flex flex-col gap-3">
-                  <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/50">CANVAS PALETTE</div>
+                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>CANVAS PALETTE</div>
 
                   <div>
                     <div className="text-[5.5px] uppercase text-white/18 tracking-[0.14em] mb-1.5">MODO DE COR</div>
@@ -3163,7 +3192,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             borderColor:palette.mode===m.id?m.c+'88':'rgba(255,255,255,0.06)',
                             background:palette.mode===m.id?m.c+'12':'transparent',
                             color:palette.mode===m.id?m.c:'rgba(255,255,255,0.4)',
-                            borderRadius:1,
+                            borderRadius:0,
                           }}>{m.label}</button>
                       ))}
                     </div>
@@ -3187,14 +3216,14 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           <div key={role} className="flex items-center gap-1">
                             {/* Color swatch dot */}
                             <div className="w-2 h-2 flex-shrink-0 border border-white/[0.06]"
-                              style={{background:curColor,borderRadius:1}}/>
+                              style={{background:curColor,borderRadius:0}}/>
                             <span className="text-[5.5px] font-mono w-11 flex-shrink-0"
                               style={{color:curColor}}>{role}</span>
                             {/* Native color picker */}
                             <input type="color" value={curColor}
                               onChange={e=>setPalette(p=>({...p,roleColorOverrides:{...p.roleColorOverrides,[role]:e.target.value}}))}
                               className="w-6 h-4 cursor-pointer flex-shrink-0 border-0 p-0"
-                              style={{background:'transparent',borderRadius:1}}/>
+                              style={{background:'transparent',borderRadius:0}}/>
                             {/* Hex text input */}
                             <input type="text" value={curColor}
                               onChange={e=>{
@@ -3203,7 +3232,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                                   setPalette(p=>({...p,roleColorOverrides:{...p.roleColorOverrides,[role]:v}}));
                               }}
                               className="flex-1 min-w-0 bg-white/[0.03] border border-dashed border-white/[0.06] text-[5px] px-1 py-0.5"
-                              style={{color:curColor,borderRadius:1}}/>
+                              style={{color:curColor,borderRadius:0}}/>
                             {/* Reset to default */}
                             {isOverridden && (
                               <button
@@ -3240,7 +3269,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           style={{
                             borderColor:palette.bgColor===bg.color?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.06)',
                             background:bg.color,
-                            borderRadius:1,
+                            borderRadius:0,
                           }}>
                           <span className="text-[5px] font-mono text-white/50">{bg.label}</span>
                         </button>
@@ -3252,7 +3281,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       <input type="color" value={palette.bgColor}
                         onChange={e=>setPalette(p=>({...p,bgColor:e.target.value}))}
                         className="w-6 h-4 cursor-pointer border-0 p-0 flex-shrink-0"
-                        style={{borderRadius:1}}/>
+                        style={{borderRadius:0}}/>
                       <input type="text" value={palette.bgColor}
                         onChange={e=>{
                           const v=e.target.value.trim();
@@ -3260,7 +3289,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             setPalette(p=>({...p,bgColor:v}));
                         }}
                         className="flex-1 bg-white/[0.03] border border-dashed border-white/[0.06] text-[5px] px-1 py-0.5 text-white/50"
-                        style={{borderRadius:1}}/>
+                        style={{borderRadius:0}}/>
                     </div>
                   </div>
                 </div>
@@ -3275,8 +3304,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         const q = stateRef.current!.quanta[contextMenu.qIdx];
         return (
           <div
-            className="fixed z-[100] min-w-[148px] bg-black border border-white/[0.08] overflow-hidden"
-            style={{ left: contextMenu.sx + 4, top: contextMenu.sy + 4, borderRadius:1, fontFamily:"'IBM Plex Mono', monospace" }}
+            className="fixed z-[100] min-w-[148px] overflow-hidden"
+            style={{ left: contextMenu.sx + 4, top: contextMenu.sy + 4, fontFamily:MONO, background:'rgba(0,0,0,0.96)', border:'1px dashed rgba(255,255,255,0.06)' }}
             onMouseLeave={() => setContextMenu(null)}>
             {/* Header */}
             <div className="px-2.5 py-1.5 border-b border-dashed border-white/[0.06] flex items-center justify-between">
@@ -3301,7 +3330,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     }}
                     className={`text-[5.5px] uppercase py-1 px-0.5 transition-all
                       ${q.role===r?'bg-white/10':'hover:bg-white/6'}`}
-                    style={{ color: q.role===r ? ROLE_COLORS[r] : 'rgba(255,255,255,0.4)', borderRadius:1 }}>
+                    style={{ color: q.role===r ? ROLE_COLORS[r] : 'rgba(255,255,255,0.4)', borderRadius:0 }}>
                     {r.slice(0,3)}
                   </button>
                 ))}
@@ -3318,7 +3347,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   <button
                     onClick={() => { q.timbreIdx=-1; forceRender(n=>n+1); setContextMenu(null); }}
                     className={`text-[5px] px-1 py-0.5 border transition-all ${q.timbreIdx===-1?'border-white/30 text-white/70 bg-white/10':'border-white/[0.06] text-white/30 hover:text-white/60 hover:border-white/15'}`}
-                    style={{borderRadius:1}}>
+                    style={{borderRadius:0}}>
                     Role
                   </button>
                   {TIMBRE_TEMPLATES.map((t,idx)=>(
@@ -3326,7 +3355,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       onClick={() => { q.timbreIdx=idx; forceRender(n=>n+1); setContextMenu(null); }}
                       title={t.name}
                       className={`text-[8px] py-0.5 px-0.5 border transition-all ${q.timbreIdx===idx?'border-current bg-current/15':'border-white/[0.06] hover:border-white/15'}`}
-                      style={{color: q.timbreIdx===idx ? t.color : 'rgba(255,255,255,0.4)', borderRadius:1}}>
+                      style={{color: q.timbreIdx===idx ? t.color : 'rgba(255,255,255,0.4)', borderRadius:0}}>
                       {t.icon}
                     </button>
                   ))}
@@ -3350,7 +3379,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   onClick={() => { action(); forceRender(n=>n+1); setContextMenu(null); }}
                   className={`text-left text-[6.5px] uppercase tracking-wider px-2 py-1 transition-all
                     ${label==='Delete'?'text-red-400/70 hover:bg-red-900/20':'text-white/45 hover:text-white/80 hover:bg-white/[0.06]'}`}
-                  style={{borderRadius:1}}>
+                  style={{borderRadius:0}}>
                   {label}
                 </button>
               ))}
@@ -3363,8 +3392,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {cinematic && (
         <button onClick={()=>setCinematic(false)}
           title="Press H to restore HUD"
-          className="fixed top-3 right-3 z-40 px-2.5 py-1 border border-dashed border-white/[0.06] bg-black/90 text-[6px] uppercase tracking-[0.14em] text-white/25 hover:text-white/60 hover:border-white/20 transition-all"
-          style={{borderRadius:1,fontFamily:"'IBM Plex Mono', monospace"}}>
+          className="fixed top-3 right-3 z-40 px-2.5 py-1 transition-all"
+          style={{fontFamily:MONO,fontSize:7,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(255,255,255,0.20)',background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)'}}>
           H · Show HUD
         </button>
       )}
@@ -3377,9 +3406,9 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {/* ── COMPOSE MODE HINT ──────────────────────────────────────────────── */}
       {composeMode && !running && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[6] pointer-events-none">
-          <div className="flex items-center gap-3 px-4 py-2 border border-amber-400/20 bg-black/90" style={{borderRadius:1,fontFamily:"'IBM Plex Mono', monospace"}}>
-            <span className="text-[7px] text-amber-300/70 uppercase tracking-[0.14em]">✏ COMPOSE</span>
-            <span className="text-[7px] text-white/25">Click to place · Drag = velocity · ▶ Release to run · R to restore</span>
+          <div className="flex items-center gap-3 px-4 py-2" style={{fontFamily:MONO,background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(251,191,36,0.15)'}}>
+            <span style={{fontSize:7,color:'rgba(251,191,36,0.60)',letterSpacing:'0.12em',textTransform:'uppercase'}}>✏ COMPOSE</span>
+            <span style={{fontSize:7,color:'rgba(255,255,255,0.20)'}}>Click to place · Drag = velocity · ▶ Release to run · R to restore</span>
           </div>
         </div>
       )}
@@ -3387,8 +3416,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {/* ── PHYSICS MODE BADGE ─────────────────────────────────────────────── */}
       {physicsMode && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[6] pointer-events-none">
-          <div className="flex items-center gap-2 px-3 py-1 border border-orange-400/25 bg-black/90" style={{borderRadius:1,fontFamily:"'IBM Plex Mono', monospace"}}>
-            <span className="text-[7px] text-orange-300/60 uppercase tracking-[0.14em]">⚛ BALLISTIC · WALL BOUNCE · GATE NOTES ONLY</span>
+          <div className="flex items-center gap-2 px-3 py-1" style={{fontFamily:MONO,background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,153,68,0.15)'}}>
+            <span style={{fontSize:7,color:'rgba(255,153,68,0.55)',letterSpacing:'0.12em',textTransform:'uppercase'}}>⚛ BALLISTIC · WALL BOUNCE · GATE NOTES ONLY</span>
           </div>
         </div>
       )}
@@ -3396,18 +3425,23 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {/* ── NO AUDIO STATE ───────────────────────────────────────────────────── */}
       {!audioOn && (
         <div className="fixed inset-0 z-[5] flex items-center justify-center pointer-events-none">
-          <div className="text-center pointer-events-auto" style={{fontFamily:"'IBM Plex Mono', monospace"}}>
-            <Music size={28} className="mx-auto mb-3 opacity-40" style={{color:'#37b2da'}}/>
-            <div className="text-[10px] uppercase tracking-[0.2em] text-white/30 mb-1.5" style={{fontFamily:"'Doto', monospace",fontWeight:400}}>
+          <div className="text-center pointer-events-auto">
+            <div style={{fontSize:18,color:`${ACCENT}25`,marginBottom:12}}>◈</div>
+            <div style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',marginBottom:6}}>
               Synesthetic Quanta Instrument
             </div>
-            <div className="text-[8px] text-white/18 mb-5" style={{fontWeight:200}}>
-              Simulation active · Start Audio to hear · Draw gates · Use tools
+            <div style={{fontFamily:MONO,fontSize:8,color:'rgba(255,255,255,0.14)',marginBottom:20,fontWeight:300}}>
+              Draw gate lines · Place particles · Press play
             </div>
             <button onClick={handleAudioToggle}
-              className="px-5 py-2 border border-[#37b2da]/35 text-[#37b2da]/75 bg-[#37b2da]/[0.04]
-                text-[8px] uppercase tracking-[0.16em] hover:border-[#37b2da]/60 hover:text-[#37b2da] transition-all"
-              style={{borderRadius:1}}>
+              className="transition-all"
+              style={{
+                fontFamily:MONO,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',
+                padding:'8px 24px',
+                color:`${ACCENT}bb`,
+                background:`${ACCENT}08`,
+                border:`1px dashed ${ACCENT}30`,
+              }}>
               ▶ START AUDIO
             </button>
           </div>
@@ -3417,19 +3451,19 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {/* ── STUDIO SEQUENCER BOTTOM PANEL ────────────────────────────────────── */}
       {!cinematic && (
         <div className="fixed left-0 right-0 z-[25] border-t border-dashed border-white/[0.06]"
-          style={{ bottom: 0, background: '#000', fontFamily:"'IBM Plex Mono', monospace" }}>
+          style={{ bottom: 0, background: '#000', fontFamily:MONO }}>
           {/* Collapse bar */}
-          <div className="flex items-center gap-2 px-3 py-1 cursor-pointer select-none hover:bg-white/[0.02] transition-colors"
-            onClick={() => setShowStudioSeq(v => !v)}>
-            <span className="text-[6px] uppercase tracking-[0.16em]"
-              style={{ color: studioActive ? '#37b2da' : 'rgba(255,255,255,0.25)' }}>
+          <div className="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none transition-colors"
+            onClick={() => setShowStudioSeq(v => !v)}
+            style={{borderBottom:showStudioSeq?'1px dashed rgba(255,255,255,0.04)':'none'}}>
+            <span style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color: studioActive ? ACCENT : 'rgba(255,255,255,0.22)'}}>
               STUDIO SEQ
             </span>
             {studioActive && (
-              <span className="w-1.5 h-1.5 bg-[#37b2da] animate-pulse flex-shrink-0" style={{borderRadius:1}} />
+              <span className="w-1.5 h-1.5 animate-pulse flex-shrink-0" style={{background:ACCENT}} />
             )}
-            <span className="text-[5.5px] font-mono text-white/15 ml-auto">
-              {showStudioSeq ? '▼ Recolher' : '▲ Expandir'}
+            <span style={{fontFamily:MONO,fontSize:6,color:'rgba(255,255,255,0.12)',marginLeft:'auto'}}>
+              {showStudioSeq ? '▼' : '▲'}
             </span>
           </div>
 

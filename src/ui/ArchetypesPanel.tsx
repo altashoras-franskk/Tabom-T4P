@@ -60,7 +60,7 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
 
       {/* Life Stats - Dinâmica Populacional */}
       {lifeStats && (lifeStats.births > 0 || lifeStats.deaths > 0) && (
-        <div className="bg-gradient-to-r from-green-500/10 to-red-500/10 border border-white/[0.06] rounded p-3 space-y-2">
+        <div className="p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.04)' }}>
           <div className="flex items-center gap-2 text-white/90">
             <Activity size={12} strokeWidth={2} />
             <span className="text-[9px] uppercase tracking-wider font-medium">Dinâmica Populacional (últimos 15s)</span>
@@ -99,12 +99,12 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
             [&::-webkit-scrollbar]:w-1 
             [&::-webkit-scrollbar-track]:bg-white/5 
             [&::-webkit-scrollbar-thumb]:bg-white/20 
-            [&::-webkit-scrollbar-thumb]:rounded-full
+            [&::-webkit-scrollbar-thumb]:bg-white/15
             [&::-webkit-scrollbar-thumb:hover]:bg-white/30">
             {archetypeRegistry.list.slice(0, 10).map((arch) => (
               <div
                 key={arch.id}
-                className="bg-white/[0.02] border border-white/[0.06] rounded p-2.5 hover:bg-white/[0.04] transition-all"
+                className="bg-white/[0.02] p-2.5 hover:bg-white/[0.04] transition-all" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}
               >
                 <div className="flex items-start gap-2 mb-1.5">
                   <div className="text-xl leading-none">{arch.sigil}</div>
@@ -158,7 +158,7 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
           [&::-webkit-scrollbar]:w-1 
           [&::-webkit-scrollbar-track]:bg-white/5 
           [&::-webkit-scrollbar-thumb]:bg-white/20 
-          [&::-webkit-scrollbar-thumb]:rounded-full
+          [&::-webkit-scrollbar-thumb]:bg-white/15
           [&::-webkit-scrollbar-thumb:hover]:bg-white/30">
           {Array.from({ length: microConfig.typesCount }).map((_, typeIdx) => {
             const count = typeCounts[typeIdx];
@@ -168,13 +168,13 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
             return (
               <div
                 key={typeIdx}
-                className="bg-white/[0.02] border border-white/[0.06] rounded p-3 hover:bg-white/[0.04] transition-all"
+                className="bg-white/[0.02] p-3 hover:bg-white/[0.04] transition-all" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}
               >
                 {/* Type ID + Color */}
                 <div className="flex items-center gap-3 mb-2">
                   <div
-                    className="w-4 h-4 rounded-full border-2 border-white/20 shadow-lg"
-                    style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}80` }}
+                    className="w-4 h-4"
+                    style={{ backgroundColor: color, border: '1px dashed rgba(255,255,255,0.15)' }}
                   />
                   <div className="flex-1">
                     <div className="text-white/80 text-[11px] font-medium">
@@ -187,9 +187,9 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
                 </div>
 
                 {/* Population bar */}
-                <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                <div className="h-1.5 bg-white/[0.06] overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all duration-300"
+                    className="h-full transition-all duration-300"
                     style={{ 
                       width: `${percentage}%`,
                       backgroundColor: color
@@ -215,7 +215,7 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
             id="sigilsEnabled"
             checked={sigilConfig.enabled}
             onChange={(e) => onSigilConfigChange({ enabled: e.target.checked })}
-            className="w-3 h-3 rounded border-white/20 bg-white/[0.06] checked:bg-cyan-500/60 cursor-pointer"
+            className="w-3 h-3 border-white/15 bg-white/[0.05] checked:bg-cyan-500/50 cursor-pointer"
           />
           <label htmlFor="sigilsEnabled" className="text-white/70 text-[10px] font-light cursor-pointer">
             Detecção de Padrões Ativa
@@ -230,7 +230,7 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
                 id="showSigilOverlay"
                 checked={sigilConfig.showOverlay}
                 onChange={(e) => onSigilConfigChange({ showOverlay: e.target.checked })}
-                className="w-3 h-3 rounded border-white/20 bg-white/[0.06] checked:bg-cyan-500/60 cursor-pointer"
+                className="w-3 h-3 border-white/15 bg-white/[0.05] checked:bg-cyan-500/50 cursor-pointer"
               />
               <label htmlFor="showSigilOverlay" className="text-white/60 text-[10px] font-light cursor-pointer">
                 Mostrar Overlay (Tecla: S)
@@ -243,7 +243,7 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
                 <div className="text-white/60 text-[9px] font-light">
                   Padrões detectados: {archetypesDetected.length}
                 </div>
-                <div className="bg-white/[0.02] border border-white/[0.06] rounded p-2 space-y-1">
+                <div className="bg-white/[0.02] p-2 space-y-1" style={{ border: '1px dashed rgba(255,255,255,0.04)' }}>
                   {archetypesDetected.slice(0, 5).map((archetype) => (
                     <div key={archetype.id} className="flex items-center gap-2 text-[9px]">
                       <span className="text-lg">{archetype.sigil}</span>
@@ -264,7 +264,7 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
       </div>
 
       {/* Info Box */}
-      <div className="bg-cyan-500/5 border border-cyan-500/20 rounded p-3 space-y-2">
+      <div className="p-3 space-y-2" style={{ background: 'rgba(34,211,238,0.03)', border: '1px dashed rgba(34,211,238,0.12)' }}>
         <div className="flex items-center gap-2 text-cyan-400/80">
           <Target size={12} strokeWidth={2} />
           <span className="text-[9px] uppercase tracking-wider font-medium">Sobre Tipos</span>

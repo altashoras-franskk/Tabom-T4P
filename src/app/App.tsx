@@ -3632,7 +3632,7 @@ const App: React.FC = () => {
         {/* Viewport zoom indicator — Complexity Life */}
         {activeLab === 'complexityLife' && (vpZoom < 0.99 || vpZoom > 1.01 || vpPanned) && (
           <div className="absolute bottom-4 left-4 z-20 flex flex-col items-start gap-1 pointer-events-auto">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 border border-white/10 backdrop-blur-sm">
+            <div className="flex items-center gap-1.5 px-2 py-1" style={{ background: 'rgba(0,0,0,0.92)', border: '1px dashed rgba(255,255,255,0.06)' }}>
               <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">zoom</span>
               <span className="text-[9px] font-mono text-cyan-300/70">{vpZoom.toFixed(2)}×</span>
             </div>
@@ -3642,11 +3642,11 @@ const App: React.FC = () => {
                 if (canvasInnerRef.current) { canvasInnerRef.current.style.transform = ''; }
                 setVpZoom(1); setVpPanned(false);
               }}
-              className="px-2 py-0.5 rounded text-[8px] font-mono bg-black/50 border border-white/10 text-white/35 hover:text-white/70 backdrop-blur-sm transition-colors"
+              className="px-2 py-0.5 text-[8px] font-mono text-white/35 hover:text-white/70 transition-colors" style={{ background: 'rgba(0,0,0,0.85)', border: '1px dashed rgba(255,255,255,0.06)' }}
             >
               [Home] reset
             </button>
-            <div className="px-1.5 py-0.5 rounded bg-black/40 border border-white/5">
+            <div className="px-1.5 py-0.5" style={{ background: 'rgba(0,0,0,0.70)', border: '1px dashed rgba(255,255,255,0.04)' }}>
               <span className="text-[7px] font-mono text-white/18">roda=zoom · rclique+drag=pan · ←↑→↓=nav</span>
             </div>
           </div>
