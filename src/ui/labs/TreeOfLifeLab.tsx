@@ -906,12 +906,12 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
             ))}
 
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button onClick={applyJourneyAnswers} style={{
+              <button title="Aplicar respostas da jornada" onClick={applyJourneyAnswers} style={{
                 flex: 1, padding: '8px 14px', borderRadius: 6, cursor: 'pointer',
                 background: 'rgba(160,100,255,0.2)', border: '1px solid rgba(180,120,255,0.5)',
                 color: 'rgba(220,200,255,0.95)', fontSize: 10, letterSpacing: '0.08em',
               }}>Begin the Journey</button>
-              <button onClick={() => setShowJourneyModal(false)} style={{
+              <button title="Cancelar jornada" onClick={() => setShowJourneyModal(false)} style={{
                 padding: '8px 14px', borderRadius: 6, cursor: 'pointer',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
                 color: 'rgba(180,165,150,0.5)', fontSize: 10,
@@ -1048,7 +1048,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
 
           <SBDiv />
           <SBSec label="Journey Presets">
-            <button onClick={() => setShowJourneyModal(true)} style={{
+            <button title="Iniciar jornada mística" onClick={() => setShowJourneyModal(true)} style={{
               width: '100%', padding: '5px 8px', marginBottom: 4, borderRadius: 5, cursor: 'pointer',
               background: 'linear-gradient(135deg, rgba(160,80,255,0.12), rgba(220,180,60,0.08))',
               border: '1px solid rgba(180,120,255,0.3)',
@@ -1058,7 +1058,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
               ✦ Mystical Journey Questionnaire
             </button>
             {JOURNEY_PRESETS.map(p => (
-              <button key={p.id} onClick={() => applyPreset(p)} style={{
+              <button title={`${p.name}: ${p.desc}`} key={p.id} onClick={() => applyPreset(p)} style={{
                 display: 'flex', alignItems: 'flex-start', gap: 5, width: '100%',
                 padding: '4px 8px', marginBottom: 2, borderRadius: 4, cursor: 'pointer', textAlign: 'left',
                 background: params.preset === p.id ? 'rgba(96,20,128,0.18)' : 'rgba(255,255,255,0.025)',
@@ -1120,7 +1120,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
 
           {/* Advanced */}
           <div style={{ padding: '0 10px 6px' }}>
-            <button onClick={() => setAdvOpen(!advOpen)} style={{
+            <button title={advOpen ? "Fechar avançado" : "Grimório & configuração"} onClick={() => setAdvOpen(!advOpen)} style={{
               display: 'flex', alignItems: 'center', gap: 4, width: '100%',
               fontSize: 7, background: 'none', border: 'none', cursor: 'pointer',
               color: 'rgba(180,165,150,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -1135,7 +1135,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
                   Preset: <b style={{ color: 'rgba(200,165,255,0.7)' }}>{params.preset}</b><br />
                   Chapters: {chapters.length}
                 </div>
-                <button onClick={() => { setChapters([]); saveGrimoire([]); }} style={{
+                <button title="Limpar grimório" onClick={() => { setChapters([]); saveGrimoire([]); }} style={{
                   marginTop: 5, fontSize: 7, background: 'rgba(255,50,30,0.08)',
                   border: '1px solid rgba(255,50,30,0.18)', borderRadius: 3,
                   padding: '2px 6px', cursor: 'pointer', color: 'rgba(255,110,90,0.55)',
@@ -1217,7 +1217,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
                 { ico: <RefreshCw size={11} />, action: () => { camRef.current = { zoom: 1, px: 0, py: 0 }; } },
                 { ico: <Maximize2 size={11} />, action: () => setFullscreen(f => !f) },
               ].map(({ ico, action }, i) => (
-                <button key={i} onClick={action} style={{
+                <button title={label} key={i} onClick={action} style={{
                   width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   borderRadius: 6, cursor: 'pointer',
                   background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.08)',
@@ -1228,7 +1228,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
 
             {/* Global card apply button */}
             {selectedCard && (
-              <button onClick={() => playCard(selectedCard, 'global', 'global')} style={{
+              <button title="Jogar carta selecionada" onClick={() => playCard(selectedCard, 'global', 'global')} style={{
                 position: 'absolute', top: 8, right: 12, padding: '4px 14px', borderRadius: 6,
                 cursor: 'pointer', background: 'rgba(255,200,60,0.12)', border: '1px solid rgba(255,200,60,0.3)',
                 fontSize: 8, color: 'rgba(255,220,100,0.9)', letterSpacing: '0.1em',
@@ -1388,7 +1388,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
               { id: 'grimoire', label: 'Grimoire', ico: '📖' },
               { id: 'glossary', label: 'Glossary', ico: '📚' },
             ] as const).map(t => (
-              <button key={t.id} onClick={() => setRightTab(t.id)} style={{
+              <button title={t.label} key={t.id} onClick={() => setRightTab(t.id)} style={{
                 flex: 1, padding: '7px 3px', fontSize: 7, border: 'none', cursor: 'pointer',
                 letterSpacing: '0.08em', textTransform: 'uppercase',
                 background: rightTab === t.id ? 'rgba(180,120,255,0.1)' : 'transparent',
@@ -1722,7 +1722,7 @@ function JourneyPanel({
       </div>
 
       <div style={{ marginBottom: 6 }}>
-        <button onClick={() => setShowLightLore(!showLightLore)} style={{
+        <button title={showLightLore ? "Ocultar Luz & Lore" : "Luz & Lore"} onClick={() => setShowLightLore(!showLightLore)} style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '5px 8px', borderRadius: 5, cursor: 'pointer',
           background: 'rgba(180,120,60,0.06)', border: '1px solid rgba(220,185,80,0.15)',
@@ -1746,7 +1746,7 @@ function JourneyPanel({
       </div>
 
       <div style={{ marginBottom: 6 }}>
-        <button onClick={() => setShowWorlds(!showWorlds)} style={{
+        <button title={showWorlds ? "Ocultar Mundos" : "Mundos"} onClick={() => setShowWorlds(!showWorlds)} style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '5px 8px', borderRadius: 5, cursor: 'pointer',
           background: 'rgba(80,120,200,0.06)', border: '1px solid rgba(100,150,220,0.15)',
@@ -2236,7 +2236,7 @@ function SBSec({ label, hint, children }: { label: string; hint?: string; childr
 
 function SBLensBtn({ label, desc, active, onClick }: { label: string; desc: string; active: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{
+    <button title={label} onClick={onClick} style={{
       display: 'flex', flexDirection: 'column', width: '100%',
       padding: '4px 8px', marginBottom: 2, borderRadius: 4, cursor: 'pointer', textAlign: 'left',
       background: active ? 'rgba(180,120,255,0.12)' : 'rgba(255,255,255,0.025)',
@@ -2292,7 +2292,7 @@ function SBBar({ label, v, c }: { label: string; v: number; c: string }) {
 
 function SBBtn({ onClick, c, children }: { onClick: () => void; c: string; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} style={{
+    <button title={label} onClick={onClick} style={{
       flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
       padding: '4px 5px', borderRadius: 4, cursor: 'pointer', fontSize: 8,
       textTransform: 'uppercase', letterSpacing: '0.07em',

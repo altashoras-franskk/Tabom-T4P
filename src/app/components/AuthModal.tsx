@@ -152,7 +152,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
         onClick={e => e.stopPropagation()}
       >
         {/* Close */}
-        <button
+        <button title="Fechar"
           onClick={onClose}
           style={{
             position: 'absolute', top: 14, right: 14,
@@ -184,7 +184,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
           background: 'rgba(255,255,255,0.04)', borderRadius: 7, padding: 3,
         }}>
           {(['login', 'register'] as Mode[]).map(m => (
-            <button
+            <button title={m}
               key={m}
               onClick={() => { setMode(m); setError(''); setSuccess(''); }}
               style={{
@@ -252,7 +252,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
                 onFocus={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)')}
                 onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
-              <button
+              <button title={showPw ? "Esconder senha" : "Mostrar senha"}
                 type="button"
                 onClick={() => setShowPw(v => !v)}
                 style={{
@@ -287,7 +287,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
           )}
 
           {/* Submit */}
-          <button
+          <button title={loading ? "Carregando..." : mode === "login" ? "Entrar" : "Criar conta"}
             type="submit"
             disabled={loading}
             style={{

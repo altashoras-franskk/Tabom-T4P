@@ -739,7 +739,7 @@ export const AsimovTheater: React.FC<Props> = ({ active }) => {
         flexWrap: 'wrap',
       }}>
         {/* Play/Pause */}
-        <button
+        <button title="Play"
           onClick={() => setRunning(r => !r)}
           style={{
             padding: '4px 10px', borderRadius: 4, cursor: 'pointer',
@@ -754,7 +754,7 @@ export const AsimovTheater: React.FC<Props> = ({ active }) => {
         </button>
 
         {/* Reset */}
-        <button
+        <button title="Pausar"
           onClick={handleReset}
           style={{
             padding: '4px 10px', borderRadius: 4, cursor: 'pointer',
@@ -772,7 +772,7 @@ export const AsimovTheater: React.FC<Props> = ({ active }) => {
 
         {/* Presets */}
         {ASIMOV_PRESETS.map(p => (
-          <button
+          <button title="Pular"
             key={p.id}
             onClick={() => handlePresetChange(p)}
             style={{
@@ -788,7 +788,7 @@ export const AsimovTheater: React.FC<Props> = ({ active }) => {
         ))}
 
         {/* Scenarios button */}
-        <button
+        <button title="Reiniciar"
           onClick={() => setShowLessons(true)}
           style={{
             padding: '3px 9px', borderRadius: 4, cursor: 'pointer', fontSize: 9.5,
@@ -809,7 +809,7 @@ export const AsimovTheater: React.FC<Props> = ({ active }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>Cena</span>
           {[20, 30, 60].map(d => (
-            <button
+            <button title="Anterior"
               key={d}
               onClick={() => setSceneDuration(d)}
               style={{
@@ -830,7 +830,7 @@ export const AsimovTheater: React.FC<Props> = ({ active }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>Campo</span>
           {(['off', 'R', 'L', 'N'] as const).map(layer => (
-            <button
+            <button title="Próximo"
               key={layer}
               onClick={() => setFieldLayer(layer)}
               style={{
@@ -878,7 +878,7 @@ export const AsimovTheater: React.FC<Props> = ({ active }) => {
         <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)' }} />
 
         {/* Anomaly toggle */}
-        <button
+        <button title="Fechar"
           onClick={() => setAnomalyEnabled(v => !v)}
           style={{
             padding: '3px 9px', borderRadius: 4, cursor: 'pointer', fontSize: 9.5,

@@ -203,6 +203,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
               <button
                 key={tab.id}
                 onClick={() => onLabChange(tab.id)}
+                title={tab.label}
                 className="flex items-center gap-1.5 px-3 py-2 transition-all whitespace-nowrap shrink-0 relative"
                 style={{
                   color: isActive ? tabAccent : 'rgba(255,255,255,0.25)',

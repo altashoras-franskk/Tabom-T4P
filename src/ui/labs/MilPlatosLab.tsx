@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { DraggablePanel } from '../../app/components/DraggablePanel';
 import type {
   MPParams, MPMetrics, MPOverlay, MPToolId, MPTab,
   PlateauSnapshot, RhizomeEdge,
@@ -139,7 +140,7 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
-  const [legendPos, setLegendPos] = useState<{ x: number; y: number } | null>(null);
+  // legendPos removed — legend now uses DraggablePanel
   const [snapshots, setSnapshots] = useState<PlateauSnapshot[]>(() => {
     try { const r = localStorage.getItem('mp_snapshots'); return r ? JSON.parse(r) : []; }
     catch { return []; }
@@ -169,7 +170,7 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
   const panStartRef = useRef({ x: 0, y: 0, vpx: 0, vpy: 0 });
   const speedRef = useRef(speed);
   const viewModeRef = useRef(viewMode);
-  const legendDragRef = useRef<{ dragging: boolean; ox: number; oy: number }>({ dragging: false, ox: 0, oy: 0 });
+  // legendDragRef removed — legend uses DraggablePanel now
   const dragTargetRef = useRef<{ type: 'organ' | 'rnode' | 'zone'; idx: number } | null>(null);
   const [showJornada, setShowJornada] = useState(false);
   const [jornadaStep, setJornadaStep] = useState(0);
@@ -294,13 +295,7 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
   }, [jornadaAnswers, resetWorld]);
 
 
-  const onLegendMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault(); const el = e.currentTarget as HTMLElement; const rect = el.getBoundingClientRect();
-    legendDragRef.current = { dragging: true, ox: e.clientX - rect.left, oy: e.clientY - rect.top };
-    const onMove = (ev: MouseEvent) => { if (!legendDragRef.current.dragging) return; setLegendPos({ x: ev.clientX - legendDragRef.current.ox, y: ev.clientY - legendDragRef.current.oy }); };
-    const onUp = () => { legendDragRef.current.dragging = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-  }, []);
+  // Legend drag logic removed — now uses DraggablePanel
 
   useEffect(() => { if (!active || viewMode !== '3d') return; const c = canvas3dRef.current; if (!c) return; if (!renderer3dRef.current) renderer3dRef.current = new Renderer3D(c); const par = c.parentElement; if (par) renderer3dRef.current.resize(par.clientWidth, par.clientHeight); }, [active, viewMode]);
 
@@ -335,7 +330,6 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
   const K = computeK(params);
   const currentSliders = tab === 'cso' ? CSO_PARAMS : tab === 'rizoma' ? RIZOMA_PARAMS : [...CSO_PARAMS, ...RIZOMA_PARAMS];
   const ei = inspected ? EL_INFO[inspected.type] : null;
-  const legendStyle: React.CSSProperties = legendPos ? { position: 'fixed', left: legendPos.x, top: legendPos.y, zIndex: 50 } : { position: 'absolute', bottom: 12, left: 12, zIndex: 50 };
 
   return (
     <div className="fixed inset-0 flex" style={{ fontFamily: MONO, background: '#040408', color: 'rgba(255,255,255,0.88)' }}>
@@ -345,51 +339,53 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
 
         {/* View mode */}
         <div style={{ position: 'absolute', top: 56, right: 312, display: 'flex', gap: 2 }}>
-          <button onClick={() => setViewMode('2d')} style={{ background: viewMode === '2d' ? 'rgba(99,102,241,0.2)' : 'rgba(0,0,0,0.6)', border: viewMode === '2d' ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.1)', borderRadius: 3, padding: '3px 8px', cursor: 'pointer', fontSize: 7.5, fontWeight: 600, color: viewMode === '2d' ? ACCENT : 'rgba(255,255,255,0.4)', fontFamily: MONO }}>2D</button>
-          <button onClick={() => setViewMode('3d')} style={{ background: viewMode === '3d' ? 'rgba(99,102,241,0.2)' : 'rgba(0,0,0,0.6)', border: viewMode === '3d' ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.1)', borderRadius: 3, padding: '3px 8px', cursor: 'pointer', fontSize: 7.5, fontWeight: 600, color: viewMode === '3d' ? ACCENT : 'rgba(255,255,255,0.4)', fontFamily: MONO }}>3D</button>
+          <button onClick={() => setViewMode('2d')} title="Visualização 2D" style={{ background: viewMode === '2d' ? 'rgba(99,102,241,0.2)' : 'rgba(0,0,0,0.6)', border: viewMode === '2d' ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.1)', borderRadius: 3, padding: '3px 8px', cursor: 'pointer', fontSize: 7.5, fontWeight: 600, color: viewMode === '2d' ? ACCENT : 'rgba(255,255,255,0.4)', fontFamily: MONO }}>2D</button>
+          <button onClick={() => setViewMode('3d')} title="Visualização 3D" style={{ background: viewMode === '3d' ? 'rgba(99,102,241,0.2)' : 'rgba(0,0,0,0.6)', border: viewMode === '3d' ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.1)', borderRadius: 3, padding: '3px 8px', cursor: 'pointer', fontSize: 7.5, fontWeight: 600, color: viewMode === '3d' ? ACCENT : 'rgba(255,255,255,0.4)', fontFamily: MONO }}>3D</button>
         </div>
 
         {/* Speed */}
         <div style={{ position: 'absolute', top: 56, left: 12, display: 'flex', gap: 2, alignItems: 'center' }}>
           <span style={{ fontSize: 6.5, color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}>VEL</span>
           {SPEED_OPTS.map(s => (
-            <button key={s} onClick={() => setSpeed(s)} style={{ background: speed === s ? 'rgba(99,102,241,0.2)' : 'rgba(0,0,0,0.6)', border: speed === s ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.08)', borderRadius: 3, padding: '2px 5px', cursor: 'pointer', fontSize: 7, color: speed === s ? ACCENT : 'rgba(255,255,255,0.35)', fontFamily: MONO }}>{s}x</button>
+            <button key={s} onClick={() => setSpeed(s)} title={`Velocidade ${s}x`} style={{ background: speed === s ? 'rgba(99,102,241,0.2)' : 'rgba(0,0,0,0.6)', border: speed === s ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.08)', borderRadius: 3, padding: '2px 5px', cursor: 'pointer', fontSize: 7, color: speed === s ? ACCENT : 'rgba(255,255,255,0.35)', fontFamily: MONO }}>{s}x</button>
           ))}
         </div>
 
         {viewMode === '2d' && (<div style={{ position: 'absolute', bottom: 12, right: 312, background: 'rgba(0,0,0,0.75)', borderRadius: 4, padding: '3px 8px', fontSize: 7, color: 'rgba(255,255,255,0.35)', fontFamily: MONO, pointerEvents: 'none' }}>{(zoomLevel * 100).toFixed(0)}% | alt+arraste = pan | scroll = zoom</div>)}
         {viewMode === '3d' && (<div style={{ position: 'absolute', bottom: 12, right: 312, background: 'rgba(0,0,0,0.75)', borderRadius: 4, padding: '3px 8px', fontSize: 7, color: 'rgba(255,255,255,0.35)', fontFamily: MONO, pointerEvents: 'none' }}>3D | alt+arraste = orbitar | scroll = distancia</div>)}
-        {zoomLevel !== 1 && viewMode === '2d' && (<button onClick={resetView} style={{ position: 'absolute', bottom: 30, right: 312, background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontSize: 7, color: ACCENT, fontFamily: MONO }}>Reset zoom</button>)}
+        {zoomLevel !== 1 && viewMode === '2d' && (<button onClick={resetView} title="Resetar zoom" style={{ position: 'absolute', bottom: 30, right: 312, background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontSize: 7, color: ACCENT, fontFamily: MONO }}>Reset zoom</button>)}
 
         {activeTool !== 'select' && (<div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '4px 14px', fontSize: 8.5, color: 'rgba(255,255,255,0.5)', fontFamily: MONO, pointerEvents: 'none' }}>{MP_TOOLS.find(t => t.id === activeTool)?.icon}{' '}{MP_TOOLS.find(t => t.id === activeTool)?.label}</div>)}
 
-        {/* Inspect tooltip */}
+        {/* Inspect tooltip — draggable */}
         {inspected && ei && (
-          <div style={{ position: 'absolute', top: 80, left: 12, background: 'rgba(0,0,0,0.92)', border: `1px solid ${ei.color}33`, borderRadius: 6, padding: '8px 12px', fontSize: 8, color: 'rgba(255,255,255,0.7)', fontFamily: MONO, pointerEvents: 'none', minWidth: 180, maxWidth: 260 }}>
-            <div style={{ fontWeight: 700, color: ei.color, marginBottom: 3, fontSize: 8.5 }}>{ei.title}</div>
-            <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.35)', marginBottom: 5, lineHeight: 1.4 }}>{ei.desc}</div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 4 }}>
-              {inspected.type === 'afeto' && (<><div>Intensidade: <span style={{ color: '#fbbf24' }}>{inspected.intensity.toFixed(2)}</span></div><div>Hue: <span style={{ color: `hsl(${inspected.hue},70%,60%)` }}>{inspected.hue.toFixed(0)}</span></div><div>Vida: <span style={{ color: '#6ee7b7' }}>{inspected.life}</span></div></>)}
-              {inspected.type === 'orgao' && (<><div>Importancia: <span style={{ color: '#60a5fa' }}>{inspected.importance.toFixed(2)}</span></div><div>Saude: <span style={{ color: inspected.health > 0.5 ? '#6ee7b7' : '#ef4444' }}>{inspected.health.toFixed(2)}</span></div><div>Conexoes: <span style={{ color: '#fb923c' }}>{inspected.nConns}</span></div></>)}
-              {inspected.type === 'no-rizoma' && (<><div>Heat: <span style={{ color: '#fbbf24' }}>{inspected.heat.toFixed(2)}</span></div><div>Territorio: <span style={{ color: '#f97316' }}>{inspected.territory.toFixed(2)}</span></div><div>Entrada: <span style={{ color: inspected.isEntry ? '#34d399' : '#94a3b8' }}>{inspected.isEntry ? 'Sim' : 'Nao'}</span></div><div>Conexoes: <span style={{ color: '#60a5fa' }}>{inspected.nConns}</span></div></>)}
-              {inspected.type === 'zona' && (<><div>Forca: <span style={{ color: '#a78bfa' }}>{inspected.strength.toFixed(2)}</span></div><div>Raio: <span style={{ color: '#60a5fa' }}>{inspected.radius.toFixed(3)}</span></div></>)}
-              <div style={{ color: 'rgba(255,255,255,0.20)', marginTop: 2 }}>({inspected.x.toFixed(3)}, {inspected.y.toFixed(3)})</div>
+          <DraggablePanel id="mp_inspect" title={ei.title} titleColor={ei.color} defaultX={12} defaultY={80} zIndex={40} width={220}>
+            <div style={{ padding: '6px 10px', fontSize: 8, color: 'rgba(255,255,255,0.7)', fontFamily: MONO }}>
+              <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.35)', marginBottom: 5, lineHeight: 1.4 }}>{ei.desc}</div>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 4 }}>
+                {inspected.type === 'afeto' && (<><div>Intensidade: <span style={{ color: '#fbbf24' }}>{inspected.intensity.toFixed(2)}</span></div><div>Hue: <span style={{ color: `hsl(${inspected.hue},70%,60%)` }}>{inspected.hue.toFixed(0)}</span></div><div>Vida: <span style={{ color: '#6ee7b7' }}>{inspected.life}</span></div></>)}
+                {inspected.type === 'orgao' && (<><div>Importancia: <span style={{ color: '#60a5fa' }}>{inspected.importance.toFixed(2)}</span></div><div>Saude: <span style={{ color: inspected.health > 0.5 ? '#6ee7b7' : '#ef4444' }}>{inspected.health.toFixed(2)}</span></div><div>Conexoes: <span style={{ color: '#fb923c' }}>{inspected.nConns}</span></div></>)}
+                {inspected.type === 'no-rizoma' && (<><div>Heat: <span style={{ color: '#fbbf24' }}>{inspected.heat.toFixed(2)}</span></div><div>Territorio: <span style={{ color: '#f97316' }}>{inspected.territory.toFixed(2)}</span></div><div>Entrada: <span style={{ color: inspected.isEntry ? '#34d399' : '#94a3b8' }}>{inspected.isEntry ? 'Sim' : 'Nao'}</span></div><div>Conexoes: <span style={{ color: '#60a5fa' }}>{inspected.nConns}</span></div></>)}
+                {inspected.type === 'zona' && (<><div>Forca: <span style={{ color: '#a78bfa' }}>{inspected.strength.toFixed(2)}</span></div><div>Raio: <span style={{ color: '#60a5fa' }}>{inspected.radius.toFixed(3)}</span></div></>)}
+                <div style={{ color: 'rgba(255,255,255,0.20)', marginTop: 2 }}>({inspected.x.toFixed(3)}, {inspected.y.toFixed(3)})</div>
+              </div>
             </div>
-          </div>
+          </DraggablePanel>
         )}
 
         {/* Draggable legend */}
-        <div onMouseDown={onLegendMouseDown} style={{ ...legendStyle, background: 'rgba(0,0,0,0.80)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 5, padding: '6px 10px', cursor: 'grab', fontSize: 6.5, fontFamily: MONO, color: 'rgba(255,255,255,0.35)', lineHeight: 1.7, userSelect: 'none' }}>
-          <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.20)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 1 }}>Legenda (arraste)</div>
-          <div><span style={{ color: '#60a5fa' }}>&#9675;</span> Orgaos (estratificacao)</div>
-          <div><span style={{ color: '#fbbf24' }}>&#8226;</span> Afetos (intensidades)</div>
-          <div><span style={{ color: '#34d399' }}>&#9670;</span> Nos rizoma (entradas)</div>
-          <div><span style={{ color: '#60a5fa' }}>&#8212;</span> Conexoes rizoma</div>
-          <div><span style={{ color: '#a78bfa' }}>- -</span> Linhas de fuga</div>
-          <div><span style={{ color: 'rgba(99,102,241,0.5)' }}>&#9632;</span> Consistencia (azul)</div>
-          <div><span style={{ color: 'rgba(251,191,36,0.5)' }}>&#9632;</span> Territorio (ambar)</div>
-          <div style={{ marginTop: 2, color: 'rgba(255,255,255,0.15)' }}>clique = inspecionar</div>
-        </div>
+        <DraggablePanel id="mp_legend" title="LEGENDA" titleColor="rgba(255,255,255,0.25)" defaultX={12} defaultY={Math.max(200,window.innerHeight-200)} zIndex={35} width={160}>
+          <div style={{ padding: '4px 8px 6px', fontSize: 6.5, fontFamily: MONO, color: 'rgba(255,255,255,0.35)', lineHeight: 1.7 }}>
+            <div><span style={{ color: '#60a5fa' }}>&#9675;</span> Orgaos (estratificacao)</div>
+            <div><span style={{ color: '#fbbf24' }}>&#8226;</span> Afetos (intensidades)</div>
+            <div><span style={{ color: '#34d399' }}>&#9670;</span> Nos rizoma (entradas)</div>
+            <div><span style={{ color: '#60a5fa' }}>&#8212;</span> Conexoes rizoma</div>
+            <div><span style={{ color: '#a78bfa' }}>- -</span> Linhas de fuga</div>
+            <div><span style={{ color: 'rgba(99,102,241,0.5)' }}>&#9632;</span> Consistencia (azul)</div>
+            <div><span style={{ color: 'rgba(251,191,36,0.5)' }}>&#9632;</span> Territorio (ambar)</div>
+            <div style={{ marginTop: 2, color: 'rgba(255,255,255,0.15)' }}>clique = inspecionar</div>
+          </div>
+        </DraggablePanel>
 
         {worldRef.current.cso.events.length > 0 && (<div style={{ position: 'absolute', top: 80, right: 312, maxWidth: 240, pointerEvents: 'none' }}>{worldRef.current.cso.events.slice(-4).map((ev, i) => (<div key={i} style={{ fontSize: 7.5, color: ev.color, fontFamily: MONO, background: 'rgba(0,0,0,0.7)', padding: '2px 6px', borderRadius: 3, marginBottom: 2, opacity: Math.min(1, ev.ttl / 60) }}>{ev.type === 'ruptura' ? '!' : ev.type === 'reconexao' ? '~' : '*'} {ev.message}</div>))}</div>)}
       </div>
@@ -406,7 +402,7 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 8, color: ACCENT }}>{(macroValue * 100).toFixed(0)}% CsO</span><span style={{ fontSize: 8, color: '#f472b6' }}>K={K.toFixed(2)}</span></div>
 
         <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
-          {(['cso', 'rizoma', 'platos'] as MPTab[]).map(t => (<button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: '3px 0', borderRadius: 3, cursor: 'pointer', fontSize: 7.5, fontWeight: 600, fontFamily: MONO, textTransform: 'uppercase', background: tab === t ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)', border: tab === t ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.06)', color: tab === t ? ACCENT : 'rgba(255,255,255,0.4)' }}>{t === 'cso' ? 'CsO' : t === 'rizoma' ? 'Rizoma' : 'Platos'}</button>))}
+          {(['cso', 'rizoma', 'platos'] as MPTab[]).map(t => (<button key={t} onClick={() => setTab(t)} title={t === 'cso' ? 'Corpo sem Órgãos' : t === 'rizoma' ? 'Rizoma' : 'Platôs'} style={{ flex: 1, padding: '3px 0', borderRadius: 3, cursor: 'pointer', fontSize: 7.5, fontWeight: 600, fontFamily: MONO, textTransform: 'uppercase', background: tab === t ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)', border: tab === t ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.06)', color: tab === t ? ACCENT : 'rgba(255,255,255,0.4)' }}>{t === 'cso' ? 'CsO' : t === 'rizoma' ? 'Rizoma' : 'Platos'}</button>))}
         </div>
 
         <Hdr label={tab === 'cso' ? 'PARAMETROS CsO' : tab === 'rizoma' ? 'PARAMETROS RIZOMA' : 'TODOS OS PARAMETROS'} />
@@ -417,7 +413,7 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 2, marginBottom: 6 }}>{MP_TOOLS.map(t => (<button key={t.id} onClick={() => setActiveTool(t.id)} title={t.desc} style={{ background: activeTool === t.id ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.02)', border: activeTool === t.id ? `1px solid ${t.color}` : '1px solid rgba(255,255,255,0.05)', borderRadius: 3, padding: '3px 2px', cursor: 'pointer', fontSize: 7, color: activeTool === t.id ? t.color : 'rgba(255,255,255,0.4)', textAlign: 'center', fontFamily: MONO, lineHeight: 1.3 }}><div style={{ fontSize: 11 }}>{t.icon}</div>{t.label}</button>))}</div>
 
         <Hdr label="CAMADAS" />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 6 }}>{OVERLAY_DEFS.map(o => (<button key={o.key} onClick={() => toggleOverlay(o.key)} style={{ background: overlays.has(o.key) ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)', border: overlays.has(o.key) ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.05)', borderRadius: 3, padding: '2px 6px', cursor: 'pointer', fontSize: 7, color: overlays.has(o.key) ? ACCENT : 'rgba(255,255,255,0.35)', fontFamily: MONO }}>{o.label}</button>))}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 6 }}>{OVERLAY_DEFS.map(o => (<button key={o.key} onClick={() => toggleOverlay(o.key)} title={o.label} style={{ background: overlays.has(o.key) ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)', border: overlays.has(o.key) ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.05)', borderRadius: 3, padding: '2px 6px', cursor: 'pointer', fontSize: 7, color: overlays.has(o.key) ? ACCENT : 'rgba(255,255,255,0.35)', fontFamily: MONO }}>{o.label}</button>))}</div>
 
         <Hdr label="DIAGNOSTICOS" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginBottom: 4 }}>
@@ -441,13 +437,13 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
 
         {selectedPreset && (() => { const preset = MP_PRESETS.find(p => p.id === selectedPreset); if (!preset?.theory) return null; return (<div style={{ margin: '6px 0', padding: '8px 10px', background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.10)', borderRadius: 5 }}><div style={{ fontSize: 6.5, fontWeight: 600, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4, fontFamily: MONO, borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 2 }}>TEORIA</div>{preset.plateauRef && (<div style={{ fontSize: 7.5, color: ACCENT, fontWeight: 600, marginBottom: 5, fontFamily: DOTO, lineHeight: 1.3 }}>{preset.plateauRef}</div>)}<div style={{ fontSize: 7.5, color: 'rgba(255,255,255,0.50)', lineHeight: 1.55, fontFamily: MONO, textAlign: 'justify' }}>{preset.theory}</div></div>); })()}
 
-        {snapshots.length > 0 && (<><Hdr label="PLATOS CAPTURADOS" />{snapshots.map(s => (<button key={s.id} onClick={() => loadSnapshot(s)} style={{ width: '100%', padding: '3px 5px', borderRadius: 3, cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)', fontSize: 7, fontFamily: MONO, textAlign: 'left', marginBottom: 2 }}><strong style={{ color: ACCENT }}>{s.label}</strong><span style={{ color: 'rgba(255,255,255,0.25)', marginLeft: 4 }}>K={s.K.toFixed(2)}</span></button>))}</>)}
+        {snapshots.length > 0 && (<><Hdr label="PLATOS CAPTURADOS" />{snapshots.map(s => (<button key={s.id} onClick={() => loadSnapshot(s)} title={`Carregar: ${s.label}`} style={{ width: '100%', padding: '3px 5px', borderRadius: 3, cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)', fontSize: 7, fontFamily: MONO, textAlign: 'left', marginBottom: 2 }}><strong style={{ color: ACCENT }}>{s.label}</strong><span style={{ color: 'rgba(255,255,255,0.25)', marginLeft: 4 }}>K={s.K.toFixed(2)}</span></button>))}</>)}
 
         <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', marginTop: 6 }} onClick={() => setPresetsExpanded(!presetsExpanded)}>
           <Hdr label={`PRESETS (${MP_PRESETS.length})`} />
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginLeft: 'auto', marginTop: 4 }}>{presetsExpanded ? 'v' : '>'}</span>
         </div>
-        {presetsExpanded && (<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, marginTop: 2 }}>{MP_PRESETS.map(p => (<button key={p.id} onClick={() => applyPreset(p.id)} style={{ background: selectedPreset === p.id ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)', border: selectedPreset === p.id ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.04)', borderRadius: 3, padding: '4px 4px 3px', cursor: 'pointer', textAlign: 'left' }}><div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 1 }}><span style={{ fontSize: 10 }}>{p.icon}</span><span style={{ fontSize: 7, fontWeight: 500, color: selectedPreset === p.id ? ACCENT : 'rgba(255,255,255,0.55)' }}>{p.name}</span></div><div style={{ fontSize: 6, color: 'rgba(255,255,255,0.20)', lineHeight: 1.2 }}>{p.description}</div></button>))}</div>)}
+        {presetsExpanded && (<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, marginTop: 2 }}>{MP_PRESETS.map(p => (<button key={p.id} onClick={() => applyPreset(p.id)} title={`${p.name}: ${p.description}`} style={{ background: selectedPreset === p.id ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)', border: selectedPreset === p.id ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.04)', borderRadius: 3, padding: '4px 4px 3px', cursor: 'pointer', textAlign: 'left' }}><div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 1 }}><span style={{ fontSize: 10 }}>{p.icon}</span><span style={{ fontSize: 7, fontWeight: 500, color: selectedPreset === p.id ? ACCENT : 'rgba(255,255,255,0.55)' }}>{p.name}</span></div><div style={{ fontSize: 6, color: 'rgba(255,255,255,0.20)', lineHeight: 1.2 }}>{p.description}</div></button>))}</div>)}
 
         {showJornada && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)' }}>
@@ -463,16 +459,16 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
                   onChange={e => { const v = parseFloat(e.target.value); setJornadaAnswers(prev => { const next = [...prev]; next[jornadaStep] = v; return next; }); }}
                   style={{ width: '100%', accentColor: ACCENT, marginBottom: 16 }} />
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  {jornadaStep > 0 && <button onClick={() => setJornadaStep(s => s - 1)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 9, fontFamily: MONO }}>Voltar</button>}
-                  <button onClick={() => { if (jornadaAnswers[jornadaStep] === undefined) setJornadaAnswers(prev => { const next = [...prev]; next[jornadaStep] = 0.5; return next; }); setJornadaStep(s => s + 1); }} style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid ' + ACCENT, borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: ACCENT, fontSize: 9, fontFamily: MONO, fontWeight: 600 }}>
+                  {jornadaStep > 0 && <button onClick={() => setJornadaStep(s => s - 1)} title="Voltar à pergunta anterior" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 9, fontFamily: MONO }}>Voltar</button>}
+                  <button onClick={() => { if (jornadaAnswers[jornadaStep] === undefined) setJornadaAnswers(prev => { const next = [...prev]; next[jornadaStep] = 0.5; return next; }); setJornadaStep(s => s + 1); }} title="Próximo passo" style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid ' + ACCENT, borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: ACCENT, fontSize: 9, fontFamily: MONO, fontWeight: 600 }}>
                     {jornadaStep < JORNADA_QS.length - 1 ? 'Proximo' : 'Gerar CsO'}
                   </button>
                 </div>
               </>) : (<>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginBottom: 16, lineHeight: 1.5 }}>Seu Corpo sem Orgaos esta pronto. Clique para gerar a simulacao personalizada.</div>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowJornada(false)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 9, fontFamily: MONO }}>Cancelar</button>
-                  <button onClick={finishJornada} style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid ' + ACCENT, borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: ACCENT, fontSize: 9, fontFamily: MONO, fontWeight: 600 }}>Gerar meu CsO</button>
+                  <button onClick={() => setShowJornada(false)} title="Cancelar jornada" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 9, fontFamily: MONO }}>Cancelar</button>
+                  <button onClick={finishJornada} title="Gerar seu Corpo sem Órgãos" style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid ' + ACCENT, borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: ACCENT, fontSize: 9, fontFamily: MONO, fontWeight: 600 }}>Gerar meu CsO</button>
                 </div>
               </>)}
             </div>
@@ -487,4 +483,4 @@ const Hdr: React.FC<{ label: string }> = ({ label }) => (<div style={{ fontSize:
 const Slider: React.FC<{ label: string; color: string; value: number; onChange: (v: number) => void }> = ({ label, color, value, onChange }) => (<div style={{ marginBottom: 3 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 7, marginBottom: 1 }}><span style={{ color }}>{label}</span><span style={{ color: 'rgba(255,255,255,0.35)' }}>{value.toFixed(2)}</span></div><input type="range" min={0} max={1} step={0.01} value={value} onChange={e => onChange(parseFloat(e.target.value))} style={{ width: '100%', height: 3, accentColor: color }} /></div>);
 const MetRow: React.FC<{ label: string; value: string; color: string }> = ({ label, value, color }) => (<div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 7, marginBottom: 1 }}><span style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span><span style={{ color, fontWeight: 500 }}>{value}</span></div>);
 const BarReadout: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (<div style={{ marginBottom: 2 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 6.5, marginBottom: 1 }}><span style={{ color: 'rgba(255,255,255,0.30)' }}>{label}</span><span style={{ color }}>{(clamp01(value) * 100).toFixed(0)}%</span></div><div style={{ height: 2.5, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}><div style={{ height: '100%', width: `${clamp01(value) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.15s' }} /></div></div>);
-const MiniBtn: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (<button onClick={onClick} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3, padding: '3px 8px', cursor: 'pointer', color: ACCENT, fontSize: 10, fontFamily: MONO }}>{label}</button>);
+const MiniBtn: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (<button onClick={onClick} title={label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3, padding: '3px 8px', cursor: 'pointer', color: ACCENT, fontSize: 10, fontFamily: MONO }}>{label}</button>);

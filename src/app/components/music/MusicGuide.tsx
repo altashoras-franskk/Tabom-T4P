@@ -616,12 +616,12 @@ export const MusicGuide: React.FC<MusicGuideProps> = ({ onClose }) => {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={onClose}
+            <button title="Fechar guia" onClick={onClose}
               className="transition-opacity hover:opacity-70"
               style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.20)', padding: '4px 8px', border: '1px dashed rgba(255,255,255,0.06)' }}>
               Pular
             </button>
-            <button onClick={onClose} style={{ color: 'rgba(255,255,255,0.15)' }} className="hover:opacity-70 transition-opacity">
+            <button title="Fechar" onClick={onClose} style={{ color: 'rgba(255,255,255,0.15)' }} className="hover:opacity-70 transition-opacity">
               <X size={13} />
             </button>
           </div>
@@ -664,7 +664,7 @@ export const MusicGuide: React.FC<MusicGuideProps> = ({ onClose }) => {
           borderTop: '1px dashed rgba(255,255,255,0.04)',
           flexShrink: 0,
         }}>
-          <button onClick={() => setPage(p => Math.max(0, p - 1))}
+          <button title="Página anterior" onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
             className="flex items-center gap-1 transition-all disabled:opacity-0"
             style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.10em', textTransform: 'uppercase', color: step.color + '66' }}>
@@ -676,7 +676,7 @@ export const MusicGuide: React.FC<MusicGuideProps> = ({ onClose }) => {
           </div>
 
           {page < STEPS.length - 1 ? (
-            <button onClick={() => setPage(p => p + 1)}
+            <button title="Próxima página" onClick={() => setPage(p => p + 1)}
               className="flex items-center gap-1 transition-all"
               style={{
                 fontFamily: MONO, fontSize: 8, letterSpacing: '0.10em', textTransform: 'uppercase',
@@ -686,7 +686,7 @@ export const MusicGuide: React.FC<MusicGuideProps> = ({ onClose }) => {
               Próximo <ChevronRight size={10} />
             </button>
           ) : (
-            <button onClick={onClose}
+            <button title="Concluir guia" onClick={onClose}
               className="flex items-center gap-1 transition-all"
               style={{
                 fontFamily: MONO, fontSize: 8, letterSpacing: '0.10em', textTransform: 'uppercase',

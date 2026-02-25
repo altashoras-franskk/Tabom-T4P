@@ -34,7 +34,7 @@ export const WhatsNewBanner: React.FC = () => {
         padding: 16,
         animation: 'slideIn 0.5s ease-out',
       }}>
-      <button onClick={handleDismiss}
+      <button title="Dispensar" onClick={handleDismiss}
         className="absolute top-2 right-2 transition-colors"
         style={{color:'rgba(255,255,255,0.20)'}}>
         <X size={13} />

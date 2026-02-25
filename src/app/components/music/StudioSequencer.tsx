@@ -95,7 +95,7 @@ export const StudioSequencer: React.FC<Props> = ({
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-3 py-1.5" style={{borderBottom:'1px dashed rgba(255,255,255,0.04)'}}>
         {/* On/Off */}
-        <button onClick={onToggleActive}
+        <button title={active ? "Desativar sequencer" : "Ativar sequencer"} onClick={onToggleActive}
           className="flex items-center gap-1 px-2.5 py-1 transition-all"
           style={{
             fontSize:7,letterSpacing:'0.08em',textTransform:'uppercase',
@@ -117,7 +117,7 @@ export const StudioSequencer: React.FC<Props> = ({
         <div className="flex items-center gap-0.5">
           <span style={{fontSize:6,color:'rgba(255,255,255,0.14)',textTransform:'uppercase',marginRight:4}}>Steps</span>
           {([8,16] as const).map(n => (
-            <button key={n} onClick={() => onSetStepCount(n)}
+            <button title={`${n} steps`} key={n} onClick={() => onSetStepCount(n)}
               className="transition-all"
               style={{
                 fontSize:7,padding:'2px 8px',
@@ -132,7 +132,7 @@ export const StudioSequencer: React.FC<Props> = ({
 
         {/* Patterns */}
         <div className="relative">
-          <button onClick={() => setShowPatterns(v => !v)}
+          <button title="Padrões" onClick={() => setShowPatterns(v => !v)}
             className="transition-all"
             style={{fontSize:7,padding:'2px 8px',color:'rgba(255,255,255,0.22)',border:'1px dashed rgba(255,255,255,0.06)'}}>
             Padrões ▾
@@ -141,7 +141,7 @@ export const StudioSequencer: React.FC<Props> = ({
             <div className="absolute bottom-full right-0 mb-1 z-50 w-52 py-1"
               style={{background:'rgba(0,0,0,0.96)',border:'1px dashed rgba(255,255,255,0.06)'}}>
               {STUDIO_PATTERNS.map(pat => (
-                <button key={pat.name}
+                <button title={pat.name} key={pat.name}
                   onClick={() => { onLoadPattern(pat); setShowPatterns(false); }}
                   className="w-full text-left px-3 py-1.5 transition-all"
                   style={{background:'transparent'}}
@@ -155,7 +155,7 @@ export const StudioSequencer: React.FC<Props> = ({
           )}
         </div>
 
-        <button onClick={onClearAll}
+        <button title="Limpar tudo" onClick={onClearAll}
           className="transition-all"
           style={{fontSize:7,padding:'2px 8px',color:'rgba(255,60,60,0.35)',border:'1px dashed rgba(255,60,60,0.12)'}}>
           Limpar
@@ -207,7 +207,7 @@ export const StudioSequencer: React.FC<Props> = ({
                   const isHalf    = si === 0 || si === 8;
 
                   return (
-                    <button key={si} onClick={() => onToggleStep(ri, si)}
+                    <button title={`Beat ${si+1}`} key={si} onClick={() => onToggleStep(ri, si)}
                       className={`relative flex-1 transition-all ${isCur ? 'ring-1 ring-white/70' : ''}`}
                       style={{
                         height: 22,

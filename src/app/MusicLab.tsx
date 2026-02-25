@@ -26,14 +26,17 @@ import { RecordingButton } from './components/recording/RecordingButton';
 const Music3DRenderer = lazy(() => import('../render/music3DRenderer'));
 import { StudioSequencer, DEFAULT_STUDIO_ROWS, SRow, PatternDef } from './components/music/StudioSequencer';
 import { MusicGuide } from './components/music/MusicGuide';
+import { RadialMenu, RadialItem } from './components/music/RadialMenu';
+import { DraggablePanel } from './components/DraggablePanel';
 import { WhatsNewBanner } from './components/music/WhatsNewBanner';
 import { ZoomControls } from './components/ZoomControls';
 import { useZoomPan, screenToWorldMusic } from '../hooks/useZoomPan';
 import {
-  Pause, RotateCcw, Music, X, Volume2, Film,
+  Pause, Play, RotateCcw, Music, X, Volume2, Film,
   MousePointer2, Plus, Minus, Target, Zap, RefreshCw,
-  Snowflake, Shuffle, Eraser, ChevronRight,
+  Snowflake, Shuffle, Eraser, ChevronRight, ChevronDown,
   ChevronLeft, Settings, Sliders, ZapOff, Trash2, Dice5, HelpCircle, Image,
+  Pencil, Eye, EyeOff,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,6 +82,39 @@ const TOOLS: { id:MusicalTool; icon: React.ReactNode; label:string; key:string; 
 ];
 
 const VOICE_ROLES: VoiceRole[] = ['KICK','BASS','PERC','PAD','LEAD','ARP','STRINGS','CHOIR'];
+
+const RADIAL_TOOL_ITEMS: RadialItem[] = [
+  {id:'select',icon:'⇱',label:'Select',color:'#aaaaff',group:'essential',key:'Q'},
+  {id:'spawn',icon:'+',label:'Spawn',color:'#aaffaa',group:'essential',key:'W'},
+  {id:'gate',icon:'−',label:'Gate',color:'#ffffff',group:'essential',key:'E'},
+  {id:'erase',icon:'✕',label:'Erase',color:'#ff4466',group:'essential',key:'P'},
+  {id:'attractor',icon:'◎',label:'Attractor',color:'#00aaff',group:'forces',key:'A'},
+  {id:'repulsor',icon:'⊘',label:'Repulsor',color:'#ff4400',group:'forces',key:'T'},
+  {id:'vortex',icon:'↻',label:'Vortex',color:'#cc44ff',group:'forces',key:'Y'},
+  {id:'excite',icon:'⚡',label:'Excite',color:'#ff8800',group:'forces',key:'U'},
+  {id:'freeze',icon:'❄',label:'Freeze',color:'#88ddff',group:'forces',key:'I'},
+  {id:'mutate',icon:'⇄',label:'Mutate',color:'#ff88ff',group:'forces',key:'O'},
+  {id:'channel',icon:'≋',label:'Channel',color:'#c0c8d0',group:'quantum',key:'1'},
+  {id:'rail',icon:'⊢',label:'Rail',color:'#c8960a',group:'quantum',key:'2'},
+  {id:'tunnel',icon:'⊙',label:'Tunnel',color:'#cc66ff',group:'quantum',key:'3'},
+  {id:'cage',icon:'⬡',label:'Cage',color:'#00ffcc',group:'instruments',key:'7'},
+  {id:'string',icon:'⌇',label:'String',color:'#ffd700',group:'instruments',key:'8'},
+  {id:'zone',icon:'✦',label:'FX Zone',color:'#ff44cc',group:'instruments',key:'9'},
+  {id:'metro',icon:'⌛',label:'Metro',color:'#ffcc00',group:'instruments',key:'0'},
+];
+
+const RADIAL_POWER_ITEMS: RadialItem[] = [
+  {id:'exciteAll',icon:'⚡',label:'Excite All',color:'#ff8800',group:'power'},
+  {id:'freezeAll',icon:'❄',label:'Freeze All',color:'#88ddff',group:'power'},
+  {id:'explode',icon:'💥',label:'Explode',color:'#ff4444',group:'power'},
+  {id:'compress',icon:'◎',label:'Compress',color:'#aa88ff',group:'power'},
+  {id:'scatter',icon:'✦',label:'Scatter',color:'#aaffaa',group:'power'},
+  {id:'harmonize',icon:'♫',label:'Harmonize',color:'#ffd700',group:'power'},
+  {id:'reseed',icon:'↻',label:'Reseed',color:'#88ffaa',group:'clear'},
+  {id:'addTen',icon:'+10',label:'+10 Quanta',color:'#88aaff',group:'clear'},
+  {id:'removeTen',icon:'−10',label:'-10 Quanta',color:'#ff8866',group:'clear'},
+  {id:'clearAll',icon:'✕',label:'Clear All',color:'#ff4466',group:'clear'},
+];
 
 // ── Default role configs (fallback for roles absent in the active preset) ──────
 // Ensures ARP / STRINGS / CHOIR always fire even if the preset doesn't list them.
@@ -145,7 +181,7 @@ const S: React.FC<{
 };
 
 const Tog: React.FC<{label:string;on:boolean;color?:string;onToggle:()=>void}> = ({label,on,color='#88aaff',onToggle})=>(
-  <button onClick={onToggle}
+  <button onClick={onToggle} title={`${label}: ${on?'ON':'OFF'}`}
     className="flex items-center gap-1.5 text-[8px] font-mono uppercase tracking-widest transition-colors"
     style={{color:on?color:'rgba(255,255,255,.25)'}}>
     <span>{on?'◉':'○'}</span>{label}
@@ -167,16 +203,16 @@ const PresetGrid: React.FC<{currentId:string;onSelect:(id:string)=>void;onClose:
             <span style={{fontSize:12,color:`${ACCENT}40`}}>◈</span>
             <span style={{fontFamily:DOTO,fontSize:10,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.30)'}}>60 PRESETS</span>
           </div>
-          <button onClick={onClose} className="text-white/25 hover:text-white/60"><X size={13}/></button>
+          <button onClick={onClose} title="Fechar" className="text-white/25 hover:text-white/60"><X size={13}/></button>
         </div>
         <div className="flex items-center gap-1.5 px-4 py-2 border-b border-dashed border-white/[0.06] overflow-x-auto flex-shrink-0"
           style={{scrollbarWidth:'none'}}>
-          <button onClick={()=>setFilter(null)}
+          <button onClick={()=>setFilter(null)} title="Mostrar todos os presets"
             className={`text-[6px] uppercase tracking-[0.14em] px-2 py-0.5 border whitespace-nowrap transition-all
               ${!filter?'border-[#37b2da]/50 text-[#37b2da] bg-[#37b2da]/8':'border-white/[0.06] text-white/28 hover:text-white/55'}`}
             style={{fontFamily:MONO,borderRadius:0}}>All</button>
           {allTags.map(t=>(
-            <button key={t} onClick={()=>setFilter(filter===t?null:t)}
+            <button key={t} onClick={()=>setFilter(filter===t?null:t)} title={`Filtrar: ${t}`}
               className={`text-[6px] uppercase tracking-[0.14em] px-2 py-0.5 border whitespace-nowrap transition-all
                 ${filter===t?'border-current bg-current/10':'border-white/[0.06] text-white/28 hover:text-white/55'}`}
               style={{fontFamily:MONO,borderRadius:0,...(filter===t?{color:TAG_COLORS[t]??'#aaa',borderColor:TAG_COLORS[t]??'#aaa'}:{})}}>
@@ -187,7 +223,7 @@ const PresetGrid: React.FC<{currentId:string;onSelect:(id:string)=>void;onClose:
         <div className="grid grid-cols-4 gap-2 p-4 overflow-y-auto"
           style={{scrollbarWidth:'thin',scrollbarColor:'rgba(55,178,218,.15) transparent'}}>
           {shown.map(p=>(
-            <button key={p.id} onClick={()=>{onSelect(p.id);onClose();}}
+            <button key={p.id} onClick={()=>{onSelect(p.id);onClose();}} title={p.name}
               className={`text-left p-3 border transition-all
                 ${p.id===currentId?'border-[#37b2da]/40 bg-[#37b2da]/[0.04]':'border-white/[0.06] hover:border-white/15 hover:bg-white/[0.02]'}`}
               style={{borderRadius:0,borderStyle:p.id===currentId?'solid':'dashed'}}>
@@ -289,7 +325,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const compositionSnapshotRef = useRef<any>(null);
   // Mirror flag so Reset button re-renders when snapshot is available
   const [hasSnapshot, setHasSnapshot] = useState(false);
-  const [leftOpen,    setLeftOpen]   = useState(true);
+  // leftOpen removed — left panel is now always-visible slim strip
   const [rightOpen,   setRightOpen]  = useState(false);
   const [rightTab,    setRightTab]   = useState<'timbre'|'harmony'|'physics'|'matrix'|'palette'|'aesthetic'>('harmony');
   const [editRole,    setEditRole]   = useState<VoiceRole>('PAD');
@@ -336,6 +372,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
   // ── Guide overlay ──────────────────────────────────────────────────────────
   const [showGuide, setShowGuide] = useState(false);
+  const [showClearMenu, setShowClearMenu] = useState(false);
+  // ── Radial menus ──────────────────────────────────────────────────────────
+  const [radialToolsOpen, setRadialToolsOpen] = useState(false);
+  const [radialPowersOpen, setRadialPowersOpen] = useState(false);
+  const [radialPos, setRadialPos] = useState({ x: 0, y: 0 });
+  // ── Instrument pad ────────────────────────────────────────────────────────
+  const [showInstrumentPad, setShowInstrumentPad] = useState(true);
 
   // ── Patch 01.1: overlay/palette/new-tool state ─────────────────────────────
   const [showOverlays,  setShowOverlays]  = useState(true);
@@ -1474,7 +1517,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
     zoomPan.handlePanEnd();
   },[zoomPan.handlePanEnd]);
 
-  // ── Right-click context menu ──────────────────────────────────────────────
+  // ── Right-click context menu / radial ────────────────────────────────────
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const [wx,wy]=s2w(e);
@@ -1491,6 +1534,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       setContextMenu({sx:e.clientX,sy:e.clientY,qIdx:best});
     } else {
       setContextMenu(null);
+      setRadialPos({x:e.clientX,y:e.clientY});
+      setRadialToolsOpen(true);
     }
     forceRender(n=>n+1);
   }, [s2w]);
@@ -1510,17 +1555,22 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       // H → toggle full HUD (cinematic)  V → toggle canvas overlays  R → reset/restore composition
       if (e.key==='h'||e.key==='H') {
         e.preventDefault();
-        setCinematic(v => {
-          // When restoring HUD (cinematic was true → false), also re-open left panel
-          if (v) { setLeftOpen(true); }
-          return !v;
-        });
+        setCinematic(v => !v);
       }
       if (e.key==='v'||e.key==='V') { e.preventDefault(); setShowOverlays(v=>!v); }
       if (e.key==='r'||e.key==='R') { e.preventDefault(); handleResetRef.current(); }
       const tool=map[e.key.toLowerCase()];
       if (tool) setActiveTool(tool);
-      if (e.key===' '){e.preventDefault(); const next=!runningRef.current; runningRef.current=next; setRunning(next); if(!next){audioEngine.cutAll();}else{const p=presetRef.current;audioEngine.restoreGains(p.reverbAmt*fxRef.current,p.delayAmt*fxRef.current,p.delayTime,p.masterGain*masterVolRef.current);}}
+      if (e.key===' ' && e.shiftKey) {
+        e.preventDefault();
+        setRadialPos({x:window.innerWidth/2,y:window.innerHeight/2});
+        setRadialPowersOpen(true);
+      } else if (e.key===' '){e.preventDefault(); const next=!runningRef.current; runningRef.current=next; setRunning(next); if(!next){audioEngine.cutAll();}else{const p=presetRef.current;audioEngine.restoreGains(p.reverbAmt*fxRef.current,p.delayAmt*fxRef.current,p.delayTime,p.masterGain*masterVolRef.current);}}
+      if (e.key==='Tab' && !e.shiftKey) {
+        e.preventDefault();
+        setRadialPos({x:window.innerWidth/2,y:window.innerHeight/2});
+        setRadialToolsOpen(true);
+      }
       if (e.ctrlKey||e.metaKey) {
         if (e.key==='='||e.key==='+'){e.preventDefault();zoomPan.zoomIn();}
         if (e.key==='-'){e.preventDefault();zoomPan.zoomOut();}
@@ -1619,6 +1669,28 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
     st.sequencer.active = false; setSeqActive(false);
     setQuantaCount(0);
     forceRender(n => n + 1);
+  }, []);
+
+  // ── Radial menu selection handlers ──────────────────────────────────────
+  const handleRadialToolSelect = useCallback((id: string) => {
+    setActiveTool(id as MusicalTool);
+    setRadialToolsOpen(false);
+  }, []);
+  const handleRadialPowerSelect = useCallback((id: string) => {
+    const powerMap: Record<string, () => void> = {
+      exciteAll:  macroExciteAll,
+      freezeAll:  macroFreezeAll,
+      explode:    macroExplode,
+      compress:   macroCompress,
+      scatter:    macroScatter,
+      harmonize:  macroHarmonize,
+      reseed:     macroReseed,
+      addTen:     macroAddTen,
+      removeTen:  macroRemoveTen,
+      clearAll:   macroClearAll,
+    };
+    powerMap[id]?.();
+    setRadialPowersOpen(false);
   }, []);
 
   // ── Composition Reset / Restore [R] ─────────────────────────────────────
@@ -2143,7 +2215,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               <div style={{fontSize:6,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(55,178,218,0.40)',marginBottom:3}}>COLOR</div>
               <div className="flex gap-1">
                 {(['role','charge','velocity'] as const).map(m=>(
-                  <button key={m} onClick={()=>setColor3DMode(m)}
+                  <button key={m} onClick={()=>setColor3DMode(m)} title={`Colorir por ${m}`}
                     className="transition-all"
                     style={{
                       fontSize:6,letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 6px',
@@ -2165,7 +2237,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   {label:'Axes',   v:show3DAxes,   fn:()=>setShow3DAxes(x=>!x)},
                   {label:'Trails', v:show3DTrails, fn:()=>setShow3DTrails(x=>!x)},
                 ].map(({label,v,fn})=>(
-                  <button key={label} onClick={fn}
+                  <button key={label} onClick={fn} title={`${label}: ${v?'ON':'OFF'}`}
                     className="transition-all"
                     style={{
                       fontSize:6,letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 6px',
@@ -2241,147 +2313,142 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         }}
       />
 
-      {/* ── TOP HUD ─────────────────────────────────────────────────────────── */}
+      {/* ── TOP HUD — compact icon-driven ─────────────────────────────────── */}
       {!cinematic && (
         <div className="fixed top-9 left-0 right-0 z-20 pointer-events-none"
           style={{fontFamily:MONO}}>
-          <div className="flex items-center gap-0 pointer-events-auto"
-            style={{background:'rgba(0,0,0,0.94)',borderBottom:'1px dashed rgba(255,255,255,0.06)'}}>
+          <div className="flex items-center pointer-events-auto"
+            style={{background:'rgba(0,0,0,0.94)',borderBottom:'1px dashed rgba(255,255,255,0.06)',height:28}}>
 
-            {/* Audio — primary action */}
-            <button onClick={handleAudioToggle}
-              className="flex items-center gap-1.5 px-3 py-1.5 transition-all"
-              style={{
-                color:audioOn&&running?'#37b2da':'rgba(55,178,218,0.55)',
-                background:audioOn&&running?'rgba(55,178,218,0.06)':'transparent',
-                borderRight:'1px dashed rgba(255,255,255,0.06)',
-                fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',
-              }}>
-              {audioOn&&running?<><Pause size={9}/> Pause</>:<><Volume2 size={9}/>{audioOn?' Resume':' Start Audio'}</>}
-            </button>
-
-            {/* Divider */}
-            <div style={{width:1,height:16,borderLeft:'1px dashed rgba(255,255,255,0.06)'}}/>
-
-            {/* Preset */}
-            <button onClick={()=>setShowGrid(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 transition-all"
-              style={{fontSize:8,borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-              <Music size={9} style={{color:currentPreset.primary+'88'}}/>
-              <span style={{color:currentPreset.primary+'bb',letterSpacing:'0.06em'}}>{currentPreset.name}</span>
+            {/* ── Transport ───────────────────────────────────────── */}
+            <button onClick={handleAudioToggle} title={audioOn&&running?'Pause':'Play'}
+              className="flex items-center justify-center transition-all"
+              style={{width:32,height:28,color:audioOn&&running?ACCENT:'rgba(55,178,218,0.55)',background:audioOn&&running?'rgba(55,178,218,0.06)':'transparent',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              {audioOn&&running?<Pause size={11}/>:<Play size={11}/>}
             </button>
 
             {/* BPM */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-              <span style={{fontSize:7,color:'rgba(255,255,255,0.22)',letterSpacing:'0.1em',textTransform:'uppercase'}}>BPM</span>
+            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:28}}>
               <input type="range" min={30} max={180} step={1} value={bpm}
                 onChange={e=>setBpm(parseInt(e.target.value))}
-                className="w-14 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:'#37b2da'}}/>
-              <span style={{fontSize:8,color:'rgba(255,255,255,0.35)',width:22,textAlign:'right'}}>{bpm}</span>
+                title={`BPM: ${bpm}`}
+                className="w-12 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:ACCENT}}/>
+              <span style={{fontSize:8,color:'rgba(255,255,255,0.40)',width:20,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{bpm}</span>
+            </div>
+
+            {/* Vol */}
+            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:28}}>
+              <Volume2 size={8} style={{color:'rgba(255,255,255,0.22)',flexShrink:0}}/>
+              <input type="range" min={0} max={1} step={0.01} value={masterVol}
+                onChange={e=>setMasterVol(parseFloat(e.target.value))}
+                title={`Volume: ${Math.round(masterVol*100)}%`}
+                className="w-10 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:ACCENT}}/>
             </div>
 
             {/* FX */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-              <span style={{fontSize:7,color:'rgba(255,255,255,0.22)',letterSpacing:'0.1em',textTransform:'uppercase'}}>FX</span>
+            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:28}}>
+              <span style={{fontSize:6,color:'rgba(255,255,255,0.22)',letterSpacing:'0.08em'}}>FX</span>
               <input type="range" min={0} max={1} step={0.01} value={fxAmount}
                 onChange={e=>setFxAmount(parseFloat(e.target.value))}
-                className="w-12 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:'#37b2da'}}/>
-              <span style={{fontSize:7,color:'rgba(255,255,255,0.25)'}}>{Math.round(fxAmount*100)}%</span>
+                title={`FX: ${Math.round(fxAmount*100)}%`}
+                className="w-10 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:ACCENT}}/>
             </div>
 
+            {/* ── Divider ─ */}
+            <div style={{width:1,height:16,background:'rgba(255,255,255,0.04)'}}/>
+
+            {/* Preset name (click to open grid) */}
+            <button onClick={()=>setShowGrid(true)} title="Escolher preset"
+              className="flex items-center gap-1.5 px-3 transition-all"
+              style={{height:28,borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              <Music size={8} style={{color:currentPreset.primary+'88',flexShrink:0}}/>
+              <span style={{fontSize:8,color:currentPreset.primary+'bb',letterSpacing:'0.04em',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentPreset.name}</span>
+            </button>
+
+            {/* Root + Scale badges (click to cycle) */}
+            <button onClick={() => applyRoot((liveRoot + 1) % 12)} title={`Root: ${NOTE_NAMES[liveRoot % 12]} (click to cycle)`}
+              className="flex items-center justify-center transition-all"
+              style={{height:28,width:28,fontSize:9,color:'#88ffcc',background:'rgba(136,255,204,0.04)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              {NOTE_NAMES[liveRoot % 12]}
+            </button>
+            <button onClick={() => {
+              const scales = Object.keys(SCALE_LABELS) as Scale[];
+              const idx = scales.indexOf(liveScale);
+              applyScale(scales[(idx + 1) % scales.length]);
+            }} title={`Scale: ${SCALE_LABELS[liveScale]} (click to cycle)`}
+              className="flex items-center justify-center transition-all"
+              style={{height:28,fontSize:7,color:'rgba(155,89,255,0.75)',padding:'0 8px',borderRight:'1px dashed rgba(255,255,255,0.06)',letterSpacing:'0.06em',textTransform:'uppercase'}}>
+              {SCALE_LABELS[liveScale]}
+            </button>
+
             {/* Lens */}
-            <div className="flex items-center gap-0" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+            <div className="flex items-center" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
               {(['Off','Notes','Harmony','Rhythm','Tension','Events'] as MusicLens[]).map(l=>(
-                <button key={l} onClick={()=>setLens(l)}
-                  className="px-2 py-1.5 transition-all"
+                <button key={l} onClick={()=>setLens(l)} title={`Lens: ${l}`}
+                  className="transition-all"
                   style={{
-                    fontSize:7,letterSpacing:'0.08em',textTransform:'uppercase',
-                    color:lens===l?'#37b2da':'rgba(255,255,255,0.20)',
+                    height:28,padding:'0 6px',
+                    fontSize:6,letterSpacing:'0.06em',textTransform:'uppercase',
+                    color:lens===l?ACCENT:'rgba(255,255,255,0.18)',
                     background:lens===l?'rgba(55,178,218,0.05)':'transparent',
-                    borderBottom:lens===l?'1px solid #37b2da':'1px solid transparent',
+                    borderBottom:lens===l?`1px solid ${ACCENT}`:'1px solid transparent',
                   }}>
                   {l}
                 </button>
               ))}
             </div>
 
-            {/* Vol */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-              <Volume2 size={9} style={{color:'rgba(255,255,255,0.20)'}}/>
-              <input type="range" min={0} max={1} step={0.01} value={masterVol}
-                onChange={e=>setMasterVol(parseFloat(e.target.value))}
-                className="w-10 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:'#37b2da'}}/>
-            </div>
+            {/* ── Divider ─ */}
+            <div style={{width:1,height:16,background:'rgba(255,255,255,0.04)'}}/>
 
-            {/* View toggles */}
-            <button onClick={()=>setCinematic(v=>!v)}
-              className="p-1.5 transition-all"
-              style={{color:cinematic?'#37b2da':'rgba(255,255,255,0.20)',background:cinematic?'rgba(55,178,218,0.05)':'transparent',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+            {/* View toggles — icon only */}
+            <button onClick={()=>setCinematic(v=>!v)} title="Cinematic [C]"
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,color:cinematic?ACCENT:'rgba(255,255,255,0.18)'}}>
               <Film size={10}/>
             </button>
-            <button onClick={()=>setView3D(v=>!v)} title="3D Visualization Mode"
-              className="flex items-center gap-1 px-2.5 py-1.5 transition-all"
-              style={{
-                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
-                color:view3D?'#37b2da':'rgba(255,255,255,0.22)',
-                background:view3D?'rgba(55,178,218,0.05)':'transparent',
-                borderRight:'1px dashed rgba(255,255,255,0.06)',
-              }}>
-              <span style={{fontSize:10}}>◎</span> 3D
+            <button onClick={()=>setView3D(v=>!v)} title="3D Mode"
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,fontSize:8,color:view3D?ACCENT:'rgba(255,255,255,0.18)',fontWeight:view3D?600:400}}>
+              3D
             </button>
-            {view3D && (
-              <div className="flex items-center gap-0" style={{borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-                {(['3d-orbital','3d-top','3d-side','3d-fpp'] as const).map((cam) => (
-                  <button key={cam} onClick={() => setCamera3D(cam)}
-                    className="px-2 py-1.5 transition-all"
-                    style={{
-                      fontSize:7,letterSpacing:'0.08em',textTransform:'uppercase',
-                      color:camera3D===cam?'#37b2da':'rgba(255,255,255,0.20)',
-                      background:camera3D===cam?'rgba(55,178,218,0.05)':'transparent',
-                      borderBottom:camera3D===cam?'1px solid #37b2da':'1px solid transparent',
-                    }}>
-                    {cam === '3d-orbital' ? 'ORB' : cam === '3d-top' ? 'TOP' : cam === '3d-side' ? 'SIDE' : 'FPP'}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button onClick={()=>setShowVel(v=>!v)}
-              className="p-1.5 transition-all"
-              style={{fontSize:7,color:showVel?'#37b2da':'rgba(255,255,255,0.20)',background:showVel?'rgba(55,178,218,0.05)':'transparent'}}>
+            {view3D && (['3d-orbital','3d-top','3d-side','3d-fpp'] as const).map(cam=>(
+              <button key={cam} onClick={()=>setCamera3D(cam)} title={cam.replace('3d-','').toUpperCase()}
+                className="transition-all"
+                style={{height:28,padding:'0 4px',fontSize:6,letterSpacing:'0.06em',textTransform:'uppercase',
+                  color:camera3D===cam?ACCENT:'rgba(255,255,255,0.18)',
+                  borderBottom:camera3D===cam?`1px solid ${ACCENT}`:'1px solid transparent',
+                }}>
+                {cam==='3d-orbital'?'ORB':cam==='3d-top'?'TOP':cam==='3d-side'?'SIDE':'FPP'}
+              </button>
+            ))}
+            <button onClick={()=>setShowVel(v=>!v)} title="Velocity Vectors"
+              className="flex items-center justify-center transition-all"
+              style={{width:20,height:28,fontSize:7,fontWeight:showVel?700:400,color:showVel?ACCENT:'rgba(255,255,255,0.15)'}}>
               V
             </button>
-
-            {/* Divider */}
-            <div style={{width:1,height:16,borderLeft:'1px dashed rgba(255,255,255,0.06)'}}/>
-
-            {/* Physics */}
-            <button onClick={togglePhysicsMode} title="Physics Sandbox"
-              className="flex items-center gap-1 px-2.5 py-1.5 transition-all"
-              style={{
-                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
-                color:physicsMode?'#ff9944':'rgba(255,255,255,0.22)',
-                background:physicsMode?'rgba(255,153,68,0.06)':'transparent',
-                borderRight:'1px dashed rgba(255,255,255,0.06)',
-              }}>
-              ⚛ {physicsMode ? 'Ballistic' : 'Physics'}
+            <button onClick={()=>setShowOverlays(v=>!v)} title="Overlays [V]"
+              className="flex items-center justify-center transition-all"
+              style={{width:24,height:28,color:showOverlays?'rgba(255,255,255,0.22)':'#fbbf24'}}>
+              {showOverlays?<Eye size={9}/>:<EyeOff size={9}/>}
             </button>
 
-            {/* Compose */}
+            {/* ── Spacer ─ */}
+            <div style={{flex:1}}/>
+
+            {/* ── Actions cluster ── */}
+            <button onClick={togglePhysicsMode} title="Physics Sandbox"
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,fontSize:9,color:physicsMode?'#ff9944':'rgba(255,255,255,0.18)'}}>
+              ⚛
+            </button>
             <button onClick={toggleComposeMode} title="Compose Mode"
-              className="flex items-center gap-1 px-2.5 py-1.5 transition-all"
-              style={{
-                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
-                color:composeMode?'#fbbf24':'rgba(255,255,255,0.22)',
-                background:composeMode?'rgba(251,191,36,0.06)':'transparent',
-                borderRight:'1px dashed rgba(255,255,255,0.06)',
-              }}>
-              {composeMode
-                ? <><span className="w-1.5 h-1.5 inline-block animate-pulse" style={{background:'#fbbf24'}}/><span>Composing</span></>
-                : <><span>✏</span><span>Compose</span></>
-              }
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,color:composeMode?'#fbbf24':'rgba(255,255,255,0.18)'}}>
+              <Pencil size={10}/>
             </button>
             {composeMode && !running && (
-              <button
+              <button title="Exportar capa para Meta-Gen-Art"
                 onClick={() => {
                   const st = stateRef.current;
                   if (st) {
@@ -2406,71 +2473,44 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   if (audioEngine.ready)
                     audioEngine.restoreGains(p.reverbAmt * fxRef.current, p.delayAmt * fxRef.current, p.delayTime, p.masterGain * masterVolRef.current);
                 }}
-                className="flex items-center gap-1 px-2.5 py-1.5 animate-pulse transition-all"
-                style={{fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'#4ade80',background:'rgba(74,222,128,0.06)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-                ▶ Release
+                title="Release composition"
+                className="flex items-center justify-center animate-pulse transition-all"
+                style={{width:26,height:28,color:'#4ade80'}}>
+                <Play size={11}/>
               </button>
             )}
-
-            {/* Reset */}
-            <button onClick={handleResetCompose} title={hasSnapshot ? 'Restore [R]' : 'Reset [R]'}
-              className="flex items-center gap-1 px-2 py-1.5 transition-all"
-              style={{
-                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
-                color:hasSnapshot?'rgba(251,191,36,0.65)':'rgba(255,255,255,0.22)',
-                borderRight:'1px dashed rgba(255,255,255,0.06)',
-              }}>
-              <RotateCcw size={9}/><span>{hasSnapshot ? 'Restore' : 'Reset'}</span>
+            <button onClick={handleResetCompose} title={hasSnapshot?'Restore':'Reset'}
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,color:hasSnapshot?'rgba(251,191,36,0.65)':'rgba(255,255,255,0.18)'}}>
+              <RotateCcw size={9}/>
             </button>
-
-            {/* Random */}
             <button onClick={macroRandom} title="Preset aleatório"
-              className="flex items-center gap-1 px-2 py-1.5 transition-all"
-              style={{fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,color:'rgba(255,255,255,0.18)'}}>
               <Dice5 size={9}/>
             </button>
-
-            {/* Export cover to Meta-Gen-Art */}
-            <button onClick={() => { exportSnapshotToMetaArt(); }} title="Exportar capa → Meta-Gen-Art"
-              className="flex items-center gap-1 px-2 py-1.5 transition-all"
-              style={{
-                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
-                color: lastCoverExport > 0 && Date.now() - lastCoverExport < 3000 ? '#4ade80' : 'rgba(255,255,255,0.22)',
-                borderRight:'1px dashed rgba(255,255,255,0.06)',
-              }}>
+            <button onClick={()=>{exportSnapshotToMetaArt();}} title="Exportar capa → Meta-Gen-Art"
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,color:lastCoverExport>0&&Date.now()-lastCoverExport<3000?'#4ade80':'rgba(255,255,255,0.18)'}}>
               <Image size={9}/>
-              <span>{lastCoverExport > 0 && Date.now() - lastCoverExport < 3000 ? '✓' : 'Capa'}</span>
             </button>
-
-            {/* Guia */}
-            <button onClick={() => setShowGuide(true)} title="Guia"
-              className="flex items-center gap-1 px-2 py-1.5 transition-all"
-              style={{fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(55,178,218,0.45)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+            <button onClick={()=>setShowGuide(true)} title="Guia"
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,color:'rgba(55,178,218,0.45)'}}>
               <HelpCircle size={9}/>
             </button>
-
-            {/* Overlays toggle */}
-            <button onClick={()=>setShowOverlays(v=>!v)} title="Overlays [V]"
-              className="px-2 py-1.5 transition-all"
-              style={{fontSize:8,color:showOverlays?'rgba(255,255,255,0.22)':'#fbbf24',background:showOverlays?'transparent':'rgba(251,191,36,0.06)'}}>
-              {showOverlays ? '◉' : '○'}
-            </button>
-
-            {/* Clear */}
             <button onClick={macroClearCanvas} title="Limpar tudo"
-              className="flex items-center gap-1 px-2 py-1.5 transition-all"
-              style={{fontSize:8,color:'rgba(255,255,255,0.18)'}}>
+              className="flex items-center justify-center transition-all"
+              style={{width:26,height:28,color:'rgba(255,255,255,0.15)'}}>
               <Trash2 size={9}/>
-              <span>Clear</span>
             </button>
 
-            {/* Quanta count */}
-            <div className="flex items-center gap-1 px-2.5 py-1.5" style={{borderLeft:'1px dashed rgba(255,255,255,0.06)'}}>
-              <span style={{fontSize:7,color:'rgba(255,255,255,0.20)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Q</span>
-              <span style={{fontSize:8,color:'rgba(255,255,255,0.35)'}}>{quantaCount}</span>
+            {/* Divider + Status */}
+            <div style={{width:1,height:16,background:'rgba(255,255,255,0.04)',margin:'0 2px'}}/>
+            <div className="flex items-center gap-1 px-2" style={{height:28}}>
+              <span style={{fontSize:7,color:'rgba(255,255,255,0.22)',fontVariantNumeric:'tabular-nums'}}>{quantaCount}</span>
             </div>
 
-            {/* Zoom controls */}
             <ZoomControls
               zoom={zoomPan.zoom}
               onZoomIn={zoomPan.zoomIn}
@@ -2482,48 +2522,64 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         </div>
       )}
 
-      {/* ── LEFT TOOLBAR ────────────────────────────────────────────────────── */}
+      {/* ── LEFT TOOL STRIP — Figma-style narrow icon bar ──────────────────── */}
       {!cinematic && (
-        <div className="fixed top-[68px] left-0 z-20 flex" style={{bottom: showStudioSeq ? 258 : 32}}>
-          {/* Collapse toggle */}
-          <button onClick={()=>setLeftOpen(v=>!v)}
-            className="absolute -right-4 top-4 z-30 w-4 h-8 flex items-center justify-center transition-all"
-            style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)',borderLeft:'none',color:'rgba(255,255,255,0.22)'}}>
-            {leftOpen?<ChevronLeft size={9}/>:<ChevronRight size={9}/>}
-          </button>
-
-          {leftOpen && (
-            <div className="w-[148px] flex flex-col overflow-y-auto"
-              style={{scrollbarWidth:'none',fontFamily:MONO,background:'rgba(0,0,0,0.94)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-
-              {/* Tools */}
-              <div className="p-2" style={{borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
-                <div style={{fontFamily:DOTO,fontSize:8,color:'rgba(55,178,218,0.45)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:5,paddingLeft:2}}>TOOLS</div>
-                <div className="grid grid-cols-2 gap-1">
-                  {TOOLS.map(t=>(
+        <div className="fixed left-0 z-20 flex flex-col items-start"
+          style={{top:68,bottom:showStudioSeq?258:32,fontFamily:MONO}}>
+          {/* Tool strip */}
+          <div className="flex flex-col overflow-y-auto"
+            style={{width:36,background:'rgba(0,0,0,0.94)',borderRight:'1px dashed rgba(255,255,255,0.06)',scrollbarWidth:'none'}}>
+            {/* Group labels + tool buttons */}
+            {(() => {
+              const groups: {label:string; tools: typeof TOOLS}[] = [
+                {label:'',tools:TOOLS.filter(t=>['select','spawn','gate','erase'].includes(t.id))},
+                {label:'',tools:TOOLS.filter(t=>['attractor','repulsor','vortex','excite','freeze','mutate'].includes(t.id))},
+                {label:'',tools:TOOLS.filter(t=>['channel','rail','tunnel'].includes(t.id))},
+                {label:'',tools:TOOLS.filter(t=>['mirror','absorber','membrane'].includes(t.id))},
+                {label:'',tools:TOOLS.filter(t=>['cage','string','zone','metro'].includes(t.id))},
+              ];
+              return groups.map((g,gi)=>(
+                <React.Fragment key={gi}>
+                  {gi > 0 && <div style={{height:1,background:'rgba(255,255,255,0.04)',margin:'2px 6px'}}/>}
+                  {g.tools.map(t=>(
                     <button key={t.id} onClick={()=>setActiveTool(t.id)}
                       title={`${t.label} [${t.key}]`}
-                      className="flex items-center gap-1.5 px-1.5 py-1.5 transition-all"
+                      className="flex items-center justify-center transition-all relative"
                       style={{
-                        fontSize:7,
+                        width:36,height:28,
                         color:activeTool===t.id?t.color:'rgba(255,255,255,.28)',
-                        background:activeTool===t.id?'rgba(255,255,255,0.06)':'transparent',
-                        border:activeTool===t.id?`1px dashed ${t.color}30`:'1px dashed transparent',
+                        background:activeTool===t.id?`${t.color}0c`:'transparent',
                       }}>
-                      {t.icon}
-                      <span style={{fontSize:6,opacity:.4}}>[{t.key}]</span>
+                      {activeTool===t.id && (
+                        <div style={{position:'absolute',left:0,top:4,bottom:4,width:2,background:t.color}}/>
+                      )}
+                      <span style={{fontSize:13,lineHeight:1}}>{t.icon}</span>
                     </button>
                   ))}
-                </div>
-                {/* Active tool label */}
-                <div className="mt-1.5 text-center"
-                  style={{fontFamily:MONO,fontSize:8,color:TOOLS.find(t=>t.id===activeTool)?.color??'#aaa'}}>
+                </React.Fragment>
+              ));
+            })()}
+          </div>
+
+          {/* Contextual mini-bar (shows only when tool needs params) */}
+          {(() => {
+            const needsCtx = activeTool==='spawn'||activeTool==='excite'||activeTool==='freeze'
+              ||activeTool==='attractor'||activeTool==='repulsor'||activeTool==='vortex'
+              ||activeTool==='zone'||activeTool==='metro'
+              ||(activeTool==='select'&&selectedQ);
+            if (!needsCtx) return null;
+            const toolColor = TOOLS.find(t=>t.id===activeTool)?.color??ACCENT;
+            return (
+              <div style={{
+                position:'absolute',left:38,top:0,
+                width:140,background:'rgba(0,0,0,0.94)',
+                border:'1px dashed rgba(255,255,255,0.06)',borderLeft:'none',
+                padding:8,maxHeight:'60vh',overflowY:'auto',
+                scrollbarWidth:'none',
+              }}>
+                <div style={{fontFamily:MONO,fontSize:7,color:`${toolColor}88`,letterSpacing:'0.10em',textTransform:'uppercase',marginBottom:6}}>
                   {TOOLS.find(t=>t.id===activeTool)?.label}
                 </div>
-              </div>
-
-              {/* Tool params */}
-              <div className="p-2.5 border-b border-dashed border-white/[0.06] flex flex-col gap-2">
                 {(activeTool==='excite'||activeTool==='freeze') && (
                   <S label="Brush R" value={brushRadius} min={0.04} max={0.4} step={0.01}
                     display={v=>`${(v*100).toFixed(0)}%`}
@@ -2542,84 +2598,46 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 )}
                 {activeTool==='zone' && (
                   <>
-                    <div className="text-[6px] font-mono uppercase tracking-widest text-white/20 mb-0.5">FX Effect</div>
-                    <div className="grid grid-cols-2 gap-0.5" style={{maxHeight:112,overflowY:'auto'}}>
+                    <div className="grid grid-cols-3 gap-0.5 mb-2" style={{maxHeight:100,overflowY:'auto'}}>
                       {([
-                        {id:'slow',          icon:'🐌', label:'Slow'},
-                        {id:'fast',          icon:'⚡', label:'Fast'},
-                        {id:'mute',          icon:'🔇', label:'Mute'},
-                        {id:'excite_zone',   icon:'🔥', label:'Excite'},
-                        {id:'freeze_zone',   icon:'❄',  label:'Freeze'},
-                        {id:'reverse',       icon:'↩',  label:'Reverse'},
-                        {id:'bounce',        icon:'💥', label:'Bounce'},
-                        {id:'scatter_zone',  icon:'💫', label:'Scatter'},
-                        {id:'compress_zone', icon:'◎',  label:'Compress'},
-                        {id:'vortex_zone',   icon:'🌀', label:'Vortex'},
-                        {id:'gravity_down',  icon:'↓g', label:'Grav↓'},
-                        {id:'gravity_up',    icon:'↑g', label:'Grav↑'},
-                        {id:'pitch_up',      icon:'♪↑', label:'Pitch↑'},
-                        {id:'pitch_down',    icon:'♪↓', label:'Pitch↓'},
-                        {id:'transpose',     icon:'♭♯', label:'Transpose'},
-                        {id:'harmonize_zone',icon:'🎼', label:'Harmonize'},
-                        {id:'glitch',        icon:'⊞',  label:'Glitch'},
-                        {id:'tremolo',       icon:'〜', label:'Tremolo'},
-                        {id:'pulse_beat',    icon:'♩',  label:'Pulse Beat'},
-                        {id:'warp',          icon:'∿',  label:'Warp Field'},
-                        {id:'phase_lock',    icon:'⌛', label:'Phase Lock'},
-                        {id:'role_shift',    icon:'⇄',  label:'Role Shift'},
-                        {id:'density_wave',  icon:'◌',  label:'Density Wave'},
+                        {id:'slow',icon:'🐌',label:'Slow'},{id:'fast',icon:'⚡',label:'Fast'},
+                        {id:'mute',icon:'🔇',label:'Mute'},{id:'excite_zone',icon:'🔥',label:'Excite'},
+                        {id:'freeze_zone',icon:'❄',label:'Freeze'},{id:'reverse',icon:'↩',label:'Rev'},
+                        {id:'bounce',icon:'💥',label:'Bounce'},{id:'scatter_zone',icon:'💫',label:'Scatter'},
+                        {id:'vortex_zone',icon:'🌀',label:'Vortex'},{id:'glitch',icon:'⊞',label:'Glitch'},
+                        {id:'pitch_up',icon:'♪↑',label:'P↑'},{id:'pitch_down',icon:'♪↓',label:'P↓'},
+                        {id:'transpose',icon:'♭♯',label:'Trans'},{id:'harmonize_zone',icon:'🎼',label:'Harm'},
+                        {id:'tremolo',icon:'〜',label:'Trem'},{id:'warp',icon:'∿',label:'Warp'},
+                        {id:'phase_lock',icon:'⌛',label:'Phase'},{id:'role_shift',icon:'⇄',label:'Role'},
                       ] as {id:FxZoneEffect;icon:string;label:string}[]).map(ef=>(
-                        <button key={ef.id} onClick={()=>setZoneEffect(ef.id)}
-                          className={`text-[5px] py-0.5 px-0.5 transition-all
-                            ${zoneEffect===ef.id?'bg-white/10 text-pink-200 border border-pink-400/35':'text-white/30 hover:text-white/60 border border-transparent hover:bg-white/5'}`}
-                          style={{borderRadius:0}}>
-                          <span style={{fontSize:8,lineHeight:1}}>{ef.icon}</span>{ef.label}
+                        <button key={ef.id} onClick={()=>setZoneEffect(ef.id)} title={ef.label}
+                          className="text-[5px] py-0.5 transition-all text-center"
+                          style={{
+                            color:zoneEffect===ef.id?'#ff88cc':'rgba(255,255,255,0.30)',
+                            background:zoneEffect===ef.id?'rgba(255,136,204,0.08)':'transparent',
+                            border:zoneEffect===ef.id?'1px dashed rgba(255,136,204,0.35)':'1px dashed rgba(255,255,255,0.04)',
+                          }}>
+                          <span style={{fontSize:8}}>{ef.icon}</span><br/>{ef.label}
                         </button>
                       ))}
                     </div>
-                    <S label="Zone Strength" value={zoneStrength} min={0} max={1} step={0.01}
+                    <S label="Strength" value={zoneStrength} min={0} max={1} step={0.01}
                       display={v=>`${(v*100).toFixed(0)}%`} color="#ff44cc" onChange={setZoneStrength}/>
-                    <S label={
-                        zoneEffect==='transpose'?'Semitones':
-                        zoneEffect==='vortex_zone'?'Spin Force':
-                        zoneEffect==='compress_zone'?'Pull Force':
-                        zoneEffect==='bounce'||zoneEffect==='scatter_zone'?'Impulse':
-                        zoneEffect==='gravity_down'||zoneEffect==='gravity_up'?'G-Force':
-                        zoneEffect==='tremolo'?'Depth':
-                        zoneEffect==='warp'?'Wave Freq':
-                        zoneEffect==='pulse_beat'?'Sync Strength':
-                        zoneEffect==='phase_lock'?'Target Phase':
-                        zoneEffect==='role_shift'?'Target Role':
-                        zoneEffect==='density_wave'?'Wave Scale':
-                        zoneEffect==='glitch'?'Chaos Radius':'Param'}
-                      value={zoneParam} min={0} max={1} step={0.01}
-                      display={v=>
-                        zoneEffect==='transpose'?`${Math.round((v-0.5)*24)}st`:
-                        zoneEffect==='role_shift'?(['KCK','BAS','PRC','PAD','LED','ARP','STR','CHO'][Math.min(Math.floor(v*8),7)]):
-                        zoneEffect==='phase_lock'?`${(v*360).toFixed(0)}°`:
-                        `${(v*100).toFixed(0)}%`
-                      }
-                      color="#cc88ff" onChange={setZoneParam}/>
+                    <S label="Param" value={zoneParam} min={0} max={1} step={0.01}
+                      display={v=>`${(v*100).toFixed(0)}%`} color="#cc88ff" onChange={setZoneParam}/>
                   </>
-                )}
-                {activeTool==='cage' && (
-                  <div className="text-[5.5px] font-mono text-white/25 leading-snug">Arraste → gaiola rect. Bolinhas dentro ficam presas.</div>
-                )}
-                {activeTool==='string' && (
-                  <div className="text-[5.5px] font-mono text-white/25 leading-snug">Arraste → corda harmônica. Colisão vibra e gera notas STRINGS.</div>
                 )}
                 {activeTool==='spawn' && (
                   <>
-                    <div className="text-[6.5px] font-mono uppercase tracking-widest text-white/25 mb-0.5">Role</div>
-                    <div className="grid grid-cols-4 gap-0.5">
+                    <div className="flex gap-0.5 mb-2 flex-wrap">
                       {VOICE_ROLES.map(r=>(
-                        <button key={r} onClick={()=>setSpawnRole(r)}
-                          className={`text-[5.5px] uppercase py-0.5 transition-all
-                            ${spawnRole===r?'bg-white/10':'hover:bg-white/6'}`}
-                          style={{color:spawnRole===r?ROLE_COLORS[r]:'rgba(255,255,255,.35)',
-                            borderBottom:`1px solid ${spawnRole===r?ROLE_COLORS[r]:'transparent'}`,borderRadius:0}}>
-                          {r.slice(0,3)}
-                        </button>
+                        <button key={r} onClick={()=>setSpawnRole(r)} title={r}
+                          className="transition-all"
+                          style={{
+                            width:14,height:14,
+                            background:spawnRole===r?ROLE_COLORS[r]:`${ROLE_COLORS[r]}22`,
+                            border:spawnRole===r?`1px solid ${ROLE_COLORS[r]}`:'1px dashed rgba(255,255,255,0.08)',
+                          }}/>
                       ))}
                     </div>
                     <S label="Count" value={spawnCount} min={1} max={10} step={1}
@@ -2627,178 +2645,166 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   </>
                 )}
                 {activeTool==='select'&&selectedQ && (
-                  <div className="flex flex-col gap-1 text-[7px] font-mono">
-                    {/* Stats row */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span style={{color:ROLE_COLORS[selectedQ.role]}} className="font-mono">{selectedQ.role}</span>
-                      <span className="text-white/30">p:{selectedQ.pitch}</span>
-                      <span className="text-white/30">c:{selectedQ.charge.toFixed(2)}</span>
-                      <span className="text-white/30">m:{selectedQ.mutations}</span>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap" style={{fontSize:7}}>
+                      <span style={{color:ROLE_COLORS[selectedQ.role]}}>{selectedQ.role}</span>
+                      <span style={{color:'rgba(255,255,255,0.30)'}}>p:{selectedQ.pitch} c:{selectedQ.charge.toFixed(2)}</span>
                     </div>
-                    {/* Per-particle timbre picker */}
-                    <div className="text-[5.5px] font-mono uppercase tracking-widest text-white/20 mt-0.5">Timbre individual</div>
-                    <div className="grid grid-cols-4 gap-0.5">
-                      {/* "Role default" slot */}
-                      <button
-                        onClick={()=>{ selectedQ.timbreIdx=-1; forceRender(n=>n+1); }}
-                        className="text-[5px] px-0.5 py-0.5 border transition-all text-center"
-                        style={{
-                          borderColor: selectedQ.timbreIdx===-1?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.08)',
-                          color: selectedQ.timbreIdx===-1?'#ffffff':'rgba(255,255,255,0.28)',
-                          background: selectedQ.timbreIdx===-1?'rgba(255,255,255,0.08)':'transparent',
-                          borderRadius:0,
-                        }}
-                        title="Role default">
+                    <div className="grid grid-cols-4 gap-0.5 mt-1">
+                      <button onClick={()=>{selectedQ.timbreIdx=-1;forceRender(n=>n+1);}} title="Usar timbre padrão da role"
+                        className="text-[5px] py-0.5 text-center transition-all"
+                        style={{color:selectedQ.timbreIdx===-1?'#fff':'rgba(255,255,255,0.25)',background:selectedQ.timbreIdx===-1?'rgba(255,255,255,0.08)':'transparent',border:'1px dashed rgba(255,255,255,0.06)'}}>
                         Role
                       </button>
                       {TIMBRE_TEMPLATES.map((tmpl,idx)=>(
-                        <button key={idx}
-                          onClick={()=>{ selectedQ.timbreIdx=idx; forceRender(n=>n+1); }}
-                          className="text-[5px] px-0.5 py-0.5 border transition-all text-center"
+                        <button key={idx} onClick={()=>{selectedQ.timbreIdx=idx;forceRender(n=>n+1);}} title={tmpl.name}
+                          className="text-[8px] py-0.5 text-center transition-all"
                           style={{
-                            borderColor: selectedQ.timbreIdx===idx?tmpl.color+'aa':'rgba(255,255,255,0.06)',
-                            color: selectedQ.timbreIdx===idx?tmpl.color:'rgba(255,255,255,0.25)',
-                            background: selectedQ.timbreIdx===idx?tmpl.color+'18':'transparent',
-                            borderRadius:0,
-                          }}
-                          title={tmpl.name}>
+                            color:selectedQ.timbreIdx===idx?tmpl.color:'rgba(255,255,255,0.25)',
+                            background:selectedQ.timbreIdx===idx?`${tmpl.color}18`:'transparent',
+                            border:selectedQ.timbreIdx===idx?`1px dashed ${tmpl.color}55`:'1px dashed rgba(255,255,255,0.04)',
+                          }}>
                           {tmpl.icon}
                         </button>
                       ))}
                     </div>
-                    {/* Current timbre name */}
-                    <div className="text-[5.5px] text-white/25 text-center mt-0.5">
-                      {selectedQ.timbreIdx>=0 ? TIMBRE_TEMPLATES[selectedQ.timbreIdx]?.name : 'Role default'}
-                    </div>
                   </div>
                 )}
               </div>
-
-              {/* Macros */}
-              <div className="p-2.5 border-b border-dashed border-white/[0.06]">
-                <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/60 mb-1.5">POWERS</div>
-                <div className="flex flex-col gap-1">
-                  {[
-                    {label:'⚡ Excite All',fn:macroExciteAll,color:'#ff8800'},
-                    {label:'❄ Freeze All', fn:macroFreezeAll,color:'#88ddff'},
-                    {label:'💥 Explode',   fn:macroExplode,  color:'#ff4444'},
-                    {label:'◎ Compress',  fn:macroCompress, color:'#aa88ff'},
-                    {label:'✦ Scatter',   fn:macroScatter,  color:'#aaffaa'},
-                    {label:'♫ Harmonize', fn:macroHarmonize,color:'#ffd700'},
-                    {label:'◎ Reseed',    fn:macroReseed,   color:'#88ffaa'},
-                    {label:'+10 Quanta',  fn:macroAddTen,   color:'#88aaff'},
-                    {label:'−10 Quanta',  fn:macroRemoveTen,color:'#ff8866'},
-                    {label:'✕ Clear All', fn:macroClearAll, color:'#ff4466'},
-                    {label:'✕ Gates',     fn:macroClearGates,  color:'#ffaaff'},
-                    {label:'✕ Attr',      fn:macroClearAttr,   color:'#ffccaa'},
-                    {label:'✕ Fields',    fn:macroClearFields, color:'#c0c8d0'},
-                    {label:'✕ Cage/Str/Z',fn:macroClearNew,    color:'#00ffcc'},
-                    {label:'↺ Matrix',    fn:macroResetMatrix, color:'#88ccff'},
-                  ].map(m=>(
-                    <button key={m.label} onClick={m.fn}
-                      className="text-left text-[7px] px-1.5 py-1 hover:bg-white/5 transition-all"
-                      style={{borderRadius:0, color:m.color+'aa'}}>
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── QUANTUM SEQUENCER ──────────────────────────────────────── */}
-              <div className="p-2.5 border-b border-dashed border-white/[0.06]">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-[6px] uppercase tracking-[0.16em] text-[#37b2da]/60">Q·SEQ</div>
-                  <button onClick={toggleSeq}
-                    className={`text-[6px] px-1.5 py-0.5 border transition-all
-                      ${seqActive?'border-[#37b2da]/50 text-[#37b2da] bg-[#37b2da]/10':'border-white/[0.06] text-white/25 hover:border-[#37b2da]/30'}`}
-                    style={{borderRadius:0}}>
-                    {seqActive?'◉ ON':'○ OFF'}
-                  </button>
-                </div>
-
-                {/* Description */}
-                <div className="mb-2 text-[5.5px] text-white/22 leading-snug bg-white/[0.02] px-1.5 py-1 border border-dashed border-white/[0.06]" style={{borderRadius:0}}>
-                  Um anel gira no canvas. Quando passa por um step armado, dispara a nota da bolinha mais próxima. Sem bolinha perto = silêncio (incerteza quântica).
-                </div>
-
-                {/* Steps count */}
-                <div className="flex items-center gap-1 mb-1.5">
-                  <span className="text-[5.5px] font-mono text-white/18 uppercase">Steps</span>
-                  {[8,12,16].map(n=>(
-                    <button key={n} onClick={()=>setSeqStepsFn(n)}
-                      className={`text-[5.5px] px-1.5 py-0.5 border transition-all
-                        ${seqSteps===n?'border-[#37b2da]/40 text-[#37b2da] bg-[#37b2da]/10':'border-white/[0.06] text-white/18 hover:text-white/40'}`}
-                      style={{borderRadius:0}}>
-                      {n}
-                    </button>
-                  ))}
-                  <span className="text-[5.5px] font-mono text-white/18 uppercase ml-0.5">Speed</span>
-                  {[0.5,1,2,4].map(m=>(
-                    <button key={m} onClick={()=>setSeqTempoMultFn(m)}
-                      className={`text-[5.5px] px-1 py-0.5 border transition-all
-                        ${seqTempoMult===m?'border-[#37b2da]/40 text-[#37b2da] bg-[#37b2da]/10':'border-white/[0.06] text-white/18 hover:text-white/40'}`}
-                      style={{borderRadius:0}}>
-                      {m}×
-                    </button>
-                  ))}
-                </div>
-
-                {/* Step grid — tap to arm/disarm beats */}
-                <div className="text-[5px] font-mono text-white/18 mb-1 uppercase tracking-widest">Beats (toque para armar)</div>
-                <div className="grid gap-0.5" style={{gridTemplateColumns:`repeat(${Math.min(seqSteps,8)},1fr)`}}>
-                  {Array.from({length:seqSteps}).map((_,i)=>{
-                    const armed=stateRef.current?.sequencer.steps[i]?.armed??false;
-                    const isCurrent = seqActive && Math.floor((stateRef.current?.sequencer.cursor??0)*seqSteps) === i;
-                    return (
-                      <button key={i} onClick={()=>toggleSeqStep(i)}
-                        title={armed?`Beat ${i+1} — ARMADO`:`Beat ${i+1} — desarmado`}
-                        className={`h-5 text-[5px] transition-all relative
-                          ${isCurrent?'ring-1 ring-white/60':''}
-                          ${armed
-                            ?'bg-[#37b2da]/20 border border-[#37b2da]/50 text-[#37b2da]'
-                            :'bg-white/[0.03] border border-white/[0.06] text-white/18 hover:bg-white/8 hover:text-white/40'}`}
-                        style={{borderRadius:0}}>
-                        {i+1}
-                        {isCurrent && <span className="absolute top-0 right-0 w-1 h-1 bg-white/70" style={{borderRadius:0}}/>}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {seqActive&&(
-                  <div className="mt-1.5 flex items-center gap-1 text-[5.5px] text-[#37b2da]/50">
-                    <span className="w-1.5 h-1.5 bg-[#37b2da]/60 animate-pulse" style={{borderRadius:0}}/>
-                    Anel ativo · {seqSteps} steps · {seqTempoMult}× bar
-                  </div>
-                )}
-                {!seqActive&&(
-                  <div className="mt-1.5 text-[5.5px] font-mono text-white/18 text-center">
-                    Clique ON para iniciar o anel
-                  </div>
-                )}
-                {tunnelFirst&&(
-                  <div className="mt-1 text-[5.5px] text-purple-400/60 text-center leading-tight bg-purple-900/15 px-1 py-0.5 border border-dashed border-purple-400/15" style={{borderRadius:0}}>
-                    Portal A colocado · clique para Portal B
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 
-      {/* ── RIGHT PANEL ─────────────────────────────────────────────────────── */}
+      {/* ── POWERS PILL BAR — floating, draggable ────────────────────────────── */}
+      {!cinematic && (
+        <DraggablePanel id="ml_powers" title="POWERS" defaultX={40} defaultY={98} zIndex={22}>
+          <div className="flex items-center gap-0.5 px-1 py-1 flex-wrap" style={{maxWidth:220}}>
+            {[
+              {icon:'⚡',fn:macroExciteAll,color:'#ff8800',title:'Excite All'},
+              {icon:'❄',fn:macroFreezeAll,color:'#88ddff',title:'Freeze All'},
+              {icon:'💥',fn:macroExplode,color:'#ff4444',title:'Explode'},
+              {icon:'◎',fn:macroCompress,color:'#aa88ff',title:'Compress'},
+              {icon:'✦',fn:macroScatter,color:'#aaffaa',title:'Scatter'},
+              {icon:'+',fn:macroAddTen,color:'#88aaff',title:'+10 Quanta'},
+              {icon:'−',fn:macroRemoveTen,color:'#ff8866',title:'-10 Quanta'},
+            ].map(p=>(
+              <button key={p.title} onClick={p.fn} title={p.title}
+                className="flex items-center justify-center transition-all hover:scale-110"
+                style={{
+                  width:24,height:24,fontSize:11,
+                  color:`${p.color}aa`,
+                  background:'rgba(0,0,0,0.85)',
+                  border:'1px dashed rgba(255,255,255,0.06)',
+                }}>
+                {p.icon}
+              </button>
+            ))}
+            {/* Clear dropdown */}
+            <div className="relative">
+              <button onClick={()=>setShowClearMenu(v=>!v)} title="Clear..."
+                className="flex items-center justify-center transition-all"
+                style={{width:24,height:24,color:'rgba(255,255,255,0.22)',background:'rgba(0,0,0,0.85)',border:'1px dashed rgba(255,255,255,0.06)'}}>
+                <Trash2 size={10}/>
+              </button>
+              {showClearMenu && (
+                <div className="absolute left-0 top-[26px] flex flex-col z-50"
+                  style={{background:'rgba(0,0,0,0.96)',border:'1px dashed rgba(255,255,255,0.06)',minWidth:100}}>
+                  {[
+                    {label:'Clear All',fn:macroClearAll,color:'#ff4466'},
+                    {label:'Gates',fn:macroClearGates,color:'#ffaaff'},
+                    {label:'Attractors',fn:macroClearAttr,color:'#ffccaa'},
+                    {label:'Fields',fn:macroClearFields,color:'#c0c8d0'},
+                    {label:'Cage/Str/Zone',fn:macroClearNew,color:'#00ffcc'},
+                    {label:'Reset Matrix',fn:macroResetMatrix,color:'#88ccff'},
+                  ].map(c=>(
+                    <button key={c.label} onClick={()=>{c.fn();setShowClearMenu(false);}} title={c.label}
+                      className="text-left px-2.5 py-1.5 hover:bg-white/5 transition-all"
+                      style={{fontSize:7,color:`${c.color}aa`}}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DraggablePanel>
+      )}
+
+      {/* ── Q.SEQ MINI-PANEL — floating, draggable ───────────────────────────── */}
+      {!cinematic && (
+        <DraggablePanel id="ml_qseq" title="Q·SEQ" defaultX={rightOpen?window.innerWidth-344:window.innerWidth-148} defaultY={98} zIndex={22} width={148}
+          headerExtra={
+            <button onClick={toggleSeq} title={seqActive?'Desativar sequencer':'Ativar sequencer'}
+              className="transition-all"
+              style={{fontSize:6,padding:'1px 6px',color:seqActive?ACCENT:'rgba(255,255,255,0.25)',
+                background:seqActive?`${ACCENT}10`:'transparent',
+                border:seqActive?`1px dashed ${ACCENT}50`:'1px dashed rgba(255,255,255,0.06)'}}>
+              {seqActive?'ON':'OFF'}
+            </button>
+          }>
+          <div style={{padding:'4px 8px 6px'}}>
+            <div className="flex items-center gap-0.5 mb-1">
+              {[8,12,16].map(n=>(
+                <button key={n} onClick={()=>setSeqStepsFn(n)} title={`${n} steps`}
+                  style={{fontSize:5,padding:'1px 4px',
+                    color:seqSteps===n?ACCENT:'rgba(255,255,255,0.18)',
+                    border:seqSteps===n?`1px dashed ${ACCENT}40`:'1px dashed rgba(255,255,255,0.04)'}}>
+                  {n}
+                </button>
+              ))}
+              <div style={{width:1,height:8,background:'rgba(255,255,255,0.04)',margin:'0 2px'}}/>
+              {[0.5,1,2,4].map(m=>(
+                <button key={m} onClick={()=>setSeqTempoMultFn(m)} title={`Velocidade ${m}×`}
+                  style={{fontSize:5,padding:'1px 3px',
+                    color:seqTempoMult===m?ACCENT:'rgba(255,255,255,0.18)',
+                    border:seqTempoMult===m?`1px dashed ${ACCENT}40`:'1px dashed rgba(255,255,255,0.04)'}}>
+                  {m}×
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-0.5" style={{gridTemplateColumns:`repeat(${Math.min(seqSteps,8)},1fr)`}}>
+              {Array.from({length:seqSteps}).map((_,i)=>{
+                const armed=stateRef.current?.sequencer.steps[i]?.armed??false;
+                const isCurrent=seqActive&&Math.floor((stateRef.current?.sequencer.cursor??0)*seqSteps)===i;
+                return (
+                  <button key={i} onClick={()=>toggleSeqStep(i)} title={`Beat ${i+1}: ${armed?'armado':'desarmado'}`}
+                    style={{
+                      height:14,fontSize:5,position:'relative',
+                      color:armed?ACCENT:'rgba(255,255,255,0.18)',
+                      background:armed?`${ACCENT}20`:'rgba(255,255,255,0.02)',
+                      border:isCurrent?'1px solid rgba(255,255,255,0.6)':armed?`1px dashed ${ACCENT}50`:'1px dashed rgba(255,255,255,0.04)',
+                    }}>
+                    {i+1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </DraggablePanel>
+      )}
+
+      {/* ── RIGHT PANEL — streamlined 200px ──────────────────────────────────── */}
       {!cinematic && (
         <div className="fixed top-[68px] right-0 z-20 flex flex-row-reverse" style={{bottom: showStudioSeq ? 258 : 32}}>
-          <button onClick={()=>setRightOpen(v=>!v)}
+          <button onClick={()=>setRightOpen(v=>!v)} title={rightOpen?'Fechar painel':'Abrir painel de controles'}
             className="absolute -left-4 top-4 z-30 w-4 h-8 flex items-center justify-center transition-all"
             style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)',borderRight:'none',color:'rgba(255,255,255,0.22)'}}>
             {rightOpen?<ChevronRight size={9}/>:<ChevronLeft size={9}/>}
           </button>
 
           {rightOpen && (
-            <div className="w-[220px] flex flex-col overflow-y-auto"
+            <div className="w-[200px] flex flex-col overflow-y-auto"
               style={{scrollbarWidth:'thin',scrollbarColor:'rgba(55,178,218,.08) transparent',fontFamily:MONO,background:'rgba(0,0,0,0.94)',borderLeft:'1px dashed rgba(255,255,255,0.06)'}}>
+
+              {/* Preset button */}
+              <button onClick={()=>setShowGrid(true)} title="Escolher preset"
+                className="flex items-center gap-1.5 px-3 py-2 transition-all hover:bg-white/[0.03]"
+                style={{borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
+                <Music size={8} style={{color:currentPreset.primary+'88'}}/>
+                <span style={{fontSize:8,color:currentPreset.primary+'bb',letterSpacing:'0.04em'}}>{currentPreset.name}</span>
+                <span style={{fontSize:6,color:'rgba(255,255,255,0.15)',marginLeft:'auto'}}>change</span>
+              </button>
 
               {/* Tabs */}
               <div className="flex" style={{flexWrap:'wrap',borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
@@ -2810,7 +2816,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   {id:'palette', label:'Palette', icon:<span style={{fontSize:7,marginRight:2}}>◈</span>},
                   {id:'aesthetic', label:'Look',  icon:<span style={{fontSize:7,marginRight:2}}>✦</span>},
                 ] as const).map(tab=>(
-                  <button key={tab.id} onClick={()=>setRightTab(tab.id)}
+                  <button key={tab.id} onClick={()=>setRightTab(tab.id)} title={tab.label}
                     className="flex-1 py-1.5 transition-all min-w-[38px]"
                     style={{
                       fontSize:6,letterSpacing:'0.12em',textTransform:'uppercase',
@@ -2833,7 +2839,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     </div>
                     <div className="grid grid-cols-3 gap-0.5">
                       {TIMBRE_TEMPLATES.map(tpl => (
-                        <button key={tpl.name}
+                        <button title={tpl.name} key={tpl.name}
                           onClick={() => setRoleParams(editRole, {
                             waveform:    tpl.wave,
                             filterType:  tpl.fType,
@@ -2862,7 +2868,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>EDIT ROLE</div>
                     <div className="grid grid-cols-4 gap-0.5">
                       {VOICE_ROLES.map(r=>(
-                        <button key={r} onClick={()=>setEditRole(r)}
+                        <button key={r} onClick={()=>setEditRole(r)} title={`Editar role: ${r}`}
                           className={`text-[6px] uppercase py-1 transition-all
                             ${editRole===r?'bg-white/10':'hover:bg-white/5'}`}
                           style={{color:editRole===r?ROLE_COLORS[r]:'rgba(255,255,255,.3)',
@@ -2973,7 +2979,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     </div>
                     <div className="grid grid-cols-6 gap-0.5">
                       {NOTE_NAMES.map((n,i) => (
-                        <button key={n} onClick={() => applyRoot(i)}
+                        <button key={n} onClick={() => applyRoot(i)} title={`Root: ${n}`}
                           className={`text-[6px] py-1.5 transition-all text-center
                             ${liveRoot===i?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
                               :(n.includes('#')||n.includes('b'))?'bg-white/[0.02] border border-white/[0.06] text-white/30 hover:bg-white/6 hover:text-white/55'
@@ -2990,7 +2996,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     </div>
                     <div className="grid grid-cols-3 gap-0.5">
                       {(Object.keys(SCALE_LABELS) as Scale[]).map(s => (
-                        <button key={s} onClick={() => applyScale(s)}
+                        <button key={s} onClick={() => applyScale(s)} title={`Escala: ${SCALE_LABELS[s]}`}
                           className={`text-[5.5px] uppercase py-1.5 text-center transition-all
                             ${liveScale===s?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
                               :'border border-dashed border-white/[0.04] text-white/30 hover:border-white/12 hover:text-white/55'}`}
@@ -3004,7 +3010,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>MODO HARMÔNICO</div>
                     <div className="flex gap-1">
                       {(['consonant','any','dissonant'] as const).map(m => (
-                        <button key={m} onClick={() => applyHarmonyMode(m)}
+                        <button key={m} onClick={() => applyHarmonyMode(m)} title={m==='consonant'?'Só notas consonantes':m==='dissonant'?'Prioriza dissonâncias':'Qualquer intervalo'}
                           className={`flex-1 text-[5.5px] uppercase py-1.5 transition-all
                             ${liveHarmonyMode===m?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
                               :'border border-dashed border-white/[0.04] text-white/25 hover:border-white/12 hover:text-white/50'}`}
@@ -3020,14 +3026,14 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
                     <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>MAPEAMENTO</div>
                     <div className="flex gap-1">
-                      <button onClick={() => setPitchMapMode('preset')}
+                      <button onClick={() => setPitchMapMode('preset')} title="Notas mapeadas pelo preset"
                         className={`flex-1 text-[5.5px] uppercase py-1.5 transition-all
                           ${pitchMapMode==='preset'?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
                             :'border border-dashed border-white/[0.04] text-white/25 hover:border-white/12 hover:text-white/50'}`}
                         style={{background:'transparent'}}>
                         Preset
                       </button>
-                      <button onClick={() => setPitchMapMode('canvas')}
+                      <button onClick={() => setPitchMapMode('canvas')} title="Notas mapeadas pela posição no canvas"
                         className={`flex-1 text-[5.5px] uppercase py-1.5 transition-all
                           ${pitchMapMode==='canvas'?'bg-[#37b2da]/15 border border-[#37b2da]/50 text-[#37b2da]'
                             :'border border-dashed border-white/[0.04] text-white/25 hover:border-white/12 hover:text-white/50'}`}
@@ -3047,7 +3053,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       {SCALE_INTERVALS[liveScale].map((iv,idx) => {
                         const nn = NOTE_NAMES[(liveRoot + iv) % 12];
                         return (
-                          <button key={`${iv}_${idx}`} onClick={() => padQuantizeDegree(iv)}
+                          <button key={`${iv}_${idx}`} onClick={() => padQuantizeDegree(iv)} title={`Quantizar para ${nn}`}
                             className="text-[6px] py-1.5 transition-all text-center bg-white/[0.04] border border-white/[0.08] text-white/55 hover:bg-white/10 hover:text-white/75"
                             style={{borderRadius:0}}>
                             {nn}
@@ -3082,7 +3088,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <div className="mt-1 text-[5px] font-mono text-white/18">Clique numa nota para definir como raiz</div>
                   </div>
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <button
+                    <button title="Sortear root, escala e modo aleatoriamente"
                       onClick={() => {
                         const sc:Scale[]=['major','minor','pentatonic','blues','dorian','phrygian','lydian','mixolydian','whole_tone','harmonic_minor'];
                         const hm=['consonant','any','any','dissonant'] as const;
@@ -3139,7 +3145,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                               {label:'☉ Zero',    g:0},
                               {label:'↑ Anti',    g:-0.327},
                             ]).map(planet=>(
-                              <button key={planet.label}
+                              <button key={planet.label} title={`Gravidade: ${planet.label} (${planet.g.toFixed(3)})`}
                                 onClick={()=>{ physRef.current={...physRef.current,gravityY:planet.g}; setPhys(p=>({...p,gravityY:planet.g})); }}
                                 className={`text-[5px] px-1 py-0.5 border transition-all
                                   ${Math.abs(phys.gravityY-planet.g)<0.004
@@ -3216,7 +3222,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                       {/* Wall bounce toggle */}
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <button
+                        <button title={`Bounce Walls: ${physRef.current.bounceWalls ? "ON" : "OFF"}`}
                           onClick={() => {
                             const v = !physRef.current.bounceWalls;
                             physRef.current = { ...physRef.current, bounceWalls: v };
@@ -3229,7 +3235,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           style={{borderRadius:0}}>
                           {phys.bounceWalls ? '◎ Wall Bounce ON' : '○ Wall Bounce OFF'}
                         </button>
-                        <button
+                        <button title={`Physics Only: ${physRef.current.physicsOnly ? "ON" : "OFF"}`}
                           onClick={() => {
                             const v = !physRef.current.physicsOnly;
                             physRef.current = { ...physRef.current, physicsOnly: v };
@@ -3255,7 +3261,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>BEHAVIOR PRESETS</div>
                     <div className="grid grid-cols-4 gap-0.5">
                       {BEHAVIOR_PRESETS.map(b => (
-                        <button key={b.id}
+                        <button title={`${b.name} — ${b.description}`} key={b.id}
                           onClick={() => {
                             setBehaviorId(b.id);
                             const newPhys = applyBehaviorToPhysics(b, phys);
@@ -3330,7 +3336,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                               {label:'♃ Jupiter', g:0.822},
                               {label:'Zero',      g:0},
                             ]).map(({label,g})=>(
-                              <button key={label}
+                              <button key={label} title={`Gravidade: ${label}`}
                                 onClick={()=>setPhys(p=>({...p,gravityY:g}))}
                                 className={`text-[5px] px-1 py-0.5 border transition-all
                                   ${Math.abs(phys.gravityY-g)<0.004
@@ -3459,12 +3465,12 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       ))}
                     </div>
                     <div className="flex gap-1 mt-1">
-                      <button onClick={macroResetMatrix}
+                      <button onClick={macroResetMatrix} title="Resetar matriz de interações"
                         className="flex-1 text-[6px] text-white/25 hover:text-white/50 transition-all py-1 border border-dashed border-white/[0.06]"
                         style={{borderRadius:0}}>
                         ↺ Reset
                       </button>
-                      <button onClick={macroRandomMatrix}
+                      <button onClick={macroRandomMatrix} title="Gerar matriz aleatória"
                         className="flex-1 text-[6px] text-[#37b2da]/45 hover:text-[#37b2da] transition-all py-1 border border-dashed border-[#37b2da]/20 hover:border-[#37b2da]/40"
                         style={{borderRadius:0}}>
                         ⚄ Random
@@ -3490,7 +3496,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                         {id:'earth', label:'Earth',  c:'#c8960a'},
                         {id:'plasma',label:'Plasma', c:'#cc44ff'},
                       ] as {id:PaletteMode;label:string;c:string}[]).map(m=>(
-                        <button key={m.id}
+                        <button key={m.id} title={`Paleta: ${m.label}`}
                           onClick={()=>setPalette(prev=>({...prev,mode:m.id}))}
                           className="py-1.5 px-1 border transition-all text-[6.5px]"
                           style={{
@@ -3508,7 +3514,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="text-[5.5px] uppercase text-white/18 tracking-[0.14em]">CORES POR ROLE</div>
                       {Object.keys(palette.roleColorOverrides ?? {}).length > 0 && (
-                        <button onClick={()=>setPalette(p=>({...p,roleColorOverrides:{}}))}
+                        <button onClick={()=>setPalette(p=>({...p,roleColorOverrides:{}}))} title="Resetar cores personalizadas"
                           className="text-[5px] font-mono text-white/20 hover:text-white/55 transition-all">↺ reset</button>
                       )}
                     </div>
@@ -3540,7 +3546,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                               style={{color:curColor,borderRadius:0}}/>
                             {/* Reset to default */}
                             {isOverridden && (
-                              <button
+                              <button title="Resetar cor deste role"
                                 onClick={()=>{
                                   const next:Partial<Record<VoiceRole,string>>={...palette.roleColorOverrides};
                                   delete next[role];
@@ -3568,7 +3574,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                         {label:'Cosmic',color:'#08050f'},
                         {label:'Slate', color:'#060809'},
                       ]).map(bg=>(
-                        <button key={bg.label}
+                        <button key={bg.label} title={`Fundo: ${bg.label}`}
                           onClick={()=>setPalette(prev=>({...prev,bgColor:bg.color}))}
                           className="flex flex-col items-center py-1.5 border transition-all"
                           style={{
@@ -3612,7 +3618,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       {MUSIC_VISUAL_PRESETS.map(vp => {
                         const active = visualPresetId === vp.id;
                         return (
-                          <button key={vp.id}
+                          <button key={vp.id} title={`${vp.name}: ${vp.description}`}
                             onClick={() => applyVisualPreset(vp.id)}
                             className="p-2 border transition-all text-left"
                             style={{
@@ -3656,7 +3662,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       onChange={v=>setAesthetic(p=>({...p,tools:{...p.tools,intensity:v}}))}/>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[5.5px] uppercase tracking-[0.14em] text-white/18">3D overlays</span>
-                      <button
+                      <button title={`Overlays 3D: ${aesthetic.threeD.overlays ? "ON" : "OFF"}`}
                         onClick={()=>setAesthetic(p=>({...p,threeD:{...p.threeD,overlays:!p.threeD.overlays}}))}
                         className="text-[6px] uppercase px-2 py-1 border transition-all"
                         style={{
@@ -3693,7 +3699,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 style={{ color: ROLE_COLORS[q.role] }}>
                 {q.role} · pitch {q.pitch}
               </span>
-              <button onClick={() => setContextMenu(null)}
+              <button onClick={() => setContextMenu(null)} title="Fechar"
                 className="text-white/25 hover:text-white/60 text-[8px]">×</button>
             </div>
             {/* Change Role */}
@@ -3701,7 +3707,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               <div className="text-[5.5px] font-mono uppercase tracking-widest text-white/22 mb-1 px-1">Change Role</div>
               <div className="grid grid-cols-4 gap-0.5">
                 {(['KICK','BASS','PERC','PAD','LEAD','ARP','STRINGS','CHOIR'] as VoiceRole[]).map(r => (
-                  <button key={r}
+                  <button key={r} title={`Mudar para ${r}`}
                     onClick={() => {
                       q.role = r; q.mutations++; q.roleLockTimer = 1.5;
                       q.hue = ROLE_HUES[r];
@@ -3724,7 +3730,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   Timbre — {q.timbreIdx >= 0 ? TIMBRE_TEMPLATES[q.timbreIdx]?.name : 'Role default'}
                 </div>
                 <div className="flex flex-wrap gap-0.5 max-h-16 overflow-y-auto" style={{scrollbarWidth:'none'}}>
-                  <button
+                  <button title="Usar timbre padrão da role"
                     onClick={() => { q.timbreIdx=-1; forceRender(n=>n+1); setContextMenu(null); }}
                     className={`text-[5px] px-1 py-0.5 border transition-all ${q.timbreIdx===-1?'border-white/30 text-white/70 bg-white/10':'border-white/[0.06] text-white/30 hover:text-white/60 hover:border-white/15'}`}
                     style={{borderRadius:0}}>
@@ -3755,7 +3761,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   setQuantaCount(st.count);
                 }},
               ].map(({label,action}) => (
-                <button key={label}
+                <button key={label} title={label}
                   onClick={() => { action(); forceRender(n=>n+1); setContextMenu(null); }}
                   className={`text-left text-[6.5px] uppercase tracking-wider px-2 py-1 transition-all
                     ${label==='Delete'?'text-red-400/70 hover:bg-red-900/20':'text-white/45 hover:text-white/80 hover:bg-white/[0.06]'}`}
@@ -3803,6 +3809,85 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       )}
 
       {/* Audio overlay removed — audio starts from toolbar button */}
+
+      {/* ── INSTRUMENT PAD — floating, draggable ──────────────────────────────── */}
+      {!cinematic && showInstrumentPad && (
+        <DraggablePanel id="ml_pad" title="PAD" titleColor="#88ffcc88" defaultX={40} defaultY={Math.max(200,window.innerHeight - (showStudioSeq?380:180))} zIndex={22} width={210}
+          onClose={()=>setShowInstrumentPad(false)}>
+          {/* Root selector — 12 semitone buttons */}
+          <div className="flex px-1.5 pt-1.5 gap-0.5">
+            {NOTE_NAMES.map((n,i)=>(
+              <button key={n} onClick={()=>applyRoot(i)} title={`Root: ${n}`}
+                className="flex-1 transition-all"
+                style={{
+                  height:16, fontSize:6, textAlign:'center',
+                  color: liveRoot===i ? '#88ffcc' : n.includes('#')||n.includes('b') ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.40)',
+                  background: liveRoot===i ? 'rgba(136,255,204,0.12)' : n.includes('#')||n.includes('b') ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                  border: liveRoot===i ? '1px solid rgba(136,255,204,0.40)' : '1px dashed rgba(255,255,255,0.04)',
+                }}>
+                {n}
+              </button>
+            ))}
+          </div>
+
+          {/* Scale selector */}
+          <div className="flex items-center px-1.5 py-1 gap-1">
+            <button onClick={()=>{
+              const scales = Object.keys(SCALE_LABELS) as Scale[];
+              const idx = scales.indexOf(liveScale);
+              applyScale(scales[(idx + 1) % scales.length]);
+            }} title="Trocar escala (clique para ciclar)"
+              className="flex items-center gap-1 transition-all"
+              style={{fontSize:7,color:'rgba(155,89,255,0.75)',letterSpacing:'0.06em',textTransform:'uppercase'}}>
+              {SCALE_LABELS[liveScale]} <ChevronDown size={7}/>
+            </button>
+            <div style={{flex:1}}/>
+            <span style={{fontSize:6,color:'rgba(255,255,255,0.15)'}}>
+              {NOTE_NAMES[liveRoot%12]} {SCALE_LABELS[liveScale]}
+            </span>
+          </div>
+
+          {/* Note pads — Launchpad-style grid */}
+          <div className="grid gap-0.5 px-1.5 pb-1.5"
+            style={{gridTemplateColumns:`repeat(${Math.min(SCALE_INTERVALS[liveScale].length,7)},1fr)`}}>
+            {SCALE_INTERVALS[liveScale].map((iv,idx)=>{
+              const nn = NOTE_NAMES[(liveRoot + iv) % 12];
+              const isRoot = iv === 0;
+              return (
+                <button key={`${iv}_${idx}`}
+                  onClick={()=>padQuantizeDegree(iv)} title={`${nn}${isRoot?' (root)':''}`}
+                  className="transition-all active:scale-95"
+                  style={{
+                    height:28, fontSize:9, textAlign:'center',
+                    color: isRoot ? '#88ffcc' : 'rgba(255,255,255,0.55)',
+                    background: isRoot ? 'rgba(136,255,204,0.08)' : 'rgba(255,255,255,0.04)',
+                    border: isRoot ? '1px solid rgba(136,255,204,0.25)' : '1px dashed rgba(255,255,255,0.06)',
+                    fontWeight: isRoot ? 600 : 400,
+                  }}>
+                  {nn}
+                </button>
+              );
+            })}
+          </div>
+        </DraggablePanel>
+      )}
+
+      {/* Instrument pad toggle (when hidden) */}
+      {!cinematic && !showInstrumentPad && (
+        <button onClick={()=>setShowInstrumentPad(true)}
+          className="fixed z-[22] pointer-events-auto transition-all"
+          title="Abrir Instrument Pad"
+          style={{
+            left:40, bottom: showStudioSeq ? 262 : 36,
+            width:24,height:24,
+            background:'rgba(0,0,0,0.85)',
+            border:'1px dashed rgba(255,255,255,0.06)',
+            color:'rgba(55,178,218,0.45)',fontSize:11,
+            display:'flex',alignItems:'center',justifyContent:'center',
+          }}>
+          ♪
+        </button>
+      )}
 
       {/* ── STUDIO SEQUENCER BOTTOM PANEL ────────────────────────────────────── */}
       {!cinematic && (
@@ -3859,6 +3944,23 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
       {/* ── WHAT'S NEW BANNER (Patch 01.3) ───────────────────────────────────── */}
       <WhatsNewBanner />
+
+      {/* ── RADIAL MENUS ─────────────────────────────────────────────────────── */}
+      <RadialMenu
+        open={radialToolsOpen}
+        items={RADIAL_TOOL_ITEMS}
+        position={radialPos}
+        activeId={activeTool}
+        onSelect={handleRadialToolSelect}
+        onClose={() => setRadialToolsOpen(false)}
+      />
+      <RadialMenu
+        open={radialPowersOpen}
+        items={RADIAL_POWER_ITEMS}
+        position={radialPos}
+        onSelect={handleRadialPowerSelect}
+        onClose={() => setRadialPowersOpen(false)}
+      />
     </div>
   );
 };

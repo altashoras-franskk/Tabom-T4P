@@ -168,7 +168,7 @@ const GlyphCard: React.FC<{ entry:GrimoireEntry; onBookmark:()=>void }> = ({ ent
             {entry.event&&<span className="text-[5px] font-mono px-1 rounded bg-red-900/25 text-red-400">{entry.event}</span>}
             <span className="text-[5px] font-mono text-white/20">{formatTimestamp(entry.timestamp)}</span>
           </div>
-          <button onClick={onBookmark} className={`${entry.bookmarked?'text-amber-400':'text-white/15 hover:text-amber-500/40'}`}><Bookmark size={7}/></button>
+          <button title="Bookmark" onClick={onBookmark} className={`${entry.bookmarked?'text-amber-400':'text-white/15 hover:text-amber-500/40'}`}><Bookmark size={7}/></button>
         </div>
         <p className="text-[6.5px] font-serif text-white/55 leading-snug line-clamp-3 mb-0.5">{entry.text}</p>
         <p className="text-[5.5px] font-mono text-white/2 italic">{entry.causalLine}</p>
@@ -314,7 +314,7 @@ const DiscoveryModal: React.FC<{ data: DiscoverySnapshot; onContinue:()=>void; o
           padding:'10px 24px 0', marginTop:8,
         }}>
           {(['story','recipe','table'] as const).map(t => (
-            <button key={t} onClick={()=>setTab(t)} style={{
+            <button title={t} key={t} onClick={()=>setTab(t)} style={{
               padding:'5px 12px', borderRadius:'6px 6px 0 0', cursor:'pointer', fontSize:9,
               fontWeight: tab===t?600:400,
               background: tab===t ? `${cat.color}16` : 'transparent',
@@ -446,14 +446,14 @@ const DiscoveryModal: React.FC<{ data: DiscoverySnapshot; onContinue:()=>void; o
           display:'flex', gap:8, justifyContent:'flex-end',
           background:'rgba(8,6,16,.6)',
         }}>
-          <button onClick={onReplay} style={{
+          <button title="Reset" onClick={onReplay} style={{
             padding:'8px 16px', borderRadius:8, cursor:'pointer', fontSize:10,
             background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.12)',
             color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',gap:5,
           }}>
             <RotateCcw size={11}/> Replay
           </button>
-          <button onClick={onContinue} style={{
+          <button title="Continuar" onClick={onContinue} style={{
             padding:'8px 22px', borderRadius:8, cursor:'pointer', fontSize:11, fontWeight:700,
             background:`linear-gradient(135deg, ${cat.color}30, ${cat.color}18)`,
             border:`1px solid ${cat.color}55`,
@@ -685,7 +685,7 @@ const Atanor: React.FC<{
           style={{flex:1, accentColor:'#ffa030', cursor:'pointer'}}/>
         <div style={{display:'flex',gap:2}}>
           {[0.15, 0.4, 1.0].map(v=>(
-            <button key={v} onClick={()=>onSimSpeed(v)} style={{
+            <button title={`Velocidade ${v}x`} key={v} onClick={()=>onSimSpeed(v)} style={{
               fontSize:6, padding:'1px 4px', borderRadius:2, cursor:'pointer', border:'none',
               background: Math.abs(simSpeed-v)<0.03 ? 'rgba(255,160,60,.25)' : 'rgba(255,255,255,.05)',
               color: Math.abs(simSpeed-v)<0.03 ? 'rgba(255,180,80,.9)' : 'rgba(255,255,255,.3)',
@@ -828,7 +828,7 @@ const OpusTab: React.FC<{
         })}
       </div>
 
-      <button onClick={onStartOpus} style={{
+      <button title="Iniciar Opus" onClick={onStartOpus} style={{
         width:'100%',padding:'7px',borderRadius:6,cursor:'pointer',
         background:opus.active?'rgba(220,60,60,.1)':'rgba(160,60,255,.14)',
         border:`1px solid ${opus.active?'rgba(220,60,60,.3)':'rgba(160,80,255,.4)'}`,
@@ -842,7 +842,7 @@ const OpusTab: React.FC<{
       <div style={{borderTop:'1px solid rgba(255,255,255,.05)',paddingTop:7}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:5}}>
           <div style={{fontSize:6.5,color:'rgba(255,255,255,.25)',textTransform:'uppercase',letterSpacing:'.08em'}}>Sequenciador Quântico</div>
-          <button onClick={onSeqToggle} style={{
+          <button title="Sequencer ON/OFF" onClick={onSeqToggle} style={{
             padding:'2px 8px',borderRadius:3,cursor:'pointer',fontSize:7,
             background:sequencer.active?'rgba(80,220,80,.14)':'rgba(255,255,255,.04)',
             border:`1px solid ${sequencer.active?'rgba(80,220,80,.35)':'rgba(255,255,255,.1)'}`,
@@ -875,12 +875,12 @@ const OpusTab: React.FC<{
         </div>
         <div style={{display:'flex',gap:3,marginTop:4,flexWrap:'wrap'}}>
           {SEQ_PRESETS.map(p=>(
-            <button key={p.id} onClick={()=>onSeqPreset(p.id)} style={{
+            <button title={p.name} key={p.id} onClick={()=>onSeqPreset(p.id)} style={{
               padding:'2px 6px',borderRadius:3,cursor:'pointer',fontSize:6.5,
               background:'rgba(160,80,255,.07)',border:'1px solid rgba(160,80,255,.18)',color:'rgba(200,150,255,.65)',
             }}>{p.id}</button>
           ))}
-          <button onClick={onSeqQuantum} style={{
+          <button title="Quantum" onClick={onSeqQuantum} style={{
             padding:'2px 6px',borderRadius:3,cursor:'pointer',fontSize:6.5,
             background:sequencer.quantum?'rgba(255,200,60,.1)':'rgba(255,255,255,.03)',
             border:`1px solid ${sequencer.quantum?'rgba(255,200,60,.3)':'rgba(255,255,255,.08)'}`,
@@ -913,7 +913,7 @@ const Arcana: React.FC<{
         {OPS_DATA.map(op=>{
           const used=opsUsed.has(op.id.toUpperCase());
           return (
-            <button key={op.id} onClick={()=>onOp(op.id)}
+            <button title={op.name} key={op.id} onClick={()=>onOp(op.id)}
               onMouseEnter={()=>setHovered(op)} onMouseLeave={()=>setHovered(null)}
               style={{
                 padding:'5px 4px',borderRadius:5,cursor:'pointer',
@@ -939,7 +939,7 @@ const Arcana: React.FC<{
         <div style={{fontSize:6,color:'rgba(255,255,255,.22)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Lente de Visualização</div>
         <div style={{display:'flex',gap:2}}>
           {(['SIGIL','FIELD','EVENTS','LAPIS'] as AlchemyLens[]).map(l=>(
-            <button key={l} onClick={()=>onLens(l)} style={{
+            <button title={l} key={l} onClick={()=>onLens(l)} style={{
               flex:1,padding:'3px 2px',borderRadius:3,cursor:'pointer',fontSize:6,fontFamily:'monospace',
               background:lens===l?'rgba(255,255,255,.09)':'rgba(255,255,255,.02)',
               border:`1px solid ${lens===l?'rgba(255,255,255,.28)':'rgba(255,255,255,.06)'}`,
@@ -958,7 +958,7 @@ const Arcana: React.FC<{
           {(Object.keys(BAR_META) as BarType[]).map(bt=>{
             const m=BAR_META[bt];
             return (
-              <button key={bt} onClick={()=>onBarTool(barTool===bt?null:bt)} style={{
+              <button title={m.label || m.id} key={bt} onClick={()=>onBarTool(barTool===bt?null:bt)} style={{
                 padding:'4px 7px',borderRadius:4,cursor:'pointer',textAlign:'left',
                 background:barTool===bt?`${m.color}16`:'rgba(255,255,255,.025)',
                 border:`1px solid ${barTool===bt?`${m.color}50`:'rgba(255,255,255,.06)'}`,
@@ -994,10 +994,10 @@ const Arcana: React.FC<{
                   <input type="range" min={.1} max={1} step={.05} value={bar.strength}
                     onChange={e=>onBarStrength(bar.id,+e.target.value)}
                     style={{width:36,accentColor:m.color,cursor:'pointer'}}/>
-                  <button onClick={()=>onToggleBar(bar.id)} style={{fontSize:5.5,padding:'1px 4px',borderRadius:2,cursor:'pointer',background:'rgba(255,255,255,.05)',border:'none',color:'rgba(255,255,255,.35)'}}>
+                  <button title="ON/OFF" onClick={()=>onToggleBar(bar.id)} style={{fontSize:5.5,padding:'1px 4px',borderRadius:2,cursor:'pointer',background:'rgba(255,255,255,.05)',border:'none',color:'rgba(255,255,255,.35)'}}>
                     {bar.active?'ON':'OFF'}
                   </button>
-                  <button onClick={()=>onDeleteBar(bar.id)} style={{background:'none',border:'none',cursor:'pointer',color:'rgba(255,60,60,.5)',padding:0}}>
+                  <button title="Remover" onClick={()=>onDeleteBar(bar.id)} style={{background:'none',border:'none',cursor:'pointer',color:'rgba(255,60,60,.5)',padding:0}}>
                     <Trash2 size={8}/>
                   </button>
                 </div>
@@ -1466,7 +1466,7 @@ export const AlchemyLab: React.FC<AlchemyLabProps> = ({ active }) => {
           pointerEvents:'all', paddingTop:4,
         }}>
           {TABS.map(tab=>(
-            <button key={tab.id}
+            <button title={tab.label} key={tab.id}
               onClick={()=>{ if(leftTab===tab.id&&hudOpen){ setHudOpen(false); } else { setLeftTab(tab.id); setHudOpen(true); } }}
               style={{
                 width:36,height:36,borderRadius:6,border:'none',cursor:'pointer',margin:'2px 0',
@@ -1595,7 +1595,7 @@ export const AlchemyLab: React.FC<AlchemyLabProps> = ({ active }) => {
             <div style={{fontSize:8,color:'rgba(255,200,80,.7)',letterSpacing:'.1em',textTransform:'uppercase',display:'flex',alignItems:'center',gap:5}}>
               <Book size={10}/> Grimório ({grimoire.length})
             </div>
-            <button onClick={()=>setShowGrim(false)} style={{background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,.3)'}}>
+            <button title="Fechar" onClick={()=>setShowGrim(false)} style={{background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,.3)'}}>
               <X size={10}/>
             </button>
           </div>

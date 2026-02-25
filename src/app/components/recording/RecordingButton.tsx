@@ -84,7 +84,7 @@ export const RecordingButton: React.FC<Props> = ({
           <div className="mb-2">
             <div className="text-[7px] font-mono text-white/30 uppercase tracking-widest mb-1">Formato</div>
             {(['auto', 'webm', 'mp4', 'mov'] as RecordFormat[]).map(f => (
-              <button
+              <button title={f}
                 key={f}
                 onClick={() => setFormat(f)}
                 className={`w-full text-left px-2 py-0.5 rounded text-[9px] font-mono transition-colors mb-0.5 flex items-center justify-between ${
@@ -105,7 +105,7 @@ export const RecordingButton: React.FC<Props> = ({
           <div>
             <div className="text-[7px] font-mono text-white/30 uppercase tracking-widest mb-1">Qualidade</div>
             {(['draft', 'standard', 'high', 'ultra'] as RecordQuality[]).map(q => (
-              <button
+              <button title={q}
                 key={q}
                 onClick={() => setQuality(q)}
                 className={`w-full text-left px-2 py-0.5 rounded text-[9px] font-mono transition-colors mb-0.5 ${

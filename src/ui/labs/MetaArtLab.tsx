@@ -134,7 +134,7 @@ function GeoPanel({
         <div style={label}>Modo</div>
         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
           {(['fluid', 'geometric', 'hybrid', '3d'] as const).map(m => (
-            <button key={m}
+            <button title={m} key={m}
               onClick={() => onParamChange('mode', m)}
               style={{
                 flex: 1, minWidth: 42, padding: '4px 0', borderRadius: 1, cursor: 'pointer', fontSize: 7,
@@ -175,7 +175,7 @@ function GeoPanel({
             {/* Trails toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
               <span style={{ ...label, marginBottom: 0, width: 60 }}>Rastros</span>
-              <button
+              <button title={`Trails 3D: ${p.trails3D ? "ON" : "OFF"}`}
                 onClick={() => onParamChange('trails3D', !p.trails3D)}
                 style={{
                   flex: 1, fontSize: 8, padding: '3px 0', borderRadius: 3, cursor: 'pointer',
@@ -207,7 +207,7 @@ function GeoPanel({
             {/* Wire toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
               <span style={{ ...label, marginBottom: 0, width: 60 }}>Wireframe</span>
-              <button
+              <button title={`Geo Shapes: ${p.showGeoShapes !== false ? "ON" : "OFF"}`}
                 onClick={() => onParamChange('showGeoShapes', p.showGeoShapes === false ? true : false)}
                 style={{
                   flex: 1, fontSize: 8, padding: '3px 0', borderRadius: 3, cursor: 'pointer',
@@ -225,7 +225,7 @@ function GeoPanel({
             {/* Solid fill toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
               <span style={{ ...label, marginBottom: 0, width: 60 }}>Sólido 3D</span>
-              <button
+              <button title={`Solid 3D: ${p.solidShapes3D ? "ON" : "OFF"}`}
                 onClick={() => onParamChange('solidShapes3D', !p.solidShapes3D)}
                 style={{
                   flex: 1, fontSize: 8, padding: '3px 0', borderRadius: 3, cursor: 'pointer',
@@ -259,7 +259,7 @@ function GeoPanel({
                 { key: 'deep_field',      name: 'Deep Field',      desc: 'Campo estelar · deriva lenta · Hubble' },
                 { key: 'rhizome_3d',      name: 'Rizoma 3D',       desc: 'Linhas retas · rastros neon · rede viva' },
               ]).map(({ key, name, desc }) => (
-                <button key={key}
+                <button title={name} key={key}
                   onClick={() => onApplyPreset(key)}
                   style={{
                     textAlign: 'left', padding: '6px 8px', borderRadius: 1, cursor: 'pointer',
@@ -344,7 +344,7 @@ function GeoPanel({
       {/* Advanced (collapsible, geo/hybrid only) */}
       {(p.mode === 'geometric' || p.mode === 'hybrid') && (
         <div>
-          <button
+          <button title={advOpen ? "Fechar avançado" : "Abrir avançado"}
             onClick={() => setAdvOpen(v => !v)}
             style={{
               width: '100%', background: 'none', border: '1px solid rgba(255,255,255,0.07)',
@@ -388,7 +388,7 @@ function GeoPanel({
               { key: 'analytical_collage', name: 'Analytical Collage', desc: 'Recortes + planos + colagem' },
               { key: 'spiritual_geometry', name: 'Spiritual Geometry', desc: 'Minimal + aura + silêncio' },
             ]).map(({ key, name, desc }) => (
-              <button key={key}
+              <button title={name} key={key}
                 onClick={() => onApplyPreset(key)}
                 style={{
                   textAlign: 'left', padding: '6px 8px', borderRadius: 1, cursor: 'pointer',
@@ -1916,7 +1916,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             ['powers',  null, 'PWR'],
             ['geo',     null, 'GEO'],
           ] as [RightPanel, React.ReactNode | null, string][]).map(([panel, icon, label]) => (
-            <button key={panel}
+            <button title={panel} key={panel}
               onClick={() => setRightPanel(prev => prev === panel ? null : panel)}
               style={{
                 ...topBtnSty,
@@ -1939,7 +1939,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
 
       {/* Cinematic exit */}
       {cinematic && (
-        <button onClick={() => setCinematic(false)}
+        <button title="Sair modo cinema" onClick={() => setCinematic(false)}
           style={{
             position: 'absolute', top: 10, right: 10, zIndex: 100,
             background: 'rgba(0,0,0,0.7)', border: `1px solid ${BORDER}`,
@@ -2389,7 +2389,7 @@ function VitrineView({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 8, color: ACCENT, letterSpacing: '0.16em',
           textTransform: 'uppercase' }}>VITRINE</span>
-        <button onClick={onNewMutate}
+        <button title="Nova mutação" onClick={onNewMutate}
           style={{ fontSize: 7, padding: '2px 8px', borderRadius: 1, cursor: 'pointer',
             border: `1px solid rgba(255,0,132,0.2)`, background: 'rgba(255,0,132,0.04)',
             color: 'rgba(255,0,132,0.6)', fontFamily: MONO, letterSpacing: '0.1em', textTransform: 'uppercase' }}>

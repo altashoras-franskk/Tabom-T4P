@@ -85,7 +85,7 @@ export const PresetCategoryView: React.FC<{onClose: ()=>void}> = ({onClose}) => 
             <h2 className="text-white text-xl font-mono uppercase tracking-wider mb-1">Preset Library</h2>
             <p className="text-white/40 text-xs font-mono">60 professionally crafted musical templates</p>
           </div>
-          <button
+          <button title="Fechar"
             onClick={onClose}
             className="text-white/40 hover:text-white/80 transition-colors text-2xl leading-none"
           >

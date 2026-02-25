@@ -926,7 +926,7 @@ export function LanguageLab({ active }: Props) {
           {/* LLM cluster button */}
           {lexicon.length >= 3 && (
             <div style={{ padding: '8px 10px 4px' }}>
-              <button
+              <button title="Executar"
                 onClick={handleCluster}
                 disabled={llmStatus.state === 'loading'}
                 style={{
@@ -1116,7 +1116,7 @@ function TrainPrompt({
         </div>
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
           {CHOICES.map(ch => (
-            <button key={ch}
+            <button title={ch} key={ch}
               onClick={() => onChoice(ch)}
               style={{
                 fontSize: 9, padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
@@ -1127,7 +1127,7 @@ function TrainPrompt({
             </button>
           ))}
         </div>
-        <button onClick={onSkip} style={{ marginTop: 12, fontSize: 8, background: 'none',
+        <button title="Pular" onClick={onSkip} style={{ marginTop: 12, fontSize: 8, background: 'none',
           border: 'none', cursor: 'pointer', color: 'rgba(200,190,180,0.3)', letterSpacing: '0.1em' }}>
           PULAR
         </button>

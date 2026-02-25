@@ -114,7 +114,7 @@ function Section({
 }) {
   return (
     <div style={{ borderTop: '1px dashed rgba(255,255,255,0.06)', paddingTop: 10, marginTop: 10 }}>
-      <button onClick={onToggle}
+      <button title="Expandir" onClick={onToggle}
         style={{ background:'none', border:'none', cursor:'pointer', color: accent, fontSize:11, display:'flex', alignItems:'center', gap:5, padding:0, letterSpacing:'0.08em', textTransform:'uppercase', width:'100%', textAlign:'left', fontFamily: DOTO }}>
         {open ? <ChevronDown size={9}/> : <ChevronRight size={9}/>}
         {title}
@@ -178,7 +178,7 @@ function RecordingPanel({
           <span style={{ fontSize:10, color:'#ef4444', fontFamily:'monospace' }}>{fmtTime(elapsed)}</span>
           <span style={{ fontSize:8, color:'rgba(239,68,68,0.5)', letterSpacing:'0.08em' }}>{actualFmt}</span>
         </div>
-        <button onClick={onStop}
+        <button title="Parar gravação" onClick={onStop}
           style={{ width:'100%', padding:'5px 0', borderRadius:4, background:'rgba(239,68,68,0.15)', border:'1px solid rgba(239,68,68,0.35)', color:'rgba(239,68,68,0.8)', fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}>
           <span>■</span> Parar Gravação
         </button>
@@ -193,7 +193,7 @@ function RecordingPanel({
         <div style={{ fontSize:8, color:'rgba(255,255,255,0.22)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:4 }}>Formato</div>
         <div style={{ display:'flex', flexWrap:'wrap' }}>
           {(['auto','webm','mp4','mov'] as RecordFormat[]).map(f => (
-            <button key={f} style={btnSty(fmt===f)} onClick={() => setFmt(f)}>
+            <button title={RECORD_FORMAT_LABELS[f]} key={f} style={btnSty(fmt===f)} onClick={() => setFmt(f)}>
               {RECORD_FORMAT_LABELS[f]}
               {(f==='mp4'||f==='mov') && !mp4ok && (
                 <span style={{ fontSize:7, color:'rgba(251,191,36,0.5)', marginLeft:2 }}>*</span>
@@ -214,7 +214,7 @@ function RecordingPanel({
         <div style={{ fontSize:8, color:'rgba(255,255,255,0.22)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:4 }}>Qualidade</div>
         <div style={{ display:'flex', flexWrap:'wrap' }}>
           {(['draft','standard','high','ultra'] as RecordQuality[]).map(q => (
-            <button key={q} style={btnSty(qual===q)} onClick={() => setQual(q)}>
+            <button title={q} key={q} style={btnSty(qual===q)} onClick={() => setQual(q)}>
               {q}
             </button>
           ))}
@@ -222,7 +222,7 @@ function RecordingPanel({
       </div>
 
       {/* Start button */}
-      <button onClick={() => onStart(fmt, qual)}
+      <button title="Iniciar gravação" onClick={() => onStart(fmt, qual)}
         style={{ width:'100%', padding:'6px 0', borderRadius:4, background:'rgba(124,58,237,0.18)', border:'1px solid rgba(124,58,237,0.35)', color:'rgba(196,181,253,0.85)', fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
         <Video size={10} strokeWidth={1.5} />
         Iniciar Gravação
@@ -281,7 +281,7 @@ function PromptEditorModal({
             <Settings size={12} strokeWidth={1.5} style={{ color: 'rgba(196,181,253,0.7)' }} />
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.06em' }}>EDITOR DE PROMPTS</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+          <button title="Fechar" onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 16 }}>✕</button>
         </div>
 
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -291,7 +291,7 @@ function PromptEditorModal({
               const ml = PROMPT_MODE_LABELS[mode];
               const isActive = mode === activeMode;
               return (
-                <button key={mode} onClick={() => setActiveMode(mode)} style={{
+                <button title={mode} key={mode} onClick={() => setActiveMode(mode)} style={{
                   width: '100%', padding: '8px 14px', textAlign: 'left', border: 'none',
                   borderLeft: `2px solid ${isActive ? 'rgba(196,181,253,0.7)' : 'transparent'}`,
                   background: isActive ? 'rgba(255,255,255,0.04)' : 'none',
@@ -338,7 +338,7 @@ function PromptEditorModal({
           <button onClick={onClose} style={{ padding: '6px 14px', borderRadius: 1, background: 'none', border: '1px dashed rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)', fontSize: 10, cursor: 'pointer' }}>
             Cancelar
           </button>
-          <button onClick={handleSave} style={{ padding: '6px 16px', borderRadius: 1, background: 'rgba(16,212,91,0.08)', border: '1px dashed rgba(16,212,91,0.35)', color: 'rgba(16,212,91,0.9)', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button title="Configurações" onClick={handleSave} style={{ padding: '6px 16px', borderRadius: 1, background: 'rgba(16,212,91,0.08)', border: '1px dashed rgba(16,212,91,0.35)', color: 'rgba(16,212,91,0.9)', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Settings size={9} strokeWidth={1.5} />
             Salvar Prompts
           </button>
@@ -497,7 +497,7 @@ function LLMPanel({
           <span style={lblSty}>Profundidade</span>
           <div style={{ display: 'flex', gap: 2 }}>
             {(['shallow','medium','deep'] as LLMDepth[]).map(d => (
-              <button key={d} onClick={() => setDepth(d)}
+              <button title={`Profundidade ${d}`} key={d} onClick={() => setDepth(d)}
                 style={{ flex: 1, padding: '3px 0', borderRadius: 3, fontSize: 8, cursor: 'pointer', fontFamily: 'monospace',
                   background: depth===d ? 'rgba(124,58,237,0.25)' : 'rgba(255,255,255,0.03)',
                   border: `1px solid ${depth===d ? 'rgba(124,58,237,0.45)' : 'rgba(255,255,255,0.07)'}`,
@@ -519,7 +519,7 @@ function LLMPanel({
 
       {/* ── Config (collapsible) ──────────────────────────────────────────── */}
       <div>
-        <button onClick={() => setShowCfg(v => !v)}
+        <button title="Expandir" onClick={() => setShowCfg(v => !v)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)', fontSize: 9, display: 'flex', alignItems: 'center', gap: 4, padding: 0, letterSpacing: '0.05em' }}
           onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
           onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}
@@ -582,7 +582,7 @@ function LLMPanel({
 
       {/* ── Actions ──────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 5 }}>
-        <button onClick={handleGenerate}
+        <button title="Gerar rizoma" onClick={handleGenerate}
           style={{
             flex: 1, padding: '8px 0', borderRadius: 6, cursor: 'pointer',
             background: 'rgba(124,58,237,0.22)', border: '1px solid rgba(124,58,237,0.45)',
@@ -597,7 +597,7 @@ function LLMPanel({
           Gerar Rizoma
         </button>
         {hasLLMNodes && (
-          <button onClick={onClear}
+          <button title="Limpar" onClick={onClear}
             style={{ padding: '8px 10px', borderRadius: 6, cursor: 'pointer', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', color: 'rgba(239,68,68,0.55)', display: 'flex', alignItems: 'center', transition: 'all 0.12s' }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.14)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239,68,68,0.35)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.06)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239,68,68,0.18)'; }}
@@ -696,7 +696,7 @@ function NodeCard({
             </div>
           )}
         </div>
-        <button onClick={onClose} style={{
+        <button title="Fechar" onClick={onClose} style={{
           background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)',
           cursor: 'pointer', padding: 2, fontSize: 14, lineHeight: 1,
         }}>✕</button>
@@ -777,7 +777,7 @@ function NodeCard({
       </div>
 
       {/* Expand search button */}
-      <button
+      <button title="Expandir nó"
         onClick={() => { onExpand(node); onClose(); }}
         style={{
           marginTop: 8, marginBottom: 6, width: '100%', padding: '7px 0',
@@ -801,7 +801,7 @@ function NodeCard({
       </button>
 
       {/* Save to collection button */}
-      <button
+      <button title="Salvar nó"
         onClick={() => onSave(node)}
         style={{
           marginBottom: 8, width: '100%', padding: '6px 0',
@@ -2071,7 +2071,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
 
           {/* ── Interaction mode ─────────────────────────────────────────── */}
           <div style={{ display:'flex', gap:4, marginBottom:0 }}>
-            <button onClick={() => setAddMode(false)}
+            <button title="Visualizar" onClick={() => setAddMode(false)}
               style={{ flex:1, padding:'5px 0', borderRadius:1, fontSize:8, cursor:'pointer', fontFamily: MONO,
                 background: !addMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
                 border: `1px dashed ${!addMode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}`,
@@ -2080,7 +2080,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
                 letterSpacing:'0.06em', textTransform:'uppercase' }}>
               <Eye size={9} strokeWidth={1.5} /> Observar
             </button>
-            <button onClick={() => setAddMode(true)}
+            <button title="Adicionar" onClick={() => setAddMode(true)}
               style={{ flex:1, padding:'5px 0', borderRadius:1, fontSize:8, cursor:'pointer', fontFamily: MONO,
                 background: addMode ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.02)',
                 border: `1px dashed ${addMode ? 'rgba(124,58,237,0.35)' : 'rgba(255,255,255,0.06)'}`,
@@ -2117,7 +2117,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
               {/* Auto-rotate toggle */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}>Auto-rotação</span>
-                <button onClick={() => {
+                <button title="Auto-rotação" onClick={() => {
                   const next = !cam3DRef.current.autoRotate;
                   cam3DRef.current.autoRotate = next;
                   setCam3DUI(prev => ({ ...prev, autoRotate: next }));
@@ -2148,7 +2148,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
                 onChange={v => { cam3DRef.current.fog = v; setCam3DUI(p => ({ ...p, fog: v })); }} />
 
               {/* Reset button */}
-              <button onClick={() => { cam3DRef.current = { ...DEFAULT_CAMERA3D }; setCam3DUI({ ...DEFAULT_CAMERA3D }); }}
+              <button title="Resetar câmera" onClick={() => { cam3DRef.current = { ...DEFAULT_CAMERA3D }; setCam3DUI({ ...DEFAULT_CAMERA3D }); }}
                 style={{
                   marginTop: 6, width: '100%', padding: '4px 0', borderRadius: 4,
                   cursor: 'pointer', fontSize: 8, letterSpacing: '0.05em',
@@ -2195,7 +2195,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
               <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.22)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6, fontFamily: MONO }}>Paletas</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {COLOR_PRESETS.map(cp => (
-                  <button
+                  <button title={cp.name}
                     key={cp.name}
                     onClick={() => applyColorPreset(cp.ae)}
                     style={{
@@ -2244,7 +2244,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
             {/* Labels */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:6, marginBottom:6 }}>
               <span style={{ fontSize:10, color:'rgba(255,255,255,0.45)' }}>Mostrar Labels</span>
-              <button onClick={() => handleAEChange('showLabels', !aesthetics.showLabels)}
+              <button title={`Labels: ${aesthetics.showLabels ? "ON" : "OFF"}`} onClick={() => handleAEChange('showLabels', !aesthetics.showLabels)}
                 style={{ padding:'3px 8px', borderRadius:3, fontSize:9, cursor:'pointer',
                   background: aesthetics.showLabels ? 'rgba(0,255,102,0.15)' : 'rgba(255,255,255,0.04)',
                   border: `1px solid ${aesthetics.showLabels ? 'rgba(0,255,102,0.35)' : 'rgba(255,255,255,0.08)'}`,
@@ -2257,7 +2257,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
             )}
 
             {/* Export frame */}
-            <button onClick={handleExportPNG}
+            <button title="Exportar PNG" onClick={handleExportPNG}
               style={{ marginTop:6, width:'100%', padding:'5px 0', borderRadius:4, cursor:'pointer',
                 background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)',
                 color:'rgba(255,255,255,0.5)', fontSize:10, display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
@@ -2296,7 +2296,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
                 ))}
               </div>
             )}
-            <button onClick={() => initSim(paramsRef.current, aestheticsRef.current)}
+            <button title="Reset" onClick={() => initSim(paramsRef.current, aestheticsRef.current)}
               style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'5px 0', borderRadius:4, cursor:'pointer', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.45)', fontSize:10 }}>
               <RotateCcw size={10} strokeWidth={1.5} />
               Reset (novo seed)
