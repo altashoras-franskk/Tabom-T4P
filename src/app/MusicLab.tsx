@@ -33,7 +33,7 @@ import {
   Pause, RotateCcw, Music, X, Volume2, Film,
   MousePointer2, Plus, Minus, Target, Zap, RefreshCw,
   Snowflake, Shuffle, Eraser, ChevronRight,
-  ChevronLeft, Settings, Sliders, ZapOff, Trash2, Dice5, HelpCircle,
+  ChevronLeft, Settings, Sliders, ZapOff, Trash2, Dice5, HelpCircle, Image,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -300,6 +300,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [pitchMapMode,setPitchMapMode]= useState<'preset'|'canvas'>('preset');
   // ── 3D Visualization (Patch 01.3) ──────────────────────────────────────────
   const [view3D,      setView3D]     = useState(false);
+  const view3DRef = useRef(false);
+  useEffect(() => { view3DRef.current = view3D; }, [view3D]);
   const [camera3D,    setCamera3D]   = useState<'3d-orbital'|'3d-fpp'|'3d-top'|'3d-side'>('3d-orbital');
   const [show3DGrid,   setShow3DGrid]   = useState(true);
   const [show3DAxes,   setShow3DAxes]   = useState(false);
@@ -849,24 +851,26 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         tool: activeTool, wx: cursorRef.current.wx, wy: cursorRef.current.wy,
         radius: brushRadius, active: cursorRef.current.active,
       };
-      renderMusic(
-        canvasRef.current!, state, preset, lensRef.current,
-        cinematicRef.current, fxRef.current, beatPulse,
-        drawingRef.current, cursor, showVelRef.current,
-        channelPtsRef.current.length>1?channelPtsRef.current:null,
-        tunnelFirst,
-        railDrawingRef.current,
-        zoomPan.zoomRef.current,
-        zoomPan.panXRef.current,
-        zoomPan.panYRef.current,
-        hoverIdxRef.current,
-        lassoRectRef.current,
-        showOverlaysRef.current,
-        paletteRef.current,
-        cageDrawingRef.current,
-        zonePointsRef.current.length > 2 ? zonePointsRef.current : null,
-        aestheticRef.current,
-      );
+      if (!view3DRef.current) {
+        renderMusic(
+          canvasRef.current!, state, preset, lensRef.current,
+          cinematicRef.current, fxRef.current, beatPulse,
+          drawingRef.current, cursor, showVelRef.current,
+          channelPtsRef.current.length>1?channelPtsRef.current:null,
+          tunnelFirst,
+          railDrawingRef.current,
+          zoomPan.zoomRef.current,
+          zoomPan.panXRef.current,
+          zoomPan.panYRef.current,
+          hoverIdxRef.current,
+          lassoRectRef.current,
+          showOverlaysRef.current,
+          paletteRef.current,
+          cageDrawingRef.current,
+          zonePointsRef.current.length > 2 ? zonePointsRef.current : null,
+          aestheticRef.current,
+        );
+      }
 
       // ── Compose-mode velocity drag overlay ─────────────────────────────
       const drag = composeDragRef.current;
@@ -2426,6 +2430,18 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               <Dice5 size={9}/>
             </button>
 
+            {/* Export cover to Meta-Gen-Art */}
+            <button onClick={() => { exportSnapshotToMetaArt(); }} title="Exportar capa → Meta-Gen-Art"
+              className="flex items-center gap-1 px-2 py-1.5 transition-all"
+              style={{
+                fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',
+                color: lastCoverExport > 0 && Date.now() - lastCoverExport < 3000 ? '#4ade80' : 'rgba(255,255,255,0.22)',
+                borderRight:'1px dashed rgba(255,255,255,0.06)',
+              }}>
+              <Image size={9}/>
+              <span>{lastCoverExport > 0 && Date.now() - lastCoverExport < 3000 ? '✓' : 'Capa'}</span>
+            </button>
+
             {/* Guia */}
             <button onClick={() => setShowGuide(true)} title="Guia"
               className="flex items-center gap-1 px-2 py-1.5 transition-all"
@@ -3786,31 +3802,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         </div>
       )}
 
-      {/* ── NO AUDIO STATE ───────────────────────────────────────────────────── */}
-      {!audioOn && (
-        <div className="fixed inset-0 z-[5] flex items-center justify-center pointer-events-none">
-          <div className="text-center pointer-events-auto">
-            <div style={{fontSize:18,color:`${ACCENT}25`,marginBottom:12}}>◈</div>
-            <div style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',marginBottom:6}}>
-              Synesthetic Quanta Instrument
-            </div>
-            <div style={{fontFamily:MONO,fontSize:8,color:'rgba(255,255,255,0.14)',marginBottom:20,fontWeight:300}}>
-              Draw gate lines · Place particles · Press play
-            </div>
-            <button onClick={handleAudioToggle}
-              className="transition-all"
-              style={{
-                fontFamily:MONO,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',
-                padding:'8px 24px',
-                color:`${ACCENT}bb`,
-                background:`${ACCENT}08`,
-                border:`1px dashed ${ACCENT}30`,
-              }}>
-              ▶ START AUDIO
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Audio overlay removed — audio starts from toolbar button */}
 
       {/* ── STUDIO SEQUENCER BOTTOM PANEL ────────────────────────────────────── */}
       {!cinematic && (

@@ -2,7 +2,7 @@
 // Agents = social actors. Groups = identity coalitions.
 // Symbols (Totem/Tabu/Ritual) = laws inscribed in the field.
 
-export const MAX_STUDY_AGENTS = 200;
+export const MAX_STUDY_AGENTS = 300;
 export const MAX_STUDY_GROUPS = 5;
 
 export const GROUP_COLORS: readonly string[] = [
@@ -54,13 +54,30 @@ export interface StudyAgent {
   wealth:    number;  // 0..1 — accumulated resource
   ideology:  number;  // -1..1 — order(−1) ↔ freedom(+1) axis
   fatigue:   number;  // 0..1  — exhaustion from conflict/ritual
+
+  // ── Complex dynamics ───────────────────────────────────────────────────
+  conformity:   number;  // 0..1 — tendency to align with local norms
+  empathy:      number;  // 0..1 — emotional contagion sensitivity
+  charisma:     number;  // 0..1 — influence multiplier on neighbors
+  groupLoyalty: number;  // 0..1 — resistance to switching groups
+  memeId:       number;  // cultural meme index (0..groupCount-1, can spread)
+
+  // ── Foucault Dynamics (Surveillance & Resistance) ──────────────────────
+  visibility:   number;  // 0..1 — how "seen" the agent feels by the panopticon
+  resistance:   number;  // 0..1 — drive to rebel against discipline/norms
+  
+  // ── Visuals ────────────────────────────────────────────────────────────
+  trailX: Float32Array;
+  trailY: Float32Array;
+  trailIdx: number;
+  lastGroupChange: number; // timestamp of last group change for visual effects
 }
 
 // ── Symbols — laws inscribed in field + behaviour ─────────────────────────────
 
-export type TotemKind   = 'BOND' | 'RIFT';
+export type TotemKind   = 'BOND' | 'RIFT' | 'ORACLE' | 'ARCHIVE' | 'PANOPTICON';
 export type TabuKind    = 'NO_ENTER' | 'NO_MIX';
-export type RitualKind  = 'GATHER' | 'PROCESSION';
+export type RitualKind  = 'GATHER' | 'PROCESSION' | 'OFFERING' | 'REVOLT';
 
 export interface StudyTotem {
   id: string;
@@ -70,6 +87,7 @@ export interface StudyTotem {
   groupId: number;        // for RIFT — which group's L it boosts
   pulseStrength: number;  // N/L deposit amount per macroTick
   bornAt: number;
+  emergent?: boolean;     // true if auto-placed by engine
 }
 
 export interface StudyTabu {
@@ -123,6 +141,24 @@ export interface StudyConfig {
   decayWealth:  number; // wealth maintenance cost per second
   ideologyPressure: number; // ideology contágio strength
 
+  // Complex dynamics
+  conformity:      number;  // 0..1 — social pressure to align with local norm
+  empathy:         number;  // 0..1 — cross-group emotional contagion
+  mobility:        number;  // 0..1 — group switching probability
+  contagion:       number;  // 0..1 — idea/meme spreading speed
+  hierarchyStrength: number;  // 0..1 — status amplifies influence
+  innovationRate:  number;  // 0..1 — spontaneous ideology mutation
+  cooperationBias: number;  // 0..1 — tendency to share wealth
+  culturalInertia: number;  // 0..1 — resistance to belief change
+  resourceScarcity: number; // 0..1 — 0=scarce, 1=abundant (R regen modifier)
+
+  // Boids / Crowd movement
+  boidsAlignment:  number;  // 0..1 — tendency to align velocity with neighbors
+  boidsCohesion:   number;  // 0..1 — tendency to move towards center of mass of neighbors
+
+  // Foucault / Control
+  panopticism:     number;  // 0..1 — how much visibility increases fear/conformity vs resistance
+  
   // Coercion / Exception
   violationThreshold: number;  // violations per minute to trigger exception
   exceptionDuration:  number;  // seconds
@@ -155,11 +191,17 @@ export interface StudyMetrics {
   conflict:     number;  // 0..1
   consensus:    number;  // 0..1
   phase:        StudyPhase;
+  // Extended telemetry
+  leaderCount:  number;
+  rebelCount:   number;
+  meanFear:     number;
+  meanBelief:   number;
+  entropy:      number;  // 0..1 — opinion diversity
 }
 
 // ── Lens / Tool ───────────────────────────────────────────────────────────────
-export type StudyLens = 'off' | 'groups' | 'power' | 'economy' | 'events' | 'field';
-export type StudyTool = 'select' | 'totem_bond' | 'totem_rift' | 'tabu_enter' | 'tabu_mix' | 'ritual_gather' | 'ritual_procession';
+export type StudyLens = 'off' | 'groups' | 'power' | 'economy' | 'events' | 'field' | 'archetype';
+export type StudyTool = 'select' | 'totem_bond' | 'totem_rift' | 'totem_oracle' | 'totem_archive' | 'totem_panopticon' | 'tabu_enter' | 'tabu_mix' | 'ritual_gather' | 'ritual_procession' | 'ritual_offering' | 'ritual_revolt';
 
 // ── Events / Pings ────────────────────────────────────────────────────────────
 export interface StudyEvent {
@@ -186,6 +228,12 @@ export function createStudyConfig(): StudyConfig {
     kBelief: 0.40, kFear: 0.35, kDesire: 0.30,
     harvestRate: 0.06, decayWealth: 0.012,
     ideologyPressure: 0.25,
+    conformity: 0.40, empathy: 0.30, mobility: 0.10,
+    contagion: 0.35, hierarchyStrength: 0.40,
+    innovationRate: 0.05, cooperationBias: 0.30,
+    culturalInertia: 0.50, resourceScarcity: 0.50,
+    boidsAlignment: 0.40, boidsCohesion: 0.30,
+    panopticism: 0.50,
     violationThreshold: 3, exceptionDuration: 25,
     autoSymbols: true,
   };
@@ -204,5 +252,5 @@ export function createStudyWorldState(): StudyWorldState {
 }
 
 export function createStudyMetrics(): StudyMetrics {
-  return { cohesion: 0.2, polarization: 0.1, conflict: 0.05, consensus: 0.5, phase: 'SWARM' };
+  return { cohesion: 0.2, polarization: 0.1, conflict: 0.05, consensus: 0.5, phase: 'SWARM', leaderCount: 0, rebelCount: 0, meanFear: 0.1, meanBelief: 0.2, entropy: 0.5 };
 }

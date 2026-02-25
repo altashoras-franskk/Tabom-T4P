@@ -104,6 +104,7 @@ import { AsimovTheater } from '../ui/labs/AsimovTheater';
 import { RhizomeLab } from '../ui/labs/RhizomeLab';
 import { LanguageLab } from '../ui/labs/LanguageLab';
 import { TreeOfLifeLab } from '../ui/labs/TreeOfLifeLab';
+import { MilPlatosLab } from '../ui/labs/MilPlatosLab';
 import { HomePage } from './components/HomePage';
 import { Renderer3D, View3DConfig, DEFAULT_VIEW3D, typeColor, getZMicro, clamp3d, Particle3D } from '../render/Renderer3D';
 import { getPsycheState, registerPsycheState } from '../sim/psyche/psycheLabGlobal';
@@ -111,6 +112,9 @@ import { View3DControls } from '../ui/View3DControls';
 import { MEME_COLORS } from '../sim/sociogenesis/sociogenesisTypes';
 import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
+
+const ADMIN_MODE_KEY = 't4p_admin_mode_v1';
+const ADMIN_PASSWORD = 'morin2026';
 
 // OR CHOZER: Bottom-up feedback engine (kept for legacy / feature-flag fallback)
 import {
@@ -204,6 +208,85 @@ function AsimovGate({ onUnlock }: { onUnlock: () => void }) {
             Senha incorreta.
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AdminGate({
+  onUnlock,
+  onClose,
+}: {
+  onUnlock: () => void;
+  onClose: () => void;
+}) {
+  const [pw, setPw] = React.useState('');
+  const [error, setError] = React.useState(false);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pw.trim().toLowerCase() === ADMIN_PASSWORD) {
+      onUnlock();
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 1200);
+    }
+  };
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 60,
+      background: 'rgba(0,0,0,0.82)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'system-ui, sans-serif',
+    }}>
+      <div style={{
+        width: 'min(420px, 92vw)',
+        background: 'rgba(8,6,14,0.98)',
+        border: '1px dashed rgba(245,158,11,0.35)',
+        borderRadius: 14,
+        padding: '18px 18px',
+        boxShadow: '0 24px 90px rgba(0,0,0,0.7)',
+      }}>
+        <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(245,158,11,0.9)', marginBottom: 8, fontFamily: 'monospace' }}>
+          Admin Mode
+        </div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, marginBottom: 14 }}>
+          Libera acesso a tools trancadas/“em breve”. (Gate de UI — não é segurança real.)
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="password"
+            value={pw}
+            onChange={e => setPw(e.target.value)}
+            placeholder="Senha..."
+            autoFocus
+            style={{
+              flex: 1, padding: '9px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.04)',
+              border: error ? '1px solid rgba(255,80,80,0.55)' : '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.82)', fontSize: 12, outline: 'none', fontFamily: 'monospace',
+              transition: 'border-color 0.2s',
+            }}
+          />
+          <button type="submit" style={{
+            padding: '9px 14px', borderRadius: 10, cursor: 'pointer',
+            background: 'rgba(245,158,11,0.15)', border: '1px dashed rgba(245,158,11,0.35)',
+            color: 'rgba(245,158,11,0.92)', fontSize: 11, letterSpacing: '0.10em', textTransform: 'uppercase',
+            fontFamily: 'monospace',
+          }}>
+            Entrar
+          </button>
+        </form>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+          <button onClick={onClose} style={{
+            padding: '7px 10px', borderRadius: 10, cursor: 'pointer',
+            background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: '0.10em', textTransform: 'uppercase',
+            fontFamily: 'monospace',
+          }}>
+            Cancelar
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -487,6 +570,11 @@ const App: React.FC = () => {
   const [showHome, setShowHome] = useState(true); // start on homepage
   const [activeLab, setActiveLab] = useState<LabId>('complexityLife');
   const [asimovUnlocked, setAsimovUnlocked] = useState(false);
+  const [adminMode, setAdminMode] = useState<boolean>(() => {
+    try { return localStorage.getItem(ADMIN_MODE_KEY) === '1'; }
+    catch { return false; }
+  });
+  const [showAdminGate, setShowAdminGate] = useState(false);
   const socioStateRef = useRef<SociogenesisState>(createSociogenesisState());
   const [socioForce, setSocioForce] = useState(0); // force re-render for socio panel
   const socioPointerRef = useRef({ cursorX: -1, cursorY: -1 });
@@ -516,6 +604,40 @@ const App: React.FC = () => {
   const lastEmergenceDetectRef = useRef(0); // for emergent institution detection
   const leadersRef = useRef<Leader[]>([]);
   const lastLeaderDetectRef = useRef(0);
+
+  const PUBLIC_LABS: LabId[] = [
+    'complexityLife',
+    'metaArtLab',
+    'musicLab',
+    'rhizomeLab',
+    'alchemyLab',
+    'treeOfLife',
+    'sociogenesis',
+    'psycheLab',
+    'milPlatos',
+  ];
+
+  const ALL_LABS_ORDER: LabId[] = [
+    'complexityLife',
+    'metaArtLab',
+    'musicLab',
+    'rhizomeLab',
+    'alchemyLab',
+    'treeOfLife',
+    'sociogenesis',
+    'psycheLab',
+    'milPlatos',
+    'languageLab',
+    'asimovTheater',
+    'physicsSandbox',
+  ];
+
+  const canAccessLab = useCallback((lab: LabId) => {
+    if (adminMode) return true;
+    return PUBLIC_LABS.includes(lab);
+  }, [adminMode]);
+
+  const availableLabs = adminMode ? ALL_LABS_ORDER : PUBLIC_LABS;
 
   // Background gradient
   const [background, setBackground] = useState('radial-gradient(circle, #000000 0%, #000000 100%)');
@@ -3777,6 +3899,9 @@ const App: React.FC = () => {
             interactionsApplied={interactionsHUD}
             narrativeStatus={narrativeStatus}
             activeLab={activeLab}
+            availableLabs={availableLabs}
+            adminMode={adminMode}
+            onOpenAdmin={() => setShowAdminGate(true)}
             socioStats={activeLab === 'sociogenesis' ? {
               totems: socioStateRef.current.totems.length,
               taboos: socioStateRef.current.taboos.length,
@@ -3786,6 +3911,14 @@ const App: React.FC = () => {
             } : undefined}
             onGoHome={() => setShowHome(true)}
             onLabChange={(lab) => {
+              if (!canAccessLab(lab)) {
+                toast.info('Tool trancada', {
+                  description: 'Ative Admin Mode (morin2026) para acessar.',
+                  duration: 2500,
+                });
+                setShowAdminGate(true);
+                return;
+              }
               setActiveLab(lab);
               setShowHome(false);
               const LABELS: Record<string, [string, string]> = {
@@ -4369,10 +4502,10 @@ const App: React.FC = () => {
       <RhizomeLab active={!showHome && activeLab === 'rhizomeLab'} />
 
       {/* Asimov Theater — predictive history by complex agents (password-gated) */}
-      {!showHome && activeLab === 'asimovTheater' && !asimovUnlocked ? (
+      {!showHome && activeLab === 'asimovTheater' && !asimovUnlocked && !adminMode ? (
         <AsimovGate onUnlock={() => setAsimovUnlocked(true)} />
       ) : (
-        <AsimovTheater active={!showHome && activeLab === 'asimovTheater' && asimovUnlocked} />
+        <AsimovTheater active={!showHome && activeLab === 'asimovTheater' && (asimovUnlocked || adminMode)} />
       )}
 
       {/* Language Lab — Heptapod language simulation */}
@@ -4383,6 +4516,9 @@ const App: React.FC = () => {
 
       {/* Physics Sandbox — modular robot builder + CEM learning */}
       <PhysicsSandbox active={!showHome && activeLab === 'physicsSandbox'} />
+
+      {/* Mil Platôs — CsO lens: stratification ↔ body-without-organs */}
+      <MilPlatosLab active={!showHome && activeLab === 'milPlatos'} />
 
       <Toaster position="bottom-right" theme="dark" />
 
@@ -4478,8 +4614,30 @@ const App: React.FC = () => {
       {showHome && (
         <HomePage
           onEnterLab={(lab) => {
+            if (!canAccessLab(lab)) {
+              toast.info('Tool trancada', {
+                description: 'Ative Admin Mode (morin2026) para acessar.',
+                duration: 2500,
+              });
+              setShowAdminGate(true);
+              return;
+            }
             setActiveLab(lab);
             setShowHome(false);
+          }}
+          onOpenAdmin={() => setShowAdminGate(true)}
+          adminMode={adminMode}
+        />
+      )}
+
+      {showAdminGate && (
+        <AdminGate
+          onClose={() => setShowAdminGate(false)}
+          onUnlock={() => {
+            setAdminMode(true);
+            try { localStorage.setItem(ADMIN_MODE_KEY, '1'); } catch { /* ignore */ }
+            setShowAdminGate(false);
+            toast.success('Admin Mode ativado', { description: 'Acesso liberado.', duration: 2000 });
           }}
         />
       )}

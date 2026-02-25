@@ -55,7 +55,7 @@ export function generateGlyph(
 
   // ── Outer ring: driven by sync + density ──────────────────────────────────
   const outerRadius = 0.70 + qSync * 0.20;   // 0.70..0.90
-  const outerThick  = mode === 'heptapod'
+  const outerThick  = (mode === 'heptapod' || mode === 'recursive')
     ? 0.07 + qCoh * 0.09
     : 0.05 + qDensity * 0.07;
   const roughness   = Math.max(0, obs.tensionIndex * 0.4 + obs.noveltyIndex * 0.2);
@@ -66,23 +66,40 @@ export function generateGlyph(
     roughness,
   };
 
-  // ── Inner rings: 1–3, driven by coherence + loopCount ─────────────────────
-  const ringCount = 1 + Math.round(qLoop * 2);  // 1..3
+  // ── Inner rings ──────────────────────────────────────────────────────────
+  let ringCount: number;
+  if (mode === 'recursive') {
+    // Recursive: many nested rings (Fibonacci-like)
+    ringCount = 2 + Math.round(qLoop * 3 + qSym * 2);  // 2..7 rings
+  } else {
+    ringCount = 1 + Math.round(qLoop * 2);  // 1..3
+  }
   const innerRings: InnerRing[] = [];
   for (let i = 0; i < ringCount; i++) {
-    const fraction = (i + 1) / (ringCount + 1);
+    let fraction: number;
+    if (mode === 'recursive') {
+      // Golden ratio spacing creates nested self-similar structure
+      const phi = 0.618033988749895;
+      fraction = Math.pow(phi, i + 1);
+    } else {
+      fraction = (i + 1) / (ringCount + 1);
+    }
     innerRings.push({
-      radius: outerRadius * (0.35 + fraction * 0.35),
+      radius: outerRadius * (0.15 + fraction * 0.55),
       thickness: outerThick * (0.5 + i * 0.1),
-      phaseOffset: pseudoRandom(sigKey[i] * 1000 + i) * TWO_PI,
+      phaseOffset: mode === 'recursive'
+        ? (pseudoRandom(sigKey[i % sigKey.length] * 1000 + i) * TWO_PI + i * Math.PI * 0.382)
+        : pseudoRandom(sigKey[i % sigKey.length] * 1000 + i) * TWO_PI,
     });
   }
 
   // ── Notches: driven by tension + novelty ──────────────────────────────────
-  // In heptapod mode: 1-2 dramatic splatters; other modes: 0-3
-  const notchCount = mode === 'heptapod'
-    ? 1 + Math.round(qTension * 1.0)   // always 1, sometimes 2
-    : Math.round((qTension + qNovelty) * 0.5 * 3);
+  let notchCount: number;
+  if (mode === 'heptapod' || mode === 'recursive') {
+    notchCount = 1 + Math.round(qTension * 1.0);
+  } else {
+    notchCount = Math.round((qTension + qNovelty) * 0.5 * 3);
+  }
   const notches: Notch[] = [];
   for (let i = 0; i < Math.min(3, notchCount); i++) {
     const angleBase = (i / Math.max(1, notchCount)) * TWO_PI;
@@ -90,29 +107,34 @@ export function generateGlyph(
     notches.push({
       angle: angleBase + jitter,
       depth: 0.4 + qTension * 0.5,
-      // wider notch → bigger splatter gap in the ring
       width: 0.18 + pseudoRandom(i * 113) * 0.14,
     });
   }
 
   // ── Arcs: driven by symmetry + mode ──────────────────────────────────────
-  const arcCount = mode === 'linear' ? 0
-    : mode === 'heptapod' ? Math.round(qSym * 3 + 1)
-    : Math.round(obs.eventRate * 4);
+  let arcCount: number;
+  if (mode === 'linear')       arcCount = 0;
+  else if (mode === 'recursive') arcCount = Math.round(qSym * 5 + 2); // more arcs for recursion
+  else if (mode === 'heptapod') arcCount = Math.round(qSym * 3 + 1);
+  else                           arcCount = Math.round(obs.eventRate * 4);
   const arcs: GlyphArc[] = [];
   for (let i = 0; i < arcCount; i++) {
     const startAngle = (i / arcCount) * TWO_PI + pseudoRandom(i * 200) * 0.5;
-    const sweep = 0.3 + pseudoRandom(i * 300 + 1) * 0.8;
+    const sweep = mode === 'recursive'
+      ? 0.15 + pseudoRandom(i * 300 + 1) * 1.2  // wider sweeps for recursive
+      : 0.3  + pseudoRandom(i * 300 + 1) * 0.8;
     arcs.push({
       startAngle,
       endAngle: startAngle + sweep,
-      radius: outerRadius * (0.50 + pseudoRandom(i * 400) * 0.35),
+      radius: outerRadius * (mode === 'recursive'
+        ? 0.20 + pseudoRandom(i * 400) * 0.65  // can go deep inside for nesting
+        : 0.50 + pseudoRandom(i * 400) * 0.35),
       thickness: outerThick * 0.6,
     });
   }
 
   // ── Blots: driven by silence + density ────────────────────────────────────
-  const blotCount = mode === 'heptapod'
+  const blotCount = (mode === 'heptapod' || mode === 'recursive')
     ? Math.round((1 - obs.silenceIndex) * obs.densityMean * 6)
     : Math.round(obs.densityMean * 3);
   const blots: Blot[] = [];

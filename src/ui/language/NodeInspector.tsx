@@ -35,7 +35,7 @@ function GlyphBig({ spec, size = 140 }: { spec: GlyphSpec; size?: number }) {
           ctx.clearRect(0, 0, size, size);
           t.current += 0.016;
           // drawGlyph fills its own white background — just call it directly
-          drawGlyph(ctx, spec, size / 2, size / 2, size * 0.46, { alpha: 0.96 });
+          drawGlyph(ctx, spec, size / 2, size / 2, size * 0.46, { alpha: 0.96, animated: true, time: t.current });
         }
       }
       frameRef.current = requestAnimationFrame(animate);

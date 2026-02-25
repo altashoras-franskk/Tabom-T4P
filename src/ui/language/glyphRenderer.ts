@@ -202,6 +202,65 @@ function drawInkSplatter(
   }
 }
 
+// ── Animated breathing ring (ferrofluid-style flowing ink) ──────────────────
+function drawAnimatedBrushRing(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  cx: number, cy: number, r: number,
+  notches: Notch[], roughness: number, hashSeed: number,
+  time: number,
+): void {
+  if (r <= 1) return;
+
+  const SEGS  = r < 40 ? 100 : r < 80 ? 160 : 220;
+  const baseW = r * 0.105;
+
+  const passes = [
+    { widthMult: 2.0,  alpha: 0.07, rOff: 1.5 },
+    { widthMult: 1.35, alpha: 0.18, rOff: 0.6 },
+    { widthMult: 1.0,  alpha: 0.88, rOff: 0.0 },
+    { widthMult: 0.45, alpha: 0.45, rOff: -0.6 },
+  ];
+
+  for (const pass of passes) {
+    for (let i = 0; i < SEGS; i++) {
+      const t  = i / SEGS;
+      const t2 = (i + 1) / SEGS;
+      const a  = t  * TWO_PI - Math.PI / 2;
+      const a2 = t2 * TWO_PI - Math.PI / 2;
+
+      if (isInNotchGap(a, notches)) continue;
+
+      const prof = strokeProfile(t, hashSeed, notches);
+
+      // Time-driven flow: ink "pulse" travels around the ring
+      const flowPhase = time * 1.8 + hashSeed * 0.001;
+      const flowWave  = 0.85 + 0.15 * Math.sin(a * 3 + flowPhase)
+                       + 0.10 * Math.sin(a * 5 - flowPhase * 0.7)
+                       + 0.05 * Math.sin(a * 8 + flowPhase * 1.3);
+
+      // Breathing: ring radius oscillates
+      const breathe = Math.sin(time * 0.9 + a * 2) * r * 0.015
+                    + Math.sin(time * 1.7 + a * 4) * r * 0.008;
+
+      const seed1 = hashSeed + i * 7 + pass.rOff * 1000;
+      const seed2 = hashSeed + (i + 1) * 7 + pass.rOff * 1000;
+      const rj1 = roughness > 0.01 ? (rng(seed1) - 0.5) * roughness * r * 0.14 : 0;
+      const rj2 = roughness > 0.01 ? (rng(seed2) - 0.5) * roughness * r * 0.14 : 0;
+
+      const r1 = Math.max(0.1, r + pass.rOff + rj1 + breathe);
+      const r2 = Math.max(0.1, r + pass.rOff + rj2 + breathe);
+
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a)  * r1, cy + Math.sin(a)  * r1);
+      ctx.lineTo(cx + Math.cos(a2) * r2, cy + Math.sin(a2) * r2);
+      ctx.lineWidth   = Math.max(0.5, baseW * pass.widthMult * prof * flowWave);
+      ctx.strokeStyle = `rgba(8,5,2,${pass.alpha * flowWave})`;
+      ctx.lineCap     = 'round';
+      ctx.stroke();
+    }
+  }
+}
+
 // ── Public: draw glyph ────────────────────────────────────────────────────────
 export function drawGlyph(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -212,7 +271,7 @@ export function drawGlyph(
 ): void {
   if (r <= 2) return;
 
-  const { alpha = 1, skipBackground = false, fast = r < 32 } = opts;
+  const { alpha = 1, skipBackground = false, fast = r < 32, animated = false, time = 0 } = opts;
   const hashSeed = (parseInt(spec.signatureHash.slice(0, 8), 16) || 1) >>> 0;
   const ringR    = Math.max(2, r * Math.max(0.55, spec.outerRing.radius));
 
@@ -235,15 +294,40 @@ export function drawGlyph(
   }
 
   // ── Main brushstroke ring ─────────────────────────────────────────────────
-  drawBrushRing(ctx, cx, cy, ringR, spec.notches, spec.outerRing.roughness, hashSeed, fast);
+  if (animated && !fast) {
+    drawAnimatedBrushRing(ctx, cx, cy, ringR, spec.notches, spec.outerRing.roughness, hashSeed, time);
+  } else {
+    drawBrushRing(ctx, cx, cy, ringR, spec.notches, spec.outerRing.roughness, hashSeed, fast);
+  }
+
+  // ── Inner rings (animated: they rotate) ──────────────────────────────────
+  if (!fast && spec.innerRings.length > 0) {
+    for (let ri = 0; ri < spec.innerRings.length; ri++) {
+      const ir = spec.innerRings[ri];
+      const irR = Math.max(2, r * Math.max(0.2, ir.radius));
+      const rotAngle = animated ? time * 0.5 * (ri % 2 === 0 ? 1 : -1) + ir.phaseOffset : ir.phaseOffset;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotAngle);
+      ctx.translate(-cx, -cy);
+      if (animated) {
+        drawAnimatedBrushRing(ctx, cx, cy, irR, [], spec.outerRing.roughness * 0.5, hashSeed + ri * 999 + 7777, time);
+      } else {
+        drawBrushRing(ctx, cx, cy, irR, [], spec.outerRing.roughness * 0.5, hashSeed + ri * 999 + 7777, false);
+      }
+      ctx.restore();
+    }
+  }
 
   // ── Ink splatters at notch positions ──────────────────────────────────────
   const maxSplatters = fast ? Math.min(1, spec.notches.length) : spec.notches.length;
   for (let ni = 0; ni < maxSplatters; ni++) {
-    const n  = spec.notches[ni];
-    const sx = cx + Math.cos(n.angle) * ringR;
-    const sy = cy + Math.sin(n.angle) * ringR;
-    drawInkSplatter(ctx, sx, sy, r, n.angle, hashSeed + ni * 4001);
+    const n   = spec.notches[ni];
+    const ang = n.angle + (animated ? Math.sin(time * 0.6 + ni * 1.2) * 0.06 : 0);
+    const splatR = ringR + (animated ? Math.sin(time * 1.1 + ni) * r * 0.02 : 0);
+    const sx  = cx + Math.cos(ang) * splatR;
+    const sy  = cy + Math.sin(ang) * splatR;
+    drawInkSplatter(ctx, sx, sy, r, ang, hashSeed + ni * 4001);
   }
 
   ctx.restore();
@@ -255,8 +339,8 @@ export function drawGlyphLarge(
   spec: GlyphSpec,
   cx: number, cy: number,
   r: number,
-  _time: number,
+  time: number,
   alpha = 1,
 ): void {
-  drawGlyph(ctx, spec, cx, cy, r, { alpha });
+  drawGlyph(ctx, spec, cx, cy, r, { alpha, animated: true, time });
 }

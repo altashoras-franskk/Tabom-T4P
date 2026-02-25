@@ -23,17 +23,30 @@ function GlyphThumb({
   onSpeak: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef(0);
+  const timeRef = useRef(0);
   const SIZE = 54;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, SIZE, SIZE);
-    // drawGlyph fills its own white background
-    drawGlyph(ctx, spec, SIZE / 2, SIZE / 2, SIZE * 0.44, { alpha: 0.96 });
-  }, [spec, selected, SIZE]);
+    let alive = true;
+    const animate = () => {
+      if (!alive) return;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, SIZE, SIZE);
+          timeRef.current += 0.016;
+          drawGlyph(ctx, spec, SIZE / 2, SIZE / 2, SIZE * 0.44, {
+            alpha: 0.96, animated: selected, time: timeRef.current,
+          });
+        }
+      }
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    animate();
+    return () => { alive = false; cancelAnimationFrame(rafRef.current); };
+  }, [spec, selected]);
 
   const conf = lexEntry?.confidence ?? 0;
   const confColor = conf > 0.7 ? '#2a9a50' : conf > 0.4 ? '#b07a10' : '#aa3020';

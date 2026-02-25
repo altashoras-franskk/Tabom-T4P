@@ -166,6 +166,7 @@ export function ControlsBar({
             color: 'rgba(200,190,180,0.8)', outline: 'none' }}>
           <option value="linear">Linear</option>
           <option value="heptapod">Heptapod</option>
+          <option value="recursive">Recursive</option>
           <option value="experimental">Experimental</option>
         </select>
       </div>

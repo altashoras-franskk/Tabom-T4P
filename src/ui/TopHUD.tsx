@@ -1,6 +1,18 @@
-import { Play, Pause, RotateCcw, Undo2, BookOpen, Trophy, FileText, BookText, Eye, EyeOff, Layers, Box, LayoutGrid } from 'lucide-react';
+import { Play, Pause, RotateCcw, Undo2, BookOpen, Trophy, FileText, BookText, Eye, EyeOff, Layers, Box, LayoutGrid, KeyRound } from 'lucide-react';
 
-export type LabId = 'complexityLife' | 'sociogenesis' | 'psycheLab' | 'musicLab' | 'alchemyLab' | 'metaArtLab' | 'rhizomeLab' | 'asimovTheater' | 'languageLab' | 'treeOfLife' | 'physicsSandbox' | 'milPlatos';
+export type LabId =
+  | 'complexityLife'
+  | 'sociogenesis'
+  | 'psycheLab'
+  | 'musicLab'
+  | 'alchemyLab'
+  | 'metaArtLab'
+  | 'rhizomeLab'
+  | 'asimovTheater'
+  | 'languageLab'
+  | 'treeOfLife'
+  | 'physicsSandbox'
+  | 'milPlatos';
 
 interface TopHUDProps {
   running: boolean;
@@ -29,6 +41,9 @@ interface TopHUDProps {
   viewMode?: '2D' | '3D';
   onLabChange: (lab: LabId) => void;
   onGoHome?: () => void;
+  availableLabs?: LabId[];
+  adminMode?: boolean;
+  onOpenAdmin?: () => void;
   onTogglePlay: () => void;
   onStep: () => void;
   onSetSpeed: (speed: number) => void;
@@ -114,6 +129,9 @@ export const TopHUD: React.FC<TopHUDProps> = ({
   viewMode,
   onLabChange,
   onGoHome,
+  availableLabs,
+  adminMode = false,
+  onOpenAdmin,
   onTogglePlay,
   onStep,
   onSetSpeed,
@@ -129,7 +147,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
   onToggleHideUI,
   onViewModeToggle,
 }) => {
-  const LAB_TABS: { id: LabId; label: string }[] = [
+  const ALL_LAB_TABS: { id: LabId; label: string }[] = [
     { id: 'complexityLife', label: 'Complexity Life' },
     { id: 'metaArtLab',     label: 'Meta-Gen-Art' },
     { id: 'musicLab',       label: 'Music Lab' },
@@ -138,10 +156,15 @@ export const TopHUD: React.FC<TopHUDProps> = ({
     { id: 'treeOfLife',     label: 'Tree of Life' },
     { id: 'sociogenesis',   label: 'Sociogenesis' },
     { id: 'psycheLab',      label: 'Psyche' },
+    { id: 'milPlatos',     label: 'Mil Platôs' },
     { id: 'languageLab',    label: 'Language' },
     { id: 'asimovTheater',  label: 'Asimov' },
     { id: 'physicsSandbox', label: 'Physics' },
   ];
+
+  const LAB_TABS = availableLabs && availableLabs.length
+    ? ALL_LAB_TABS.filter(t => availableLabs.includes(t.id))
+    : ALL_LAB_TABS;
 
   const accent = LAB_ACCENTS[activeLab] || '#ffd400';
 
@@ -202,6 +225,28 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           })}
         </div>
 
+        {/* Admin mode */}
+        {onOpenAdmin && (
+          <button
+            onClick={onOpenAdmin}
+            title={adminMode ? 'Admin Mode (ativado)' : 'Admin Mode (senha)'}
+            className="flex items-center gap-1 px-3 py-2 transition-all shrink-0"
+            style={{
+              borderLeft: '1px dashed rgba(255,255,255,0.06)',
+              background: adminMode ? 'rgba(245,158,11,0.10)' : 'transparent',
+              color: adminMode ? '#f59e0b' : 'rgba(255,255,255,0.25)',
+              fontFamily: MONO,
+              fontSize: '9px',
+              fontWeight: 300,
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+            }}
+          >
+            <KeyRound size={10} strokeWidth={1.5} />
+            <span className="hidden sm:inline">ADMIN</span>
+          </button>
+        )}
+
         {/* 2D / 3D toggle */}
         {onViewModeToggle && (
           <button
@@ -226,7 +271,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
       </div>
 
       {/* ── Controls bar — Complexity Lab / Sociogenesis only ──── */}
-      {activeLab !== 'psycheLab' && activeLab !== 'musicLab' && activeLab !== 'alchemyLab' && activeLab !== 'metaArtLab' && activeLab !== 'rhizomeLab' && activeLab !== 'asimovTheater' && activeLab !== 'languageLab' && activeLab !== 'treeOfLife' && activeLab !== 'physicsSandbox' && (
+      {activeLab !== 'psycheLab' && activeLab !== 'musicLab' && activeLab !== 'alchemyLab' && activeLab !== 'metaArtLab' && activeLab !== 'rhizomeLab' && activeLab !== 'asimovTheater' && activeLab !== 'languageLab' && activeLab !== 'treeOfLife' && activeLab !== 'physicsSandbox' && activeLab !== 'milPlatos' && (
       <div className="flex items-center justify-between px-3 py-1.5 gap-2 pointer-events-auto"
         style={{
           background: 'rgba(0,0,0,0.92)',

@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type LangMode        = 'listen' | 'speak' | 'train';
-export type DictionaryMode  = 'linear' | 'heptapod' | 'experimental';
+export type DictionaryMode  = 'linear' | 'heptapod' | 'recursive' | 'experimental';
 export type EntryStatus     = 'tentative' | 'accepted';
 export type LensId          = 'world' | 'glyphs' | 'events' | 'map' | 'phase' | 'meaning';
 export type OperatorKind    = 'CONVERGE' | 'DIVERGE' | 'SILENCE' | 'AMPLIFY' | 'CUT';

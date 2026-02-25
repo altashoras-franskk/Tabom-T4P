@@ -20,12 +20,12 @@ const LABS: LabEntry[] = [
   { id: 'musicLab', num: '04.', symbol: '\u{1F770}', name: 'Complex Music Lab', tag: 'INSTRUMENT', tagColor: '#37b2da', statusLabel: 'ALPHA V0', description: 'INSTRUMENTO MUSICAL DIGITAL COMPLEXO. USE PARTÍCULAS COM VIDA PRÓPRIA PRA FAZER MÚSICA EXPERIMENTAL.', enabled: true },
   { id: 'rhizomeLab', num: '05.', symbol: '\u{1F709}', name: 'Rhizome Search', tag: 'EPISTEMIC SEARCH', tagColor: '#10d45b', statusLabel: 'ALPHA V0', description: 'FERRAMENTA PARA PESQUISAS EPISTEMOLÓGICAS NÃO-LINEARES. VEJA CONCEITOS/NOMES/BIBLIOGRAFIAS ATRAVÉS DE RIZOMAS EXPANSÍVEIS.', enabled: true },
   { id: 'alchemyLab', num: '06.', symbol: '\u{1F701}', name: 'Alchemy Table', tag: 'ALCHEMY + CHEMISTRY', tagColor: '#d6552d', statusLabel: 'ALPHA V0', description: 'APRENDA O CONCEITO BÁSICO DE EMERGÊNCIA, TRANSMUTAÇÃO E COMPLEXIDADE DE ELEMENTOS QUÍMICOS E METAFÓRICOS.', enabled: true },
-  { id: 'treeOfLife', num: '07.', symbol: '\u{1F739}', name: 'Tree of Life', tag: 'HERMETISMO', tagColor: '#601480', statusLabel: 'ALPHA V0', description: 'APRENDA A OPERAR COM O ALGORITMO DA VIDA ARTIFICIAL ATRAVÉS DE EXPERIMENTOS, PRESETS E PARÂMETROS VARIÁVEIS INTERATIVOS.', enabled: true },
+  { id: 'treeOfLife', num: '07.', symbol: '\u{1F739}', name: 'Tree of Life', tag: 'HERMETIC QABALAH', tagColor: '#601480', statusLabel: 'ALPHA V0', description: 'HERMETIC QABALAH SIMULATOR. EXPLORE THE 10 SEPHIROTH, 22 PATHS, TAROT ARCANA, RITUAL TOOLS AND THE GREAT WORK. GOLDEN DAWN TRADITION.', enabled: true },
   { id: 'sociogenesis', num: '08.', symbol: '\u{1F755}', name: 'Sociogenesis', tag: 'SOCIOLOGIA', tagColor: '#9f1111', statusLabel: 'EXPERIMENTAL BUILD', description: 'DESCUBRA A EMERGÊNCIA DE SÍMBOLOS, INSTITUIÇÕES, MITOS, TOTENS E TABUS ENTRE AGENTES E COMO ISSO ALTERA O CAMPO.', enabled: true },
-  { id: 'languageLab', num: '09.', symbol: '\u{1F714}', name: 'Recursive Language', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
-  { id: 'asimovTheater', num: '10.', symbol: '\u{1F733}', name: 'Psico-history Theater', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
-  { id: 'physicsSandbox', num: '11.', symbol: '\u{1F719}', name: 'Physics Sandbox', tag: '', tagColor: '#141414', statusLabel: '', description: 'EM BREVE', enabled: false },
-  { id: 'milPlatos', num: '12.', symbol: '\u22C6', name: 'Mil Platôs', tag: '', tagColor: '#1a1a2e', statusLabel: '', description: 'EM BREVE', enabled: false },
+  { id: 'milPlatos', num: '09.', symbol: '\u22C6', name: 'Mil Platôs', tag: 'CsO LENS', tagColor: '#6366f1', statusLabel: 'EXPERIMENTAL BUILD', description: 'LENTE OPERACIONAL DELEUZE & GUATTARI. SIMULE ESTRATIFICAÇÃO ↔ CORPO SEM ÓRGÃOS, PLATÔS, RIZOMA E LINHAS DE FUGA.', enabled: true },
+  { id: 'languageLab', num: '10.', symbol: '\u{1F714}', name: 'Recursive Language', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
+  { id: 'asimovTheater', num: '11.', symbol: '\u{1F733}', name: 'Psico-history Theater', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
+  { id: 'physicsSandbox', num: '12.', symbol: '\u{1F719}', name: 'Physics Sandbox', tag: '', tagColor: '#141414', statusLabel: '', description: 'EM BREVE', enabled: false },
 ];
 
 const heroPaths = [
@@ -438,7 +438,15 @@ function ToolsNav({ onClick }: { onClick: () => void }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-export function HomePage({ onEnterLab }: { onEnterLab: (id: LabId) => void }) {
+export function HomePage({
+  onEnterLab,
+  onOpenAdmin,
+  adminMode = false,
+}: {
+  onEnterLab: (id: LabId) => void;
+  onOpenAdmin?: () => void;
+  adminMode?: boolean;
+}) {
   const [introFinished, setIntroFinished] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTarget = useRef(0);
@@ -463,6 +471,16 @@ export function HomePage({ onEnterLab }: { onEnterLab: (id: LabId) => void }) {
 
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
+      {onOpenAdmin && (
+        <button
+          onClick={onOpenAdmin}
+          className="fixed top-3 right-3 z-20 px-3 py-2 rounded-xl border border-dashed border-white/15 bg-black/60 hover:bg-white/5 transition-colors"
+          style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: adminMode ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}
+          title={adminMode ? 'Admin Mode (ativado)' : 'Admin Mode (senha)'}
+        >
+          {adminMode ? 'ADMIN ON' : 'ADMIN'}
+        </button>
+      )}
       <AnimatePresence>
         {!introFinished && <T4PAnimation onComplete={() => setIntroFinished(true)} />}
       </AnimatePresence>
@@ -570,7 +588,7 @@ export function HomePage({ onEnterLab }: { onEnterLab: (id: LabId) => void }) {
             </p>
             <div className="pt-6 flex flex-col items-center gap-5">
               <ToolsNav onClick={scrollToLabs} />
-              <p className="text-zinc-600 text-[10px] tracking-[0.25em] uppercase" style={{ fontFamily: MONO }}>6 ferramentas disponíveis + 6 em breve.</p>
+              <p className="text-zinc-600 text-[10px] tracking-[0.25em] uppercase" style={{ fontFamily: MONO }}>9 ferramentas disponíveis + 3 em breve.</p>
               <p className="text-zinc-700 text-[9px] tracking-[0.15em] uppercase" style={{ fontFamily: MONO }}>(grátis durante alpha test)</p>
             </div>
           </motion.div>
@@ -579,14 +597,14 @@ export function HomePage({ onEnterLab }: { onEnterLab: (id: LabId) => void }) {
         {/* ═══ S5 — LABS LIST ═══ */}
         <section id="labs-section" className="snap-start pb-24 pt-16 px-4 md:px-12 max-w-[1600px] mx-auto w-full">
           <div className="mb-16 border-b border-dashed border-white/10 pb-4">
-            <h3 className="text-zinc-500 text-sm tracking-widest" style={{ fontFamily: MONO }}>AVAILABLE TOOLS (8) + SOON (3)</h3>
+            <h3 className="text-zinc-500 text-sm tracking-widest" style={{ fontFamily: MONO }}>AVAILABLE TOOLS (9) + SOON (3)</h3>
           </div>
           <div className="grid gap-0">
             {LABS.map((lab, idx) => (
               <motion.div key={lab.id} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }} transition={{ delay: idx * 0.04, duration: 0.5 }}
-                className={`group border-t border-dashed border-white/10 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start hover:bg-white/5 transition-colors cursor-pointer ${!lab.enabled ? 'opacity-40' : ''}`}
-                onClick={() => lab.enabled && onEnterLab(lab.id)}>
+                className={`group border-t border-dashed border-white/10 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start hover:bg-white/5 transition-colors cursor-pointer ${(!lab.enabled && !adminMode) ? 'opacity-40' : ''}`}
+                onClick={() => (lab.enabled || adminMode) && onEnterLab(lab.id)}>
                 <div className="col-span-1 md:col-span-1 text-2xl text-zinc-600 font-light" style={{ fontFamily: MONO }}>{lab.num}</div>
                 <div className="col-span-1 md:col-span-4 flex items-center gap-4">
                   <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all" style={{ color: lab.tagColor }}>{lab.symbol}</span>
@@ -594,7 +612,9 @@ export function HomePage({ onEnterLab }: { onEnterLab: (id: LabId) => void }) {
                 </div>
                 <div className="col-span-1 md:col-span-3 flex flex-col gap-2">
                   {lab.tag && <span className="text-[10px] tracking-widest uppercase font-bold" style={{ color: lab.tagColor, fontFamily: MONO }}>[{lab.tag}]</span>}
-                  <span className="text-[10px] text-zinc-600 tracking-widest uppercase" style={{ fontFamily: MONO }}>{lab.statusLabel}</span>
+                  <span className="text-[10px] text-zinc-600 tracking-widest uppercase" style={{ fontFamily: MONO }}>
+                    {(!lab.enabled && !adminMode) ? (lab.statusLabel || 'TRANCADO') : (lab.statusLabel || '')}
+                  </span>
                 </div>
                 <div className="col-span-1 md:col-span-4">
                   <p className="text-xs text-zinc-400 leading-relaxed uppercase" style={{ fontFamily: MONO }}>{lab.description}</p>

@@ -5,8 +5,21 @@ const MONO = "'IBM Plex Mono', monospace";
 
 import React from 'react';
 import { Bookmark, ExternalLink, Network, Zap } from 'lucide-react';
-import type { RhizomeNode } from '../../../sim/rhizome/rhizomeTypes';
+import type { RhizomeNode, EdgeRelation } from '../../../sim/rhizome/rhizomeTypes';
 import type { NodeScore } from '../../../sim/rhizome/graphMetrics';
+
+const RELATION_LABELS: Record<string, { icon: string; color: string }> = {
+  influences:  { icon: '→',  color: '#a78bfa' },
+  contrasts:   { icon: '⚡', color: '#ef4444' },
+  bridges:     { icon: '◇',  color: '#f472b6' },
+  extends:     { icon: '↗',  color: '#60a5fa' },
+  contains:    { icon: '⊃',  color: '#4ade80' },
+  co_occurs:   { icon: '≈',  color: '#94a3b8' },
+  method_for:  { icon: '⚙',  color: '#fbbf24' },
+  example_of:  { icon: '◎',  color: '#fb923c' },
+  critiques:   { icon: '✗',  color: '#f87171' },
+  related:     { icon: '·',  color: '#64748b' },
+};
 import { motion } from 'motion/react';
 
 interface Props {
@@ -67,23 +80,72 @@ export function NodeInspector({
           }}>
             {node.label || `Node ${node.id}`}
           </div>
-          {node.category && (
-            <div style={{
-              display: 'inline-block',
-              marginTop: 4,
-              padding: '2px 6px',
-              borderRadius: 1,
-              fontSize: 7,
-              background: 'rgba(124,58,237,0.15)',
-              border: '1px dashed rgba(124,58,237,0.35)',
-              color: 'rgba(196,181,253,0.8)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              fontFamily: MONO,
-            }}>
-              {node.category}
-            </div>
-          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+            {node.category && (
+              <div style={{
+                display: 'inline-block',
+                padding: '2px 6px',
+                borderRadius: 1,
+                fontSize: 7,
+                background: 'rgba(124,58,237,0.15)',
+                border: '1px dashed rgba(124,58,237,0.35)',
+                color: 'rgba(196,181,253,0.8)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontFamily: MONO,
+              }}>
+                {node.category}
+              </div>
+            )}
+            {node.isBridge && (
+              <div style={{
+                display: 'inline-block',
+                padding: '2px 6px',
+                borderRadius: 1,
+                fontSize: 7,
+                background: 'rgba(244,114,182,0.15)',
+                border: '1px dashed rgba(244,114,182,0.35)',
+                color: 'rgba(244,114,182,0.9)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontFamily: MONO,
+              }}>
+                BRIDGE
+              </div>
+            )}
+            {node.isHub && (
+              <div style={{
+                display: 'inline-block',
+                padding: '2px 6px',
+                borderRadius: 1,
+                fontSize: 7,
+                background: 'rgba(251,191,36,0.15)',
+                border: '1px dashed rgba(251,191,36,0.35)',
+                color: 'rgba(251,191,36,0.9)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontFamily: MONO,
+              }}>
+                HUB
+              </div>
+            )}
+            {node.mentionCount !== undefined && node.mentionCount > 0 && (
+              <div style={{
+                display: 'inline-block',
+                padding: '2px 6px',
+                borderRadius: 1,
+                fontSize: 7,
+                background: 'rgba(96,165,250,0.12)',
+                border: '1px dashed rgba(96,165,250,0.30)',
+                color: 'rgba(96,165,250,0.85)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontFamily: MONO,
+              }}>
+                {node.mentionCount}x CITED
+              </div>
+            )}
+          </div>
         </div>
         <button
           onClick={onClose}
@@ -271,36 +333,67 @@ export function NodeInspector({
               Conexões ({connectedNodes.length})
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {connectedNodes.slice(0, 8).map(cn => (
-                <div
-                  key={cn.id}
-                  style={{
-                    padding: '5px 8px',
-                    borderRadius: 1,
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px dashed rgba(255,255,255,0.06)',
-                    fontSize: 9,
-                    fontFamily: MONO,
-                    color: 'rgba(255,255,255,0.65)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                  onClick={() => onExpand(cn)}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(124,58,237,0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(124,58,237,0.2)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-                  }}
-                >
-                  {cn.label || `Node ${cn.id}`}
-                </div>
-              ))}
-              {connectedNodes.length > 8 && (
+              {connectedNodes.slice(0, 12).map(cn => {
+                const edgeRel = node.edgeTypes?.get(cn.id) ?? cn.edgeTypes?.get(node.id);
+                const relInfo = edgeRel ? RELATION_LABELS[edgeRel] : undefined;
+                const edgeWeight = node.connections.get(cn.id) ?? 0;
+
+                return (
+                  <div
+                    key={cn.id}
+                    style={{
+                      padding: '5px 8px',
+                      borderRadius: 1,
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px dashed rgba(255,255,255,0.06)',
+                      fontSize: 9,
+                      fontFamily: MONO,
+                      color: 'rgba(255,255,255,0.65)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 6,
+                    }}
+                    onClick={() => onExpand(cn)}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(124,58,237,0.08)';
+                      e.currentTarget.style.borderColor = 'rgba(124,58,237,0.2)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                    }}
+                  >
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {cn.label || `Node ${cn.id}`}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      {relInfo && (
+                        <span style={{
+                          fontSize: 7,
+                          color: relInfo.color,
+                          fontFamily: MONO,
+                          opacity: 0.8,
+                        }}>
+                          {relInfo.icon} {edgeRel}
+                        </span>
+                      )}
+                      <span style={{
+                        fontSize: 7,
+                        color: 'rgba(255,255,255,0.25)',
+                        fontFamily: MONO,
+                      }}>
+                        {(edgeWeight * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+              {connectedNodes.length > 12 && (
                 <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.22)', marginTop: 2, fontStyle: 'italic' }}>
-                  +{connectedNodes.length - 8} mais
+                  +{connectedNodes.length - 12} mais
                 </div>
               )}
             </div>

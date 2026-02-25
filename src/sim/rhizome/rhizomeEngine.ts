@@ -387,7 +387,7 @@ function applyForces(
       n.vy += (r() * 2 - 1) * p.noise * 10;
     }
 
-    // ── 3. Spring forces on edges ─────────────────────────────────────────
+    // ── 3. Spring forces on edges (category-aware) ──────────────────────────
     for (const [neighborId, weight] of n.connections) {
       const neighbor = nodeMap.get(neighborId);
       if (!neighbor) continue;
@@ -395,16 +395,27 @@ function applyForces(
       const dx = neighbor.x - n.x;
       const dy = neighbor.y - n.y;
       const d  = Math.sqrt(dx * dx + dy * dy) || 0.001;
-      const isLong = d > LONG_LINK_DISTANCE;
 
-      // Spring rest lengths — territorializacao LOW → long rests → nodes spread far
+      // Category-aware spring mechanics
+      const sameCategory = n.category && neighbor.category &&
+        n.category.toLowerCase() === neighbor.category.toLowerCase();
+      const edgeRel = n.edgeTypes?.get(neighborId);
+      const isBridge = edgeRel === 'bridges';
+      const isLong = isBridge || d > LONG_LINK_DISTANCE;
+
+      // Intra-cluster: short rest (tight clusters). Inter-cluster: long rest (spread apart).
       const restLen = isLong
-        ? lerp(220, 420, p.linhasDeFuga)          // flight springs pull hard
-        : lerp(110, 260, 1 - p.territorializacao); // 110px (tight) → 260px (loose)
+        ? lerp(280, 500, p.linhasDeFuga)
+        : sameCategory
+          ? lerp(60, 140, 1 - p.territorializacao)
+          : lerp(180, 380, 1 - p.territorializacao);
 
+      // Intra-cluster springs are stronger, inter-cluster springs are weaker
       const springK = isLong
-        ? lerp(6, 20, p.linhasDeFuga) * weight
-        : lerp(12, 30, p.reterritorializacao) * weight;
+        ? lerp(4, 14, p.linhasDeFuga) * weight
+        : sameCategory
+          ? lerp(14, 35, p.reterritorializacao) * weight
+          : lerp(4, 12, p.reterritorializacao) * weight * 0.5;
 
       const stretch = d - restLen;
       const fx = (dx / d) * springK * stretch * dt * 0.5;
@@ -449,20 +460,27 @@ function applyForces(
     }
   }
 
-  // ── 6. General node-node repulsion (sampled) ──────────────────────────────
-  const n = nodes.length;
-  const sampleCount = Math.min(240, n * (n - 1) / 2);
+  // ── 6. General node-node repulsion (stronger, category-aware) ──────────────
+  const nn = nodes.length;
+  // More samples for better separation
+  const sampleCount = Math.min(500, nn * (nn - 1) / 2);
   for (let s = 0; s < sampleCount; s++) {
-    const ai = Math.floor(r() * n);
-    const bi = Math.floor(r() * n);
+    const ai = Math.floor(r() * nn);
+    const bi = Math.floor(r() * nn);
     if (ai === bi) continue;
     const a = nodes[ai], b = nodes[bi];
     if (a.pinned && b.pinned) continue;
     const dx = b.x - a.x, dy = b.y - a.y;
     const d  = Math.sqrt(dx * dx + dy * dy);
-    const repRadius = 65; // wider cushion so labels never pile up
+
+    // Different categories repel at much greater distance
+    const sameCategory = a.category && b.category &&
+      a.category.toLowerCase() === b.category.toLowerCase();
+    const repRadius = sameCategory ? 55 : 120;
+    const repForce  = sameCategory ? 60 : 160;
+
     if (d < repRadius && d > 0.01) {
-      const repel = (1 - d / repRadius) * 80;
+      const repel = (1 - d / repRadius) * repForce;
       const inv   = 1 / d;
       if (!a.pinned) { a.vx -= dx * inv * repel * dt; a.vy -= dy * inv * repel * dt; }
       if (!b.pinned) { b.vx += dx * inv * repel * dt; b.vy += dy * inv * repel * dt; }
@@ -508,21 +526,36 @@ function maybeLinesOfFlight(state: RhizomeState, r: () => number): void {
   const nodes = state.nodes;
   if (nodes.length < 2) return;
 
+  // In search mode: flights should only happen between DIFFERENT categories
+  // to maintain semantic integrity of the graph
   for (let attempt = 0; attempt < 12; attempt++) {
     const a = nodes[Math.floor(r() * nodes.length)];
     const b = nodes[Math.floor(r() * nodes.length)];
-    if (a.id === b.id || a.pinned && b.pinned) continue;
+    if (a.id === b.id || (a.pinned && b.pinned)) continue;
+
+    // In search mode: only cross-category flights
+    if (state.searchMode) {
+      const sameCategory = a.category && b.category &&
+        a.category.toLowerCase() === b.category.toLowerCase();
+      if (sameCategory || !a.category || !b.category) continue;
+    }
+
     const d = dist(a, b);
 
     if (d > LONG_LINK_DISTANCE) {
       if (!a.connections.has(b.id)) {
-        const w = 0.25 + r() * 0.45;
+        const w = 0.20 + r() * 0.30;
         a.connections.set(b.id, w);
         b.connections.set(a.id, w);
         a.heat = Math.min(1, a.heat + 0.45);
         b.heat = Math.min(1, b.heat + 0.45);
 
-        // Momentum boost: push both nodes outward along the flight line
+        // Tag as bridge
+        if (!a.edgeTypes) a.edgeTypes = new Map();
+        if (!b.edgeTypes) b.edgeTypes = new Map();
+        a.edgeTypes.set(b.id, 'bridges');
+        b.edgeTypes.set(a.id, 'bridges');
+
         const boostMag = 15 + r() * 20;
         const dx = b.x - a.x, dy = b.y - a.y;
         const inv = 1 / (d || 1);
@@ -536,6 +569,8 @@ function maybeLinesOfFlight(state: RhizomeState, r: () => number): void {
 
 // ── Reterritorialization ───────────────────────────────────────────────────────
 function doReterritorialization(state: RhizomeState, r: () => number): void {
+  // In search mode: only strengthen existing connections, never create new random ones.
+  // This prevents the LLM-generated semantic graph from being polluted by random edges.
   const p      = state.params;
   const nodes  = state.nodes;
   const sample = Math.min(35, nodes.length);
@@ -556,13 +591,20 @@ function doReterritorialization(state: RhizomeState, r: () => number): void {
     for (const { node: neighbor } of nearest) {
       if (r() < p.reterritorializacao * 0.55) {
         if (n.connections.has(neighbor.id)) {
+          // Strengthen existing connection
           const w = Math.min(1.0, (n.connections.get(neighbor.id)!) + 0.05);
           n.connections.set(neighbor.id, w);
           neighbor.connections.set(n.id, w);
-        } else {
-          const w = 0.3 + r() * 0.3;
-          n.connections.set(neighbor.id, w);
-          neighbor.connections.set(n.id, w);
+        } else if (!state.searchMode) {
+          // Only create new random connections outside search mode
+          const sameCategory = n.category && neighbor.category &&
+            n.category.toLowerCase() === neighbor.category.toLowerCase();
+          // Only connect same-category nodes, and at lower probability
+          if (sameCategory && r() < 0.3) {
+            const w = 0.2 + r() * 0.25;
+            n.connections.set(neighbor.id, w);
+            neighbor.connections.set(n.id, w);
+          }
         }
       }
     }
@@ -654,8 +696,9 @@ export function renderRhizome(
   const nodeMap = new Map<number, RhizomeNode>();
   for (const n of nodes) nodeMap.set(n.id, n);
 
-  // ── Collect edges ─────────────────────────────────────────────────────────
-  const edges: { a: RhizomeNode; b: RhizomeNode; w: number; d: number; isLong: boolean }[] = [];
+  // ── Collect edges with semantic type ──────────────────────────────────────
+  type EdgeRelType = string | undefined;
+  const edges: { a: RhizomeNode; b: RhizomeNode; w: number; d: number; isLong: boolean; relation: EdgeRelType }[] = [];
   const seenEdges = new Set<string>();
 
   for (const n of nodes) {
@@ -666,12 +709,36 @@ export function renderRhizome(
       const neighbor = nodeMap.get(neighborId);
       if (!neighbor) continue;
       const d = dist(n, neighbor);
-      edges.push({ a: n, b: neighbor, w: weight, d, isLong: d > LONG_LINK_DISTANCE });
+      const relation = n.edgeTypes?.get(neighborId) ?? neighbor.edgeTypes?.get(n.id);
+      const isFlight = relation === 'bridges' || d > LONG_LINK_DISTANCE;
+      edges.push({ a: n, b: neighbor, w: weight, d, isLong: isFlight, relation });
     }
   }
 
   edges.sort((a, b) => b.w - a.w);
-  const drawn = edges.slice(0, 150);
+
+  // Separate bridges from normal edges — bridges always render
+  const bridgeEdges = edges.filter(e => e.relation === 'bridges' || e.isLong);
+  const normalEdges = edges.filter(e => e.relation !== 'bridges' && !e.isLong);
+
+  // Filter normal edges: only show edges above a minimum weight threshold
+  const minWeight = 0.25;
+  const visibleNormal = normalEdges.filter(e => e.w >= minWeight).slice(0, 100);
+  const drawn = [...bridgeEdges, ...visibleNormal];
+
+  // ── Edge color by semantic relation type ───────────────────────────────────
+  const EDGE_COLORS: Record<string, string> = {
+    influences: '#a78bfa',   // violet — genealogy
+    contrasts:  '#ef4444',   // red — opposition/tension
+    bridges:    '#f472b6',   // magenta — line of flight
+    extends:    '#60a5fa',   // blue — development
+    contains:   '#4ade80',   // green — subsumption
+    co_occurs:  ae.linkColor, // default — co-occurrence
+    method_for: '#fbbf24',   // yellow — methodology
+    example_of: '#fb923c',   // orange — instance
+    critiques:  '#f87171',   // light red — challenge
+    related:    ae.linkColor, // default
+  };
 
   // ── Draw links ──────────────────────────────────────────────────────────────
   const linkW     = lerp(0.5, 3.0, ae.linkWidth);
@@ -679,23 +746,36 @@ export function renderRhizome(
   ctx.lineCap = 'round';
 
   for (const e of drawn) {
-    if (e.isLong) {
-      // Line of flight: draw with glow
+    const edgeColor = e.relation ? (EDGE_COLORS[e.relation] ?? ae.linkColor) : ae.linkColor;
+
+    if (e.isLong || e.relation === 'bridges') {
       const alpha = Math.min(0.95, 0.3 + e.w * 0.6);
-      ctx.strokeStyle = ae.flightColor;
-      ctx.lineWidth   = linkW * 1.5;
+      ctx.strokeStyle = e.relation === 'bridges' ? EDGE_COLORS.bridges : ae.flightColor;
+      ctx.lineWidth   = linkW * (1.2 + e.w * 0.8);
       ctx.globalAlpha = alpha * linkOpac * (0.6 + ae.glowIntensity * 0.4);
 
-      // Draw with glow pass
-      ctx.shadowColor = ae.flightColor;
+      ctx.shadowColor = ctx.strokeStyle as string;
       ctx.shadowBlur  = 6 * ae.glowIntensity;
       ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
       ctx.shadowBlur = 0;
+    } else if (e.relation === 'contrasts' || e.relation === 'critiques') {
+      // Tension/contrast edges: dashed red lines
+      ctx.strokeStyle = edgeColor;
+      ctx.lineWidth   = linkW * 0.8;
+      ctx.globalAlpha = linkOpac * e.w * 0.8;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (e.relation === 'influences' || e.relation === 'extends') {
+      // Genealogy/development edges: slightly thicker, colored
+      ctx.strokeStyle = edgeColor;
+      ctx.lineWidth   = linkW * (0.8 + e.w * 0.5);
+      ctx.globalAlpha = linkOpac * e.w;
+      ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
     } else {
-      // Parse link color to get rgba
-      ctx.strokeStyle = ae.linkColor;
+      ctx.strokeStyle = edgeColor;
       ctx.lineWidth   = linkW;
-      ctx.globalAlpha = linkOpac * e.w;  // removed glowIntensity multiplier — clean lines at all glow levels
+      ctx.globalAlpha = linkOpac * e.w;
       ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
     }
   }
@@ -743,6 +823,25 @@ export function renderRhizome(
     ctx.globalAlpha = (0.65 + n.heat * 0.35) * intensity;
     ctx.fillStyle   = fillColor;
     ctx.beginPath(); ctx.arc(n.x, n.y, radius, 0, Math.PI * 2); ctx.fill();
+
+    // Bridge indicator — double ring pulsing
+    if (n.isBridge) {
+      const pulse = Math.sin(n.age * 3) * 0.15 + 0.35;
+      ctx.globalAlpha = pulse * intensity;
+      ctx.strokeStyle = '#f472b6'; // magenta — line of flight color
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath(); ctx.arc(n.x, n.y, radius + 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = pulse * 0.5 * intensity;
+      ctx.beginPath(); ctx.arc(n.x, n.y, radius + 10, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    // Hub indicator — solid outer ring
+    if (n.isHub && !n.isBridge) {
+      ctx.globalAlpha = 0.25 * intensity;
+      ctx.strokeStyle = ae.hubColor;
+      ctx.lineWidth   = 2;
+      ctx.beginPath(); ctx.arc(n.x, n.y, radius + 5, 0, Math.PI * 2); ctx.stroke();
+    }
 
     // Entry ring
     if (n.isEntry) {
@@ -942,9 +1041,16 @@ export function renderRhizome3D(
   const projMap = new Map<number, P3>();
   for (const p3 of projected) projMap.set(p3.n.id, p3);
 
-  // ── Draw edges ──────────────────────────────────────────────────────────────
+  // ── Draw edges (with semantic type coloring) ────────────────────────────────
   const seenEdges = new Set<string>();
   const linkW = lerp(0.4, 2.5, ae.linkWidth);
+
+  const EDGE3D_COLORS: Record<string, string> = {
+    influences: '#a78bfa', contrasts: '#ef4444', bridges: '#f472b6',
+    extends: '#60a5fa', contains: '#4ade80', co_occurs: ae.linkColor,
+    method_for: '#fbbf24', example_of: '#fb923c', critiques: '#f87171',
+    related: ae.linkColor,
+  };
 
   for (const pa of projected) {
     for (const [nid, weight] of pa.n.connections) {
@@ -955,11 +1061,21 @@ export function renderRhizome3D(
       if (!pb) continue;
 
       const avgAlpha = (pa.alpha + pb.alpha) / 2;
-      const isLong   = Math.hypot(pa.n.x - pb.n.x, pa.n.y - pb.n.y) > LONG_LINK_DISTANCE;
+      const relation = pa.n.edgeTypes?.get(nid) ?? pb.n.edgeTypes?.get(pa.n.id);
+      const isLong   = relation === 'bridges' || Math.hypot(pa.n.x - pb.n.x, pa.n.y - pb.n.y) > LONG_LINK_DISTANCE;
+      const edgeColor = relation ? (EDGE3D_COLORS[relation] ?? ae.linkColor) : ae.linkColor;
+
       ctx.globalAlpha = ae.linkOpacity * avgAlpha * weight * 0.85;
-      ctx.strokeStyle = isLong ? ae.flightColor : ae.linkColor;
+      ctx.strokeStyle = isLong ? ae.flightColor : edgeColor;
       ctx.lineWidth   = linkW * (0.7 + avgAlpha * 0.5);
+
+      if (relation === 'contrasts' || relation === 'critiques') {
+        ctx.setLineDash([3, 2]);
+        ctx.strokeStyle = edgeColor;
+      }
+
       ctx.beginPath(); ctx.moveTo(pa.px, pa.py); ctx.lineTo(pb.px, pb.py); ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
 

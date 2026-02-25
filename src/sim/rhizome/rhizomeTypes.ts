@@ -27,6 +27,15 @@ export interface RhizomeNode {
   isAnchor?:    boolean;
   relevance?:   number;   // 0..1 from LLM — drives size + distance
   popularity?:  number;   // 0..1 from LLM — drives heat/brightness
+  // Rich edge metadata (populated from LLM typed edges)
+  edgeTypes?:   Map<number, EdgeRelation>;   // nodeId -> relation type
+  mentionCount?: number;                      // cross-reference frequency
+  computedRelevance?: number;                 // frequency-weighted importance
+  isBridge?:    boolean;                      // computed: connects 2+ communities
+  isHub?:       boolean;                      // computed: high degree centrality
+  betweenness?: number;                       // computed: bridge quality 0..1
+  closeness?:   number;                       // computed: centrality 0..1
+  communityId?: number;                       // computed: cluster membership
 }
 
 // ── Simulation Params (10 physics controls) ───────────────────────────────────
@@ -289,6 +298,26 @@ export type LLMMode =
   | 'keywords';     // dense keyword cloud, no descriptions
 export type LLMStatus   = 'idle' | 'loading' | 'done' | 'error';
 
+/** Edge relation type — describes the semantic nature of a connection */
+export type EdgeRelation =
+  | 'influences'     // A shaped B's thinking
+  | 'contrasts'      // A opposes or tensions with B
+  | 'bridges'        // A connects disparate domains (line of flight)
+  | 'extends'        // A builds upon B
+  | 'contains'       // A subsumes B
+  | 'co_occurs'      // A and B frequently appear together
+  | 'method_for'     // A is a methodology used in B
+  | 'example_of'     // A instantiates B
+  | 'critiques'      // A challenges B
+  | 'related';       // generic semantic proximity
+
+/** Typed connection with semantic metadata from LLM */
+export interface LLMEdgeDef {
+  target:    string;          // label of connected node
+  strength:  number;          // 0..1 — how strong is this connection
+  relation:  EdgeRelation;    // semantic type of the edge
+}
+
 /** Per-node definition returned by the LLM */
 export interface LLMNodeDef {
   label:        string;
@@ -296,10 +325,14 @@ export interface LLMNodeDef {
   category?:    string;
   isEntry?:     boolean;
   connections:  string[];
+  typedEdges?:  LLMEdgeDef[];      // rich edges with type + strength (new)
   relevance?:   number;
   popularity?:  number;
   directLink?:  boolean;
-  order?:       number;  // study_order mode: sequential step index
+  order?:       number;            // study_order mode: sequential step index
+  // Post-processed fields (computed after LLM response)
+  mentionCount?:  number;          // how many OTHER nodes reference this label
+  computedRelevance?: number;      // frequency-weighted relevance
 }
 
 /** Request sent to the LLM service */

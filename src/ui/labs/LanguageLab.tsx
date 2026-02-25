@@ -222,6 +222,9 @@ export function LanguageLab({ active }: Props) {
     prevObsRef.current = obs;
   }, [buildEntry, trainEvent]);
 
+  const macroTickRef = useRef(macroTick);
+  macroTickRef.current = macroTick;
+
   // ── LLM refine ────────────────────────────────────────────────────────────
   const refineEntryLLM = useCallback(async (
     spec: GlyphSpec,
@@ -382,14 +385,34 @@ export function LanguageLab({ active }: Props) {
     if (!canvas || !glyphOver) return;
 
     let frameCount = 0;
+    lastTime.current = performance.now();
 
     const loop = (now: number) => {
       rafRef.current = requestAnimationFrame(loop);
-      const dt = Math.min((now - lastTime.current) / 1000, 0.05);
+      const rawDt = (now - lastTime.current) / 1000;
+      const dt = Math.min(rawDt > 0 ? rawDt : 0.016, 0.05);
       lastTime.current = now;
       timeRef.current += dt;
 
-      if (!runningRef.current) return;
+      if (!runningRef.current) {
+        // Still render even when paused (just don't step physics)
+        const W = canvas.width, H = canvas.height;
+        if (W < 2 || H < 2) return;
+        const ctx2 = canvas.getContext('2d');
+        if (!ctx2) return;
+        // Redraw glyph overlay while paused
+        const streamArr2 = glyphStreamRef.current;
+        if (streamArr2.length > 0) {
+          const spec2 = streamArr2[streamArr2.length - 1];
+          const gCtx2 = glyphOver.getContext('2d')!;
+          gCtx2.clearRect(0, 0, glyphOver.width, glyphOver.height);
+          const gR2 = Math.min(glyphOver.width, glyphOver.height) * 0.44;
+          drawGlyph(gCtx2, spec2, glyphOver.width / 2, glyphOver.height / 2, gR2, {
+            alpha: 0.96, animated: true, time: timeRef.current,
+          });
+        }
+        return;
+      }
 
       const state  = worldRef.current;
       const p      = paramsRef.current;
@@ -406,7 +429,7 @@ export function LanguageLab({ active }: Props) {
       macroTimer.current += dt;
       if (macroTimer.current >= MACRO_TICK_INTERVAL) {
         macroTimer.current = 0;
-        macroTick();
+        macroTickRef.current();
       }
 
       // ── RENDER ────────────────────────────────────────────────────────────
@@ -422,8 +445,9 @@ export function LanguageLab({ active }: Props) {
       const OY   = (H - S) * 0.5;      // vertical offset
       const CX_S = OX + S * 0.5;       // screen-space center X
       const CY_S = OY + S * 0.5;       // screen-space center Y
-      const maxR = S * 0.47;            // visible circular window radius (px)
-      const maxR2 = maxR * maxR;
+      const windowR = S * 0.47;         // visible circular window radius (px)
+      const clipR   = windowR * 0.970;  // the actual "glass" circle
+      const clipR2  = clipR * clipR;
 
       // ── Trail fade — creates orbital ink trails (hypnotic smear) ──────────
       if (frameCount === 0) {
@@ -435,6 +459,12 @@ export function LanguageLab({ active }: Props) {
         ctx.fillRect(0, 0, W, H);
       }
 
+      // Keep ONE functional circular window for all lenses
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(CX_S, CY_S, clipR, 0, TWO_PI);
+      ctx.clip();
+
       if (lensId === 'meaning') {
         renderMeaningMap(ctx, lexiconRef.current, clustersRef.current, W, H);
       } else {
@@ -443,25 +473,67 @@ export function LanguageLab({ active }: Props) {
 
         // ── World / Glyphs lens — ferrofluid ink ring ─────────────────────
         if (lensId === 'world' || lensId === 'glyphs') {
+          const t = timeRef.current;
+          
+          // Pass 1: Draw ferrofluid connections between close particles
+          ctx.lineCap = 'round';
           for (let i = 0; i < n; i++) {
             const q = quanta[i];
             const px = OX + q.x * S;
             const py = OY + q.y * S;
             const dsx = px - CX_S, dsy = py - CY_S;
-            if (dsx * dsx + dsy * dsy > maxR2) continue;
+            if (dsx * dsx + dsy * dsy > clipR2) continue;
+            
+            for (let j = i + 1; j < n; j++) {
+              const q2 = quanta[j];
+              const dx = q2.x - q.x, dy = q2.y - q.y;
+              const d2 = dx * dx + dy * dy;
+              const linkDist = 0.035;
+              if (d2 > linkDist * linkDist) continue;
+              
+              const d = Math.sqrt(d2);
+              const phaseSim = Math.cos(q.phase - q2.phase);
+              if (phaseSim < 0.3) continue;
+              
+              const px2 = OX + q2.x * S;
+              const py2 = OY + q2.y * S;
+              const linkAlpha = (1 - d / linkDist) * phaseSim * 0.35;
+              const coh2 = (q.coherence + q2.coherence) * 0.5;
+              const dk = Math.round(10 + (1 - coh2) * 30);
+              
+              ctx.beginPath();
+              ctx.moveTo(px, py);
+              // Curved link (ferrofluid surface tension)
+              const midX = (px + px2) * 0.5;
+              const midY = (py + py2) * 0.5;
+              const perpX = -(py2 - py) * 0.15 * Math.sin(t * 2 + i * 0.1);
+              const perpY =  (px2 - px) * 0.15 * Math.sin(t * 2 + i * 0.1);
+              ctx.quadraticCurveTo(midX + perpX, midY + perpY, px2, py2);
+              ctx.strokeStyle = `rgba(${dk},${dk},${dk},${linkAlpha.toFixed(3)})`;
+              ctx.lineWidth = 0.6 + coh2 * 0.8;
+              ctx.stroke();
+            }
+          }
 
-            // Edge soft-fade
-            const rNorm  = Math.sqrt(dsx * dsx + dsy * dsy) / maxR;
+          // Pass 2: Draw particles with pulsing sizes
+          for (let i = 0; i < n; i++) {
+            const q = quanta[i];
+            const px = OX + q.x * S;
+            const py = OY + q.y * S;
+            const dsx = px - CX_S, dsy = py - CY_S;
+            if (dsx * dsx + dsy * dsy > clipR2) continue;
+
+            const rNorm  = Math.sqrt(dsx * dsx + dsy * dsy) / clipR;
             const edgeFade = Math.max(0, 1 - rNorm * rNorm * 2.5);
 
-            // Ferrofluid-sized dots: solid and dense on the ring
             const coh = Math.max(0, Math.min(1, q.coherence));
-            const size = Math.max(0.5, 1.6 + coh * 0.9);           // 0.5–2.5px
+            // Pulsing size based on phase
+            const pulse = 1 + Math.sin(q.phase + t * 1.5) * 0.25 * coh;
+            const size = Math.max(0.5, (1.6 + coh * 1.2) * pulse);
             const a    = Math.min(0.94, (0.42 + coh * 0.50 + q.ink * 0.10) * edgeFade);
 
             ctx.globalAlpha = a;
 
-            // Velocity-aligned stroke: elongated in direction of motion
             const spd = Math.sqrt(q.vx * q.vx + q.vy * q.vy);
             const dk  = Math.round(6 + (1 - coh) * 42);
             ctx.fillStyle = `rgb(${dk},${dk},${dk})`;
@@ -493,7 +565,7 @@ export function LanguageLab({ active }: Props) {
             const px = OX + q.x * S;
             const py = OY + q.y * S;
             const dsx = px - CX_S, dsy = py - CY_S;
-            if (dsx * dsx + dsy * dsy > maxR2) continue;
+            if (dsx * dsx + dsy * dsy > clipR2) continue;
             const coh = Math.max(0, q.coherence);
             const ab  = Math.abs(q.intent);
             const r = Math.round(30 + Math.max(0,  q.intent) * 200);
@@ -529,7 +601,7 @@ export function LanguageLab({ active }: Props) {
               const cx2 = OX + (gx + 0.5) * cellS;
               const cy2 = OY + (gy + 0.5) * cellS;
               const dd = (cx2 - CX_S) * (cx2 - CX_S) + (cy2 - CY_S) * (cy2 - CY_S);
-              if (dd > maxR2) continue;
+              if (dd > clipR2) continue;
               // Black → teal → cyan color scale
               const r2 = Math.round(v < 0.5 ? v * 2 * 30 : 30 + (v - 0.5) * 2 * 60);
               const g2 = Math.round(v * 180);
@@ -548,7 +620,7 @@ export function LanguageLab({ active }: Props) {
             const px = OX + q.x * S;
             const py = OY + q.y * S;
             const dsx = px - CX_S, dsy = py - CY_S;
-            if (dsx * dsx + dsy * dsy > maxR2) continue;
+            if (dsx * dsx + dsy * dsy > clipR2) continue;
             const coh = Math.max(0, q.coherence);
             // Hue: phase angle → rainbow; rotates slowly with world time
             const hue = Math.round(((q.phase / TWO_PI) * 360 + state.time * 18) % 360);
@@ -562,25 +634,34 @@ export function LanguageLab({ active }: Props) {
           ctx.globalAlpha = 1;
         }
 
-        // ── Radial vignette — soft circular window ─────────────────────────
-        const vig = ctx.createRadialGradient(CX_S, CY_S, maxR * 0.72, CX_S, CY_S, maxR * 1.02);
-        vig.addColorStop(0,    'rgba(248,245,240,0)');
-        vig.addColorStop(0.6,  'rgba(248,245,240,0.04)');
-        vig.addColorStop(0.84, 'rgba(248,245,240,0.75)');
-        vig.addColorStop(1.0,  'rgba(248,245,240,0.99)');
-        ctx.fillStyle = vig;
-        ctx.fillRect(0, 0, W, H);
+      }
 
-        // ── Alien glass border ──────────────────────────────────────────────
+      ctx.restore(); // end circular clip for lens content
+
+      // ── Radial vignette — soft circular window ─────────────────────────
+      const vig = ctx.createRadialGradient(CX_S, CY_S, windowR * 0.72, CX_S, CY_S, windowR * 1.02);
+      vig.addColorStop(0,    'rgba(248,245,240,0)');
+      vig.addColorStop(0.6,  'rgba(248,245,240,0.04)');
+      vig.addColorStop(0.84, 'rgba(248,245,240,0.75)');
+      vig.addColorStop(1.0,  'rgba(248,245,240,0.99)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
+
+      // ── Alien glass border ──────────────────────────────────────────────
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(CX_S, CY_S, clipR, 0, TWO_PI);
+      ctx.strokeStyle = 'rgba(140,130,118,0.20)';
+      ctx.lineWidth   = 1.2;
+      ctx.stroke();
+      ctx.restore();
+
+      // ── Active GlyphAct rings (always clipped to the window) ───────────
+      if (actsRef.current.length > 0) {
         ctx.save();
         ctx.beginPath();
-        ctx.arc(CX_S, CY_S, maxR * 0.970, 0, TWO_PI);
-        ctx.strokeStyle = 'rgba(140,130,118,0.20)';
-        ctx.lineWidth   = 1.2;
-        ctx.stroke();
-        ctx.restore();
-
-        // ── Active GlyphAct rings ─────────────────────────────────────────
+        ctx.arc(CX_S, CY_S, clipR, 0, TWO_PI);
+        ctx.clip();
         for (const act of actsRef.current) {
           const opInfo = OPERATOR_LABELS[act.kind];
           ctx.save();
@@ -596,28 +677,28 @@ export function LanguageLab({ active }: Props) {
           ctx.setLineDash([]);
           ctx.restore();
         }
+        ctx.restore();
       }
 
-      // ── Glyph overlay: only redraw when spec changes ─────────────────────
+      // ── Glyph overlay: animate continuously ────────────────────────────
       const streamArr = glyphStreamRef.current;
       if (streamArr.length > 0) {
         const spec = streamArr[streamArr.length - 1];
-        if (spec.id !== lastGlyphIdRef.current) {
-          lastGlyphIdRef.current = spec.id;
-          const gCtx = glyphOver.getContext('2d')!;
-          gCtx.clearRect(0, 0, glyphOver.width, glyphOver.height);
-          const gR = Math.min(glyphOver.width, glyphOver.height) * 0.44;
-          drawGlyph(gCtx, spec, glyphOver.width / 2, glyphOver.height / 2, gR, { alpha: 0.96 });
-        }
+        const gCtx = glyphOver.getContext('2d')!;
+        gCtx.clearRect(0, 0, glyphOver.width, glyphOver.height);
+        const gR = Math.min(glyphOver.width, glyphOver.height) * 0.44;
+        drawGlyph(gCtx, spec, glyphOver.width / 2, glyphOver.height / 2, gR, {
+          alpha: 0.96, animated: true, time: timeRef.current,
+        });
+        lastGlyphIdRef.current = spec.id;
       }
 
       frameCount++;
     };
 
-    lastTime.current = performance.now();
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [active, macroTick]);
+  }, [active]); // eslint-disable-line
 
   // Keep glyphStream accessible from RAF
   const glyphStreamRef = useRef<GlyphSpec[]>([]);

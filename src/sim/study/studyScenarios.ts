@@ -51,7 +51,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     apply(cfg, fcfg) {
       cfg.agentCount = 140; cfg.groupCount = 3; cfg.speed = 0.38; cfg.aggressionBase = 0.18;
       cfg.trustBase = 0.65; cfg.kBelief = 0.65; cfg.kFear = 0.50; cfg.ideologyPressure = 0.40;
-      cfg.violationThreshold = 2; cfg.autoSymbols = false;
+      cfg.violationThreshold = 2; cfg.autoSymbols = true;
       fcfg.decayN = 0.008; fcfg.diffuseN = 0.14; fcfg.regenR = 0.016;
     },
     setupWorld(f, s) {
@@ -99,7 +99,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: '5 independent tribes · each with a BOND totem · federation dynamics',
     apply(cfg, fcfg) {
       cfg.agentCount = 150; cfg.groupCount = 5; cfg.speed = 0.45; cfg.cohesion = 0.65;
-      cfg.aggressionBase = 0.28; cfg.ideologyPressure = 0.20; cfg.autoSymbols = false;
+      cfg.aggressionBase = 0.28; cfg.ideologyPressure = 0.20; cfg.autoSymbols = true;
       fcfg.diffuseN = 0.08;
     },
     setupWorld(f, s) {
@@ -140,7 +140,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     apply(cfg, fcfg) {
       cfg.agentCount = 140; cfg.groupCount = 2; cfg.speed = 0.58; cfg.aggressionBase = 0.72;
       cfg.trustBase = 0.15; cfg.ideologyPressure = 0.70; cfg.kFear = 0.55;
-      cfg.violationThreshold = 2; cfg.exceptionDuration = 40; cfg.autoSymbols = false;
+      cfg.violationThreshold = 2; cfg.exceptionDuration = 40; cfg.autoSymbols = true;
       fcfg.diffuseN = 0.04;
     },
     setupWorld(f, s) {
@@ -285,7 +285,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     apply(cfg, fcfg) {
       cfg.agentCount = 160; cfg.groupCount = 4; cfg.speed = 0.58; cfg.kDesire = 0.75;
       cfg.kBelief = 0.10; cfg.aggressionBase = 0.18; cfg.trustBase = 0.60;
-      cfg.violationThreshold = 10; cfg.autoSymbols = false;
+      cfg.violationThreshold = 10; cfg.autoSymbols = true;
       fcfg.decayN = 0.055; fcfg.regenR = 0.035;
     },
     setupWorld(f, s) {
@@ -307,7 +307,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     apply(cfg, fcfg) {
       cfg.agentCount = 140; cfg.groupCount = 3; cfg.speed = 0.35; cfg.kBelief = 0.80;
       cfg.kFear = 0.75; cfg.aggressionBase = 0.10; cfg.trustBase = 0.55;
-      cfg.violationThreshold = 1; cfg.exceptionDuration = 40; cfg.autoSymbols = false;
+      cfg.violationThreshold = 1; cfg.exceptionDuration = 40; cfg.autoSymbols = true;
       fcfg.decayN = 0.005; fcfg.diffuseN = 0.18;
     },
     setupWorld(f, s) {
@@ -359,6 +359,308 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       // Start with low N + high R (anomic abundance) → exception triggers fast
       for (let i = 0; i < f.n.length; i++) f.n[i] = 0.05;
       for (let i = 0; i < f.r.length; i++) f.r[i] = 0.70;
+      f.dirty = true;
+    },
+  },
+
+  // ══════════════════════════════════════════════════════ NEW SCENARIOS ════════
+
+  // ── Genesis II ───────────────────────────────────────────────────────────────
+
+  {
+    id: 'nomadic_encounter', name: 'Nomadic Encounter', icon: '🏕️', category: 'genesis',
+    description: 'High mobility · low loyalty · groups intermix freely → emergent tribes',
+    apply(cfg) {
+      cfg.agentCount = 180; cfg.groupCount = 5; cfg.speed = 0.55; cfg.mobility = 0.60;
+      cfg.cohesion = 0.20; cfg.culturalInertia = 0.15; cfg.contagion = 0.55;
+      cfg.empathy = 0.50; cfg.conformity = 0.15; cfg.cooperationBias = 0.35;
+      cfg.autoSymbols = true;
+    },
+  },
+
+  {
+    id: 'silent_consensus', name: 'Silent Consensus', icon: '🤫', category: 'genesis',
+    description: 'Extreme conformity · no aggression · ideology converges without conflict',
+    apply(cfg) {
+      cfg.agentCount = 160; cfg.groupCount = 3; cfg.conformity = 0.90; cfg.empathy = 0.65;
+      cfg.aggressionBase = 0.02; cfg.ideologyPressure = 0.50; cfg.culturalInertia = 0.70;
+      cfg.innovationRate = 0.01; cfg.autoSymbols = true;
+    },
+    setupWorld(f) {
+      for (let i = 0; i < f.n.length; i++) f.n[i] = 0.35;
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'first_contact', name: 'First Contact', icon: '👋', category: 'genesis',
+    description: '2 isolated groups meet · empathy vs aggression determines outcome',
+    apply(cfg) {
+      cfg.agentCount = 120; cfg.groupCount = 2; cfg.speed = 0.42; cfg.empathy = 0.55;
+      cfg.aggressionBase = 0.35; cfg.contagion = 0.40; cfg.mobility = 0.15;
+      cfg.culturalInertia = 0.60; cfg.cooperationBias = 0.25; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('BOND', -0.60, 0, 0.22, 0, 0.7));
+      s.totems.push(totem('BOND',  0.60, 0, 0.22, 1, 0.7));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'oral_tradition', name: 'Oral Tradition', icon: '📖', category: 'genesis',
+    description: 'High contagion + archives emerge · memes spread and crystallize',
+    apply(cfg) {
+      cfg.agentCount = 150; cfg.groupCount = 4; cfg.contagion = 0.75; cfg.culturalInertia = 0.55;
+      cfg.hierarchyStrength = 0.50; cfg.empathy = 0.40; cfg.conformity = 0.45;
+      cfg.autoSymbols = true;
+    },
+  },
+
+  // ── Conflict II ──────────────────────────────────────────────────────────────
+
+  {
+    id: 'culture_war', name: 'Culture War', icon: '📡', category: 'conflict',
+    description: 'High contagion + low empathy + innovation → memetic conflict',
+    apply(cfg) {
+      cfg.agentCount = 180; cfg.groupCount = 4; cfg.contagion = 0.70; cfg.empathy = 0.10;
+      cfg.innovationRate = 0.15; cfg.ideologyPressure = 0.65; cfg.aggressionBase = 0.40;
+      cfg.culturalInertia = 0.25; cfg.hierarchyStrength = 0.55; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('RIFT', -0.50, -0.50, 0.24, 0, 0.9));
+      s.totems.push(totem('RIFT',  0.50,  0.50, 0.24, 2, 0.9));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'class_revolt', name: 'Class Revolt', icon: '✊', category: 'conflict',
+    description: 'Extreme inequality + high desire + low conformity → uprising',
+    apply(cfg) {
+      cfg.agentCount = 200; cfg.groupCount = 3; cfg.speed = 0.52; cfg.aggressionBase = 0.45;
+      cfg.conformity = 0.10; cfg.kDesire = 0.70; cfg.cooperationBias = 0.55;
+      cfg.resourceScarcity = 0.20; cfg.harvestRate = 0.12; cfg.decayWealth = 0.020;
+      cfg.violationThreshold = 2; cfg.autoSymbols = true;
+    },
+    setupWorld(f) {
+      for (let i = 0; i < f.r.length; i++) f.r[i] = 0.08;
+      depositR(f, 0, 0, 0.90, 0.18);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'proxy_war', name: 'Proxy War', icon: '🎭', category: 'conflict',
+    description: '4 groups · 2 Oracles manipulate · hierarchy drives factional violence',
+    apply(cfg) {
+      cfg.agentCount = 160; cfg.groupCount = 4; cfg.hierarchyStrength = 0.80;
+      cfg.aggressionBase = 0.38; cfg.empathy = 0.12; cfg.contagion = 0.50;
+      cfg.ideologyPressure = 0.55; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('ORACLE', -0.55, 0.20, 0.26, 0, 1.0));
+      s.totems.push(totem('ORACLE',  0.55, -0.20, 0.26, 2, 1.0));
+      depositL(f, -0.55, 0.20, 0.50, 0.25);
+      depositL(f,  0.55, -0.20, 0.50, 0.25);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'genocide_risk', name: 'Genocide Risk', icon: '🩸', category: 'conflict',
+    description: 'Exception + max aggression + NO_MIX + zero empathy → worst case',
+    apply(cfg) {
+      cfg.agentCount = 140; cfg.groupCount = 2; cfg.speed = 0.50; cfg.aggressionBase = 0.80;
+      cfg.empathy = 0.0; cfg.conformity = 0.70; cfg.kFear = 0.70; cfg.trustBase = 0.10;
+      cfg.violationThreshold = 1; cfg.exceptionDuration = 50; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      for (let i = 0; i < f.n.length; i++) f.n[i] = 0.70;
+      s.tabus.push(tabu('NO_MIX', 0, 0, 0.30, 0.90));
+      s.totems.push(totem('RIFT', -0.55, 0, 0.28, 0, 1.2));
+      s.totems.push(totem('RIFT',  0.55, 0, 0.28, 1, 1.2));
+      f.dirty = true;
+    },
+  },
+
+  // ── Economy II ───────────────────────────────────────────────────────────────
+
+  {
+    id: 'commons_tragedy', name: 'Tragedy of the Commons', icon: '🌾', category: 'economy',
+    description: 'Shared resources + zero cooperation → depletion → conflict',
+    apply(cfg) {
+      cfg.agentCount = 180; cfg.groupCount = 4; cfg.cooperationBias = 0.0;
+      cfg.harvestRate = 0.14; cfg.decayWealth = 0.015; cfg.resourceScarcity = 0.30;
+      cfg.aggressionBase = 0.35; cfg.conformity = 0.20; cfg.autoSymbols = true;
+    },
+    setupWorld(f) {
+      for (let i = 0; i < f.r.length; i++) f.r[i] = 0.50;
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'gift_economy', name: 'Gift Economy', icon: '🎁', category: 'economy',
+    description: 'Max cooperation + offering rituals + empathy → wealth equality',
+    apply(cfg) {
+      cfg.agentCount = 140; cfg.groupCount = 3; cfg.cooperationBias = 0.85;
+      cfg.empathy = 0.65; cfg.harvestRate = 0.07; cfg.decayWealth = 0.010;
+      cfg.aggressionBase = 0.05; cfg.conformity = 0.45; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.rituals.push(ritual('OFFERING', 0, 0, 0.35, 6));
+      s.rituals.push(ritual('OFFERING', -0.55, -0.55, 0.25, 8));
+      for (let i = 0; i < f.r.length; i++) f.r[i] = 0.55;
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'colonial_extraction', name: 'Colonial Extraction', icon: '⛏️', category: 'economy',
+    description: 'Central group hoards R · peripheral groups depleted · hierarchy exploits',
+    apply(cfg) {
+      cfg.agentCount = 180; cfg.groupCount = 4; cfg.hierarchyStrength = 0.75;
+      cfg.cooperationBias = 0.10; cfg.harvestRate = 0.15; cfg.decayWealth = 0.005;
+      cfg.resourceScarcity = 0.35; cfg.conformity = 0.55; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      for (let i = 0; i < f.r.length; i++) f.r[i] = 0.10;
+      depositR(f, 0, 0, 0.95, 0.30);
+      s.totems.push(totem('BOND', 0, 0, 0.35, 0, 1.1));
+      s.tabus.push(tabu('NO_ENTER', 0, 0, 0.20, 0.80));
+      f.dirty = true;
+    },
+  },
+
+  // ── Culture II ───────────────────────────────────────────────────────────────
+
+  {
+    id: 'renaissance', name: 'Renaissance', icon: '🎨', category: 'culture',
+    description: 'High innovation + high empathy + oracles → cultural explosion',
+    apply(cfg) {
+      cfg.agentCount = 160; cfg.groupCount = 5; cfg.innovationRate = 0.20;
+      cfg.empathy = 0.60; cfg.contagion = 0.55; cfg.culturalInertia = 0.10;
+      cfg.cooperationBias = 0.45; cfg.hierarchyStrength = 0.40;
+      cfg.aggressionBase = 0.08; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('ORACLE', 0, 0, 0.30, 0, 1.0));
+      depositR(f, 0, 0, 0.60, 0.40);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'mass_hysteria', name: 'Mass Hysteria', icon: '😱', category: 'culture',
+    description: 'Max empathy + fear contagion + low conformity → panic cascades',
+    apply(cfg) {
+      cfg.agentCount = 180; cfg.groupCount = 3; cfg.empathy = 0.90;
+      cfg.kFear = 0.65; cfg.conformity = 0.15; cfg.contagion = 0.65;
+      cfg.aggressionBase = 0.30; cfg.innovationRate = 0.08;
+      cfg.speed = 0.55; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.tabus.push(tabu('NO_ENTER', 0, 0, 0.25, 0.90));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'cultural_assimilation', name: 'Cultural Assimilation', icon: '🔄', category: 'culture',
+    description: 'High mobility + high conformity + 1 dominant BOND → groups merge',
+    apply(cfg) {
+      cfg.agentCount = 160; cfg.groupCount = 5; cfg.mobility = 0.50;
+      cfg.conformity = 0.70; cfg.contagion = 0.60; cfg.culturalInertia = 0.20;
+      cfg.empathy = 0.40; cfg.cohesion = 0.30; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('BOND', 0, 0, 0.45, 0, 1.2));
+      depositN(f, 0, 0, 0.60, 0.40);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'counter_culture', name: 'Counter-Culture', icon: '✌️', category: 'culture',
+    description: 'High innovation + low conformity + high desire → new movements emerge',
+    apply(cfg) {
+      cfg.agentCount = 160; cfg.groupCount = 4; cfg.innovationRate = 0.18;
+      cfg.conformity = 0.08; cfg.kDesire = 0.65; cfg.empathy = 0.45;
+      cfg.contagion = 0.50; cfg.culturalInertia = 0.15; cfg.mobility = 0.30;
+      cfg.aggressionBase = 0.15; cfg.autoSymbols = true;
+    },
+    setupWorld(f) {
+      for (let i = 0; i < f.n.length; i++) f.n[i] = 0.55;
+      f.dirty = true;
+    },
+  },
+
+  // ── Power II ─────────────────────────────────────────────────────────────────
+
+  {
+    id: 'theocracy', name: 'Theocracy', icon: '⛪', category: 'power',
+    description: 'Oracle + BOND + max hierarchy + high conformity → total control',
+    apply(cfg) {
+      cfg.agentCount = 150; cfg.groupCount = 3; cfg.hierarchyStrength = 0.90;
+      cfg.conformity = 0.80; cfg.kBelief = 0.75; cfg.empathy = 0.30;
+      cfg.culturalInertia = 0.80; cfg.innovationRate = 0.01;
+      cfg.violationThreshold = 1; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      for (let i = 0; i < f.n.length; i++) f.n[i] = 0.75;
+      s.totems.push(totem('ORACLE', 0, 0, 0.40, 0, 1.3));
+      s.totems.push(totem('BOND', 0, 0.35, 0.28, 0, 0.9));
+      s.rituals.push(ritual('PROCESSION', 0, 0, 0.55, 7));
+      depositL(f, 0, 0, 0.80, 0.45);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'anarchist_commune', name: 'Anarchist Commune', icon: '🏴', category: 'power',
+    description: 'Zero hierarchy + max cooperation + high empathy + no norms → self-org',
+    apply(cfg) {
+      cfg.agentCount = 120; cfg.groupCount = 4; cfg.hierarchyStrength = 0.0;
+      cfg.cooperationBias = 0.80; cfg.empathy = 0.70; cfg.conformity = 0.0;
+      cfg.kBelief = 0.05; cfg.kFear = 0.10; cfg.aggressionBase = 0.08;
+      cfg.innovationRate = 0.12; cfg.mobility = 0.40; cfg.autoSymbols = true;
+      cfg.violationThreshold = 99;
+    },
+    setupWorld(f) {
+      for (let i = 0; i < f.r.length; i++) f.r[i] = 0.65;
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'populist_surge', name: 'Populist Surge', icon: '📢', category: 'power',
+    description: 'Charismatic Oracle + high contagion + empathy → rapid mass movement',
+    apply(cfg) {
+      cfg.agentCount = 200; cfg.groupCount = 4; cfg.contagion = 0.80;
+      cfg.empathy = 0.55; cfg.hierarchyStrength = 0.65; cfg.conformity = 0.45;
+      cfg.ideologyPressure = 0.60; cfg.speed = 0.50; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('ORACLE', -0.30, -0.30, 0.30, 0, 1.2));
+      depositL(f, -0.30, -0.30, 0.65, 0.30);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'empire_collapse', name: 'Empire Collapse', icon: '🏚️', category: 'power',
+    description: 'Archive crumbles · high innovation + mobility → fragmentation',
+    apply(cfg) {
+      cfg.agentCount = 180; cfg.groupCount = 5; cfg.mobility = 0.55;
+      cfg.innovationRate = 0.15; cfg.culturalInertia = 0.10; cfg.conformity = 0.15;
+      cfg.kBelief = 0.15; cfg.aggressionBase = 0.40; cfg.cooperationBias = 0.15;
+      cfg.hierarchyStrength = 0.25; cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('ARCHIVE', 0, 0, 0.35, 0, 0.6));
+      for (let i = 0; i < f.n.length; i++) f.n[i] = 0.50;
+      for (let i = 0; i < f.l.length; i++) f.l[i] = 0.40;
       f.dirty = true;
     },
   },

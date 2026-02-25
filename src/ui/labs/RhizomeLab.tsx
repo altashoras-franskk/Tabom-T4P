@@ -28,7 +28,7 @@ import {
 } from '../../sim/rhizome/rhizomeEngine';
 import {
   generateLLMRhizomeStreaming, injectSingleLLMNode,
-  clearLLMNodes,
+  clearLLMNodes, enrichNodesWithGraphMetrics,
   PROMPT_MAP, PROMPT_MODE_LABELS,
 } from '../../sim/rhizome/rhizomeLLM';
 import {
@@ -1640,6 +1640,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
           );
         },
         (total) => {
+          if (stateRef.current) enrichNodesWithGraphMetrics(stateRef.current);
           setHasLLMNodes(true);
           setLlmMsg(`◈ ${total} conceitos · ${req.topic}`);
           setLlmStatus('done');
@@ -1724,6 +1725,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
           );
         },
         (total) => {
+          if (stateRef.current) enrichNodesWithGraphMetrics(stateRef.current);
           setHasLLMNodes(true);
           setLlmMsg(`◈ ${total} nós de "${node.label}"`);
           setLlmStatus('done');

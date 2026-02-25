@@ -198,50 +198,69 @@ export function stepWorld(
 
   // ── Per-quantum physics ────────────────────────────────────────────────────
   for (const q of quanta) {
-    // Phase evolution
-    q.phase = (q.phase + q.phaseVel * dt) % TWO_PI;
+    // Phase evolution — modulated by dance param for pulsing speed
+    q.phase = (q.phase + q.phaseVel * dt * (0.6 + params.dance * 1.4)) % TWO_PI;
 
     // Radial vector from global center
     const dx   = q.x - CX;
     const dy   = q.y - CY;
     const dist = Math.sqrt(dx * dx + dy * dy) + 1e-7;
 
-    // Per-particle 2-lobe breathing: creates organic wave on ring
+    // Multi-harmonic breathing: 3 waves at different frequencies create organic pulsing
     const qAngle  = Math.atan2(dy, dx);
-    const breathe = Math.sin(state.time * 1.2 + qAngle * 2) * 0.008;
+    const breathe = Math.sin(state.time * 1.2 + qAngle * 2) * 0.012
+                  + Math.sin(state.time * 0.7 + qAngle * 3 + q.phase) * 0.006
+                  + Math.sin(state.time * 2.1 + q.id * 0.3) * 0.004;
 
     const ux   = dx / dist; // outward radial
     const uy   = dy / dist;
     const tx   = -uy;       // CCW tangential
     const ty   =  ux;
 
-    // A) Ring attraction — spring toward target radius (strong, snappy)
-    const tR     = targetRadius(q) + breathe;
+    // A) Ring attraction — softer spring with dance-modulated stiffness
+    const tR      = targetRadius(q) + breathe;
     const ringErr = dist - tR;
-    const fRing   = -ringErr * kRing;
+    const fRing   = -ringErr * kRing * (0.7 + 0.3 * Math.cos(state.time * 0.5 + q.id * 0.1));
     q.vx += ux * fRing * DT60;
     q.vy += uy * fRing * DT60;
 
-    // B) Orbital force — tangential (CCW for intent<0, CW for intent>0)
-    const orbitDir = q.intent < 0 ? 1.0 : -0.4 + q.scribeAffinity * 0.6;
-    const fOrbit   = kOrbit * (0.4 + q.coherence * 0.6);
+    // B) Orbital force — tangential with dance-driven speed variation
+    const orbitDir  = q.intent < 0 ? 1.0 : -0.4 + q.scribeAffinity * 0.6;
+    const danceWave = 1.0 + Math.sin(state.time * 0.8 + qAngle * 1.5) * params.dance * 0.4;
+    const fOrbit    = kOrbit * (0.4 + q.coherence * 0.6) * danceWave;
     q.vx += tx * fOrbit * orbitDir * DT60;
     q.vy += ty * fOrbit * orbitDir * DT60;
 
-    // C) Phase entrainment with ring neighbours
-    if (kEntrain > 0.01) {
-      const neighbours = getNeighbours(q, 0.10);
-      if (neighbours.length > 0) {
-        let sinSum = 0, cosSum = 0;
-        for (const nb of neighbours) { sinSum += Math.sin(nb.phase); cosSum += Math.cos(nb.phase); }
-        const avgPhase = Math.atan2(sinSum / neighbours.length, cosSum / neighbours.length);
-        const diff     = avgPhase - q.phase;
-        const aligned  = Math.cos(diff);
-        q.phase += diff * kEntrain * dt * 0.9;
-        q.coherence = Math.min(1, q.coherence + (aligned > 0.55 ? 0.025 : -0.012) * dt * 5);
-      } else {
-        q.coherence = Math.max(0, q.coherence - 0.008 * dt);
+    // C) Phase entrainment + ferrofluid neighbor attraction
+    const neighbours = getNeighbours(q, 0.10);
+    if (neighbours.length > 0) {
+      let sinSum = 0, cosSum = 0;
+      for (const nb of neighbours) { sinSum += Math.sin(nb.phase); cosSum += Math.cos(nb.phase); }
+      const avgPhase = Math.atan2(sinSum / neighbours.length, cosSum / neighbours.length);
+      const diff     = avgPhase - q.phase;
+      const aligned  = Math.cos(diff);
+      q.phase += diff * kEntrain * dt * 0.9;
+      q.coherence = Math.min(1, q.coherence + (aligned > 0.55 ? 0.025 : -0.012) * dt * 5);
+
+      // Ferrofluid chain force: same-phase neighbors attract, opposite repel
+      for (const nb of neighbours) {
+        const ndx = nb.x - q.x, ndy = nb.y - q.y;
+        const nd  = Math.sqrt(ndx * ndx + ndy * ndy) + 1e-6;
+        const phaseSim = Math.cos(nb.phase - q.phase);
+        // Short-range attraction for aligned phases, repulsion for anti-aligned
+        const chainF = phaseSim * 0.0008 * (1 + q.coherence) * params.dance;
+        if (nd > 0.012 && nd < 0.08) {
+          q.vx += (ndx / nd) * chainF * DT60;
+          q.vy += (ndy / nd) * chainF * DT60;
+        }
+        // Short-range separation to avoid overlap
+        if (nd < 0.015) {
+          q.vx -= (ndx / nd) * 0.0015 * DT60;
+          q.vy -= (ndy / nd) * 0.0015 * DT60;
+        }
       }
+    } else {
+      q.coherence = Math.max(0, q.coherence - 0.008 * dt);
     }
 
     // D) Soft wall — push back if beyond WALL_R
@@ -264,14 +283,11 @@ export function stepWorld(
       q.vy += uy * 0.003 * q.scribeAffinity * DT60;
     }
 
-    // G) Velocity cap + damping
+    // G) Velocity cap + damping (slightly less damping → more fluid motion)
     const speed = Math.sqrt(q.vx * q.vx + q.vy * q.vy);
-    const maxSpeed = 0.020;
+    const maxSpeed = 0.022;
     if (speed > maxSpeed) { q.vx = (q.vx / speed) * maxSpeed; q.vy = (q.vy / speed) * maxSpeed; }
-    q.vx *= 0.987; q.vy *= 0.987;
-
-    // NOTE: inter-particle chain forces removed — they caused scatter at ring densities.
-    // The ring spring alone is sufficient to maintain the circular formation.
+    q.vx *= 0.984; q.vy *= 0.984;
 
     // H) Integrate position
     q.x = Math.max(0.02, Math.min(0.98, q.x + q.vx * DT60));

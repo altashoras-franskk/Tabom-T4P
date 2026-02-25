@@ -48,10 +48,15 @@ const TOOLS: { id: StudyTool; icon: string; label: string; desc: string; color: 
   { id: 'select',            icon: '◇', label: 'Select',      color: '#94a3b8', desc: 'Click agent to inspect' },
   { id: 'totem_bond',        icon: '⊕', label: 'Bond Totem',  color: '#34d399', desc: 'N+L deposit · grows leaders · draws believers' },
   { id: 'totem_rift',        icon: '⊖', label: 'Rift Totem',  color: '#ff6b6b', desc: 'Anti-N · factional L · drives polarization' },
+  { id: 'totem_oracle',      icon: '🔮', label: 'Oracle',      color: '#c084fc', desc: 'High L deposit · amplifies charismatic authority' },
+  { id: 'totem_archive',     icon: '📜', label: 'Archive',     color: '#94a3b8', desc: 'Preserves N/L against decay · collective memory' },
+  { id: 'totem_panopticon',  icon: '👁', label: 'Panopticon',  color: '#fbbf24', desc: 'Max N visibility · forces conformity but sparks resistance' },
   { id: 'tabu_enter',        icon: 'X',  label: 'No-Enter',   color: '#ef4444', desc: 'Fear pulse on entry · moral panic risk' },
   { id: 'tabu_mix',          icon: '×',  label: 'No-Mix',     color: '#f97316', desc: 'Cross-group repulsion · promotes endogamy' },
   { id: 'ritual_gather',     icon: '◎', label: 'Gather',      color: '#a78bfa', desc: 'Periodic consensus · N+L deposit · costs fatigue' },
   { id: 'ritual_procession', icon: '|', label: 'Procession', color: '#fbd38d', desc: 'Discipline march · N boost · raises leader power' },
+  { id: 'ritual_offering',   icon: '🎁', label: 'Offering',   color: '#fbbf24', desc: 'Redistributes R in radius · reduces inequality' },
+  { id: 'ritual_revolt',     icon: '🔥', label: 'Revolt',     color: '#ef4444', desc: 'Destroys N · driven by high resistance & desire' },
 ];
 
 const LENSES: { id: StudyLens; label: string; desc: string }[] = [
@@ -201,6 +206,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   // Panel sections
   const [showTools,    setShowTools]    = useState(true);
   const [showAgents,   setShowAgents]   = useState(false);
+  const [showDynamics, setShowDyn]      = useState(false);
   const [showSymbols,  setShowSymbols]  = useState(true);
   const [showInspect,  setShowInspect]  = useState(true);
   const [showReadout,  setShowReadout]  = useState(true);
@@ -483,20 +489,28 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     }
 
     const now = clockRef.current.elapsed;
-    if (t === 'totem_bond' || t === 'totem_rift') {
-      const item: StudyTotem = { id: uid(), kind: t === 'totem_bond' ? 'BOND' : 'RIFT', x: wx, y: wy, radius: 0.26, groupId: 0, pulseStrength: 0.85, bornAt: now };
+    if (t === 'totem_bond' || t === 'totem_rift' || t === 'totem_oracle' || t === 'totem_archive' || t === 'totem_panopticon') {
+      const kindMap: Record<string, StudyTotem['kind']> = { totem_bond: 'BOND', totem_rift: 'RIFT', totem_oracle: 'ORACLE', totem_archive: 'ARCHIVE', totem_panopticon: 'PANOPTICON' };
+      const colorMap: Record<string, string> = { BOND: '#34d399', RIFT: '#ff6b6b', ORACLE: '#c084fc', ARCHIVE: '#94a3b8', PANOPTICON: '#fbbf24' };
+      const iconMap: Record<string, string> = { BOND: '⊕', RIFT: '⊖', ORACLE: '🔮', ARCHIVE: '📜', PANOPTICON: '👁' };
+      const kind = kindMap[t];
+      const item: StudyTotem = { id: uid(), kind, x: wx, y: wy, radius: 0.26, groupId: 0, pulseStrength: 0.85, bornAt: now };
       syms.totems = [...syms.totems, item];
-      eventsRef.current = [{ time: now, icon: item.kind === 'BOND' ? '⊕' : '⊖', message: `${item.kind} Totem placed`, color: item.kind === 'BOND' ? '#34d399' : '#ff6b6b' }, ...eventsRef.current].slice(0, 30);
+      eventsRef.current = [{ time: now, icon: iconMap[kind], message: `${kind} Totem placed`, color: colorMap[kind] }, ...eventsRef.current].slice(0, 30);
       setEventsUI([...eventsRef.current]);
     } else if (t === 'tabu_enter' || t === 'tabu_mix') {
       const item: StudyTabu = { id: uid(), kind: t === 'tabu_enter' ? 'NO_ENTER' : 'NO_MIX', x: wx, y: wy, radius: 0.20, severity: 0.6, bornAt: now, violationCount: 0 };
       syms.tabus = [...syms.tabus, item];
       eventsRef.current = [{ time: now, icon: 'X', message: `Taboo ${item.kind} declared`, color: '#ef4444' }, ...eventsRef.current].slice(0, 30);
       setEventsUI([...eventsRef.current]);
-    } else if (t === 'ritual_gather' || t === 'ritual_procession') {
-      const item: StudyRitual = { id: uid(), kind: t === 'ritual_gather' ? 'GATHER' : 'PROCESSION', x: wx, y: wy, radius: 0.30, periodSec: 7, lastFired: now, active: false, bornAt: now };
+    } else if (t === 'ritual_gather' || t === 'ritual_procession' || t === 'ritual_offering' || t === 'ritual_revolt') {
+      const kindMap2: Record<string, StudyRitual['kind']> = { ritual_gather: 'GATHER', ritual_procession: 'PROCESSION', ritual_offering: 'OFFERING', ritual_revolt: 'REVOLT' };
+      const colorMap2: Record<string, string> = { GATHER: '#a78bfa', PROCESSION: '#fbd38d', OFFERING: '#fbbf24', REVOLT: '#ef4444' };
+      const iconMap2: Record<string, string> = { GATHER: '◎', PROCESSION: '|', OFFERING: '🎁', REVOLT: '🔥' };
+      const kind2 = kindMap2[t];
+      const item: StudyRitual = { id: uid(), kind: kind2, x: wx, y: wy, radius: 0.30, periodSec: 7, lastFired: now, active: false, bornAt: now };
       syms.rituals = [...syms.rituals, item];
-      eventsRef.current = [{ time: now, icon: '◎', message: `${item.kind} Ritual founded`, color: '#a78bfa' }, ...eventsRef.current].slice(0, 30);
+      eventsRef.current = [{ time: now, icon: iconMap2[kind2], message: `${kind2} Ritual founded`, color: colorMap2[kind2] }, ...eventsRef.current].slice(0, 30);
       setEventsUI([...eventsRef.current]);
     }
     setSymbolsVer(v => v + 1);
@@ -765,6 +779,34 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               onChange={v => patchCfg({ aggressionBase: v })} />
           </Section>
 
+          {/* DYNAMICS */}
+          <Section title="Dynamics" open={showDynamics} onToggle={() => setShowDyn(v => !v)}>
+            <SliderRow label="Conform." v={cfgRef.current.conformity} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ conformity: v })} />
+            <SliderRow label="Empathy" v={cfgRef.current.empathy} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ empathy: v })} />
+            <SliderRow label="Mobility" v={cfgRef.current.mobility} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ mobility: v })} />
+            <SliderRow label="Contagion" v={cfgRef.current.contagion} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ contagion: v })} />
+            <SliderRow label="Hierarchy" v={cfgRef.current.hierarchyStrength} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ hierarchyStrength: v })} />
+            <SliderRow label="Innovate" v={cfgRef.current.innovationRate} min={0} max={0.30} step={0.01}
+              onChange={v => patchCfg({ innovationRate: v })} />
+            <SliderRow label="Cooperat." v={cfgRef.current.cooperationBias} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ cooperationBias: v })} />
+            <SliderRow label="Inertia" v={cfgRef.current.culturalInertia} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ culturalInertia: v })} />
+            <SliderRow label="Scarcity" v={cfgRef.current.resourceScarcity} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ resourceScarcity: v })} />
+            <SliderRow label="Panoptic." v={cfgRef.current.panopticism} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ panopticism: v })} />
+            <SliderRow label="Boids.Al" v={cfgRef.current.boidsAlignment} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ boidsAlignment: v })} />
+            <SliderRow label="Boids.Co" v={cfgRef.current.boidsCohesion} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ boidsCohesion: v })} />
+          </Section>
+
           {/* INSPECTOR */}
           {inspectorIdx >= 0 && inspectorSnap && (
             <Section title={`Agent #${inspectorIdx}`} badge={inspectorRole} open={showInspect} onToggle={() => setShowInspect(v => !v)}>
@@ -787,6 +829,10 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 <PsychBar label="Status"    v={inspectorSnap.status}   c="#a78bfa" />
                 <PsychBar label="Wealth"    v={inspectorSnap.wealth}   c="#fbbf24" />
                 <PsychBar label="Fatigue"   v={inspectorSnap.fatigue}  c="#94a3b8" />
+                <PsychBar label="Conform."  v={inspectorSnap.conformity} c="#60d0ff" />
+                <PsychBar label="Empathy"   v={inspectorSnap.empathy}  c="#ff6b9d" />
+                <PsychBar label="Charisma"  v={inspectorSnap.charisma} c="#ffd060" />
+                <PsychBar label="Loyalty"   v={inspectorSnap.groupLoyalty} c="#6bcb77" />
               </div>
               <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
                 <div className="text-[9px] mb-1" style={{ color: 'rgba(255,255,255,0.30)' }}>Ideology (order ↔ freedom)</div>
@@ -810,14 +856,18 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 No symbols placed.<br />Select a tool and click the canvas.
               </div>
             )}
-            {syms.totems.map(t2 => (
+            {syms.totems.map(t2 => {
+              const ic: Record<string, string> = { BOND: '⊕', RIFT: '⊖', ORACLE: '🔮', ARCHIVE: '📜', PANOPTICON: '👁' };
+              const cl: Record<string, string> = { BOND: '#34d399', RIFT: '#ff6b6b', ORACLE: '#c084fc', ARCHIVE: '#94a3b8', PANOPTICON: '#fbbf24' };
+              return (
               <SymRow key={t2.id}
-                icon={t2.kind === 'BOND' ? '⊕' : '⊖'}
+                icon={ic[t2.kind] || '⊕'}
                 label={`${t2.kind} Totem`}
-                sub={t2.id.startsWith('auto-') ? 'auto-emerged' : 'manual'}
-                color={t2.kind === 'BOND' ? '#34d399' : '#ff6b6b'}
+                sub={t2.emergent ? 'auto-emerged' : t2.id.startsWith('auto-') ? 'auto-emerged' : 'manual'}
+                color={cl[t2.kind] || '#34d399'}
                 onRemove={() => { syms.totems = syms.totems.filter(x => x.id !== t2.id); setSymbolsVer(v => v + 1); }} />
-            ))}
+              );
+            })}
             {syms.tabus.map(t2 => (
               <SymRow key={t2.id}
                 icon={t2.kind === 'NO_ENTER' ? 'X' : '×'}
@@ -826,14 +876,18 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 color="#ef4444"
                 onRemove={() => { syms.tabus = syms.tabus.filter(x => x.id !== t2.id); setSymbolsVer(v => v + 1); }} />
             ))}
-            {syms.rituals.map(r2 => (
+            {syms.rituals.map(r2 => {
+              const ic: Record<string, string> = { GATHER: '◎', PROCESSION: '|', OFFERING: '🎁', REVOLT: '🔥' };
+              const cl: Record<string, string> = { GATHER: '#a78bfa', PROCESSION: '#fbd38d', OFFERING: '#fbbf24', REVOLT: '#ef4444' };
+              return (
               <SymRow key={r2.id}
-                icon={r2.kind === 'GATHER' ? '◎' : '|'}
+                icon={ic[r2.kind] || '◎'}
                 label={`${r2.kind} Ritual`}
-                sub={r2.id.startsWith('auto-') ? 'auto-emerged' : 'manual'}
-                color="#a78bfa"
+                sub={r2.emergent ? 'auto-emerged' : r2.id.startsWith('auto-') ? 'auto-emerged' : 'manual'}
+                color={cl[r2.kind] || '#a78bfa'}
                 onRemove={() => { syms.rituals = syms.rituals.filter(x => x.id !== r2.id); setSymbolsVer(v => v + 1); }} />
-            ))}
+              );
+            })}
             {symTotal > 0 && (
               <button onClick={() => { symbolsRef.current = createStudySymbols(); resetFields(fieldsRef.current); setSymbolsVer(v => v + 1); }}
                 className="w-full text-[9px] py-1 mt-1 transition-all"

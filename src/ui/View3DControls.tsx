@@ -6,7 +6,7 @@ import type { LabId } from './TopHUD';
 
 interface ZVarDef { id: string; label: string }
 
-const Z_VARS: Record<LabId, ZVarDef[]> = {
+const Z_VARS: Partial<Record<LabId, ZVarDef[]>> = {
   complexityLife: [
     { id: 'speed',  label: 'Velocidade' },
     { id: 'energy', label: 'Energia'    },
