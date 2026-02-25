@@ -9,6 +9,7 @@ import type {
 import { GROUP_COLORS } from './studyTypes';
 import type { AgentRole } from './studyEngine';
 import type { SocialFields } from './socialFields';
+import { archetypeKeyToColor, archetypeKeyToLabel, computeArchetypeKey } from './studyArchetypes';
 
 // ── Coordinate helpers ────────────────────────────────────────────────────────
 function cx(wx: number, cw: number) { return ((wx + 1.0) * 0.5) * cw; }
@@ -33,6 +34,11 @@ let _fieldSize  = 0;
 let _fieldImgN: ImageData | null = null;
 let _fieldImgL: ImageData | null = null;
 let _fieldImgR: ImageData | null = null;
+
+// ── Archetype legend cache ────────────────────────────────────────────────────
+let _archLegendBucket = -1;
+let _archLegendAgentCount = -1;
+let _archLegendTop: Array<{ n: number; label: string; color: string }> = [];
 
 function ensureFieldCache(size: number): CanvasRenderingContext2D | null {
   if (!_fieldCanvas || _fieldSize !== size) {
@@ -73,18 +79,12 @@ function drawFieldLayer(
   mainCtx.restore();
 }
 
-// ── Archetype colors ──────────────────────────────────────────────────────────
-// Derived from agent psychology, not group
-function archetypeColor(a: StudyAgent): string {
-  const maxV = Math.max(a.belief, a.fear, a.desire, a.resistance);
-  if (a.resistance > 0.7 || (a.ideology > 0.5 && a.desire > 0.65 && a.fear < 0.35)) return '#f87171'; // rebel - red
-  if (a.belief > 0.70 && a.status > 0.45 && a.charisma > 0.4) return '#c084fc'; // priest - purple
-  if (a.centrality > 0.3 && a.status > 0.4) return '#fbbf24'; // leader - gold
-  if (a.aggression > 0.65 && a.hostileCount >= 2) return '#fb923c'; // aggressor - orange
-  if (a.fear > maxV * 0.8 && maxV > 0.3)  return '#6366f1'; // afraid - indigo
-  if (a.belief > maxV * 0.8 && maxV > 0.3) return '#34d399'; // believer - teal
-  if (a.desire > maxV * 0.8 && maxV > 0.3) return '#facc15'; // transgressor - yellow
-  return '#94a3b8'; // neutral - slate
+function stableKey(a: StudyAgent): number {
+  return (a.archKeyStable >>> 0) || computeArchetypeKey(a);
+}
+
+function momentKey(a: StudyAgent): number {
+  return (a.archKeyMoment >>> 0) || computeArchetypeKey(a);
 }
 
 // ── Main entry ────────────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ export function renderStudy(
 
   // ── Organic Trails ──
   if (lens !== 'off' && lens !== 'events') {
-    renderTails(ctx, cw, ch, agents);
+    renderTails(ctx, cw, ch, agents, roles);
   }
 
   // ── Agents (always rendered; lens changes style only) ──
@@ -172,18 +172,61 @@ export function renderStudy(
 
   // ── Pings (always) ──
   renderPings(ctx, cw, ch, pings);
+
+  // ── Archetype legend (only in archetype lens) ──
+  if (lens === 'archetype') {
+    const bucket = ((_t * 2) | 0); // recompute ~2Hz
+    if (bucket !== _archLegendBucket || agents.length !== _archLegendAgentCount) {
+      _archLegendBucket = bucket;
+      _archLegendAgentCount = agents.length;
+      const counts = new Map<number, { n: number; label: string; color: string }>();
+      for (let i = 0; i < agents.length; i++) {
+        const k = stableKey(agents[i]);
+        const e = counts.get(k);
+        if (e) e.n++;
+        else counts.set(k, { n: 1, label: archetypeKeyToLabel(k), color: archetypeKeyToColor(k) });
+      }
+      _archLegendTop = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 8);
+    }
+
+    const top = _archLegendTop;
+    if (top.length) {
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(10, 10, 255, 18 + top.length * 12);
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.fillText('Archetype (stable)', 16, 14);
+      for (let i = 0; i < top.length; i++) {
+        const y = 28 + i * 12;
+        ctx.fillStyle = top[i].color;
+        ctx.globalAlpha = 0.9;
+        ctx.fillRect(16, y + 2, 7, 7);
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = 'rgba(255,255,255,0.70)';
+        ctx.fillText(`${top[i].n} · ${top[i].label}`, 28, y);
+      }
+      ctx.restore();
+    }
+  }
 }
 
 // ── Trails (History) ──────────────────────────────────────────────────────────
 function renderTails(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[],
+  roles: AgentRole[],
 ): void {
   ctx.lineWidth = 1.5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  for (const a of agents) {
+  const stride = agents.length > 260 ? 3 : agents.length > 180 ? 2 : 1;
+  for (let ai = 0; ai < agents.length; ai += stride) {
+    const a = agents[ai];
     if (!a.trailX || a.trailX[0] === 0) continue;
 
     ctx.beginPath();
@@ -204,8 +247,9 @@ function renderTails(
         ctx.lineTo(px, py);
       }
     }
-    
-    ctx.strokeStyle = GROUP_COLORS[a.groupId % GROUP_COLORS.length];
+
+    // Always color trails by *stable* archetype (no flicker).
+    ctx.strokeStyle = archetypeKeyToColor(stableKey(a));
     ctx.globalAlpha = 0.2;
     ctx.stroke();
   }
@@ -246,8 +290,9 @@ function renderAgentsGroups(
   for (let i = 0; i < agents.length; i++) {
     const a    = agents[i];
     const ax   = cx(a.x, cw), ay = cy(a.y, ch);
-    const col  = GROUP_COLORS[a.groupId % GROUP_COLORS.length];
     const role = roles[i] ?? 'normal';
+    const baseCol = archetypeKeyToColor(stableKey(a));
+    const groupCol = GROUP_COLORS[a.groupId % GROUP_COLORS.length];
 
     // Size varies by status (leaders are visibly bigger)
     const ar = r * (0.72 + a.status * 0.72);
@@ -271,9 +316,18 @@ function renderAgentsGroups(
     }
 
     // Agent fill
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, col, 0.80);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.82);
 
-    _drawRoleIndicator(ctx, ax, ay, ar, col, role);
+    // Group identity (thin ring only; avoids "start-group color blocks")
+    ctx.beginPath();
+    ctx.arc(ax, ay, ar + 1.2, 0, Math.PI * 2);
+    ctx.strokeStyle = hexA(groupCol, 0.65);
+    ctx.lineWidth = 0.8;
+    ctx.globalAlpha = 0.55;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    _drawRoleIndicator(ctx, ax, ay, ar, baseCol, role);
   }
 }
 
@@ -285,25 +339,28 @@ function renderAgentsPower(
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const color = GROUP_COLORS[a.groupId % GROUP_COLORS.length];
     const role  = roles[i] ?? 'normal';
+    const baseCol = archetypeKeyToColor(stableKey(a));
 
     // Status aura (soft glow proportional to status)
     if (a.status > 0.15) {
       ctx.beginPath();
       ctx.arc(ax, ay, r + a.status * r * 2.5, 0, Math.PI * 2);
-      ctx.strokeStyle = hexA(color, a.status * 0.4);
+      ctx.save();
+      ctx.strokeStyle = baseCol;
       ctx.lineWidth = 1;
+      ctx.globalAlpha = Math.min(0.6, 0.12 + a.status * 0.35);
       ctx.stroke();
+      ctx.restore();
     }
 
     // Fear tint (darker/redder)
     const fearR = Math.round(255 * (0.5 + a.fear * 0.5));
     const fearG = Math.round(100 * (1 - a.fear * 0.6));
-    const fillColor = a.fear > 0.4 ? `rgb(${fearR},${fearG},60)` : color;
+    const fillColor = a.fear > 0.4 ? `rgb(${fearR},${fearG},60)` : baseCol;
     _drawAgent(ctx, ax, ay, a.vx, a.vy, r, fillColor, 0.80);
 
-    _drawRoleIndicator(ctx, ax, ay, r, color, role);
+    _drawRoleIndicator(ctx, ax, ay, r, baseCol, role);
   }
 }
 
@@ -319,8 +376,8 @@ function renderAgentsEconomy(
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const color = GROUP_COLORS[a.groupId % GROUP_COLORS.length];
     const role  = roles[i] ?? 'normal';
+    const baseCol = archetypeKeyToColor(stableKey(a));
 
     // Wealth halo for top 10
     if (top10.has(i)) {
@@ -332,9 +389,9 @@ function renderAgentsEconomy(
     }
 
     // Agent fill: dim=poor, bright=rich
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, r, color, 0.35 + a.wealth * 0.55);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, r, baseCol, 0.35 + a.wealth * 0.55);
 
-    _drawRoleIndicator(ctx, ax, ay, r, color, role);
+    _drawRoleIndicator(ctx, ax, ay, r, baseCol, role);
   }
 }
 
@@ -343,9 +400,10 @@ function renderAgentsFaded(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[], r: number,
 ): void {
-  for (const a of agents) {
-    const color = GROUP_COLORS[a.groupId % GROUP_COLORS.length];
-    _drawAgent(ctx, cx(a.x, cw), cy(a.y, ch), a.vx, a.vy, r * 0.7, color, 0.25);
+  for (let i = 0; i < agents.length; i++) {
+    const a = agents[i];
+    const baseCol = archetypeKeyToColor(stableKey(a));
+    _drawAgent(ctx, cx(a.x, cw), cy(a.y, ch), a.vx, a.vy, r * 0.7, baseCol, 0.25);
   }
 }
 
@@ -355,8 +413,8 @@ function renderAgentsPlain(
   agents: StudyAgent[], r: number,
 ): void {
   for (const a of agents) {
-    const color = GROUP_COLORS[a.groupId % GROUP_COLORS.length];
-    _drawAgent(ctx, cx(a.x, cw), cy(a.y, ch), a.vx, a.vy, r, color, 0.80);
+    const baseCol = archetypeKeyToColor(stableKey(a));
+    _drawAgent(ctx, cx(a.x, cw), cy(a.y, ch), a.vx, a.vy, r, baseCol, 0.82);
   }
 }
 
@@ -368,12 +426,35 @@ function renderAgentsArchetype(
   for (let i = 0; i < agents.length; i++) {
     const a    = agents[i];
     const ax   = cx(a.x, cw), ay = cy(a.y, ch);
-    const col  = archetypeColor(a);
     const role = roles[i] ?? 'normal';
+    const stableCol = archetypeKeyToColor(stableKey(a));
+    const momentCol = archetypeKeyToColor(momentKey(a));
+    const col  = stableCol;
     const ar   = r * (0.72 + a.status * 0.55);
 
-    // Aura for rebels/leaders
-    if (role === 'rebel') {
+    // Moment accent: show current drift only if different from stable
+    if (momentKey(a) !== stableKey(a)) {
+      ctx.beginPath();
+      ctx.arc(ax, ay, ar + 2.5, 0, Math.PI * 2);
+      ctx.strokeStyle = momentCol;
+      ctx.lineWidth = 1.0;
+      ctx.setLineDash([2, 3]);
+      ctx.globalAlpha = 0.35;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    // Auras for power archetypes
+    if (role === 'dictator') {
+      ctx.beginPath();
+      ctx.arc(ax, ay, ar + 7, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(239,68,68,0.95)';
+      ctx.lineWidth = 2.2;
+      ctx.globalAlpha = 0.55;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (role === 'rebel') {
       ctx.beginPath();
       ctx.arc(ax, ay, ar + 4, 0, Math.PI * 2);
       ctx.strokeStyle = '#f87171';
@@ -387,6 +468,14 @@ function renderAgentsArchetype(
       ctx.strokeStyle = '#fbbf24';
       ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.50;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (role === 'authority' || role === 'guardian') {
+      ctx.beginPath();
+      ctx.arc(ax, ay, ar + 4.5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = 0.45;
       ctx.stroke();
       ctx.globalAlpha = 1;
     } else if (role === 'priest') {
@@ -426,6 +515,43 @@ function _drawRoleIndicator(
       ctx.stroke();
       ctx.globalAlpha = 1;
       break;
+    case 'authority': {
+      // Shield-like outline + inner dot
+      ctx.beginPath();
+      ctx.arc(ax, ay, r + 3.2, 0, Math.PI * 2);
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 1.6;
+      ctx.globalAlpha = 0.75;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(ax, ay, r * 0.22, 0, Math.PI * 2);
+      ctx.fillStyle = '#60a5fa';
+      ctx.globalAlpha = 0.55;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 'dictator': {
+      // Coercive square ring + spikes (very readable)
+      const s = r + 4.0;
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.2;
+      ctx.strokeRect(ax - s, ay - s, s * 2, s * 2);
+      ctx.globalAlpha = 0.65;
+      ctx.beginPath();
+      ctx.moveTo(ax - s, ay - s);
+      ctx.lineTo(ax - s - 5, ay - s - 3);
+      ctx.moveTo(ax + s, ay - s);
+      ctx.lineTo(ax + s + 5, ay - s - 3);
+      ctx.moveTo(ax - s, ay + s);
+      ctx.lineTo(ax - s - 5, ay + s + 3);
+      ctx.moveTo(ax + s, ay + s);
+      ctx.lineTo(ax + s + 5, ay + s + 3);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      break;
+    }
     case 'aggressor':
       ctx.beginPath();
       ctx.arc(ax, ay, r, 0, Math.PI * 2);
@@ -489,13 +615,14 @@ function _drawRoleIndicator(
 }
 
 // ── Symbols ───────────────────────────────────────────────────────────────────
-function _countAgentsIn(agents: StudyAgent[], x: number, y: number, r: number): number {
+function _countAgentsIn(agents: StudyAgent[], x: number, y: number, r: number, step = 1): number {
   let n = 0;
-  for (const a of agents) {
+  for (let i = 0; i < agents.length; i += step) {
+    const a = agents[i];
     const d2 = (a.x - x) ** 2 + (a.y - y) ** 2;
     if (d2 < r * r) n++;
   }
-  return n;
+  return step > 1 ? Math.round(n * step) : n;
 }
 
 function renderSymbols(
@@ -503,6 +630,7 @@ function renderSymbols(
   symbols: StudySymbols, exception: boolean,
   agents: StudyAgent[],
 ): void {
+  const sampleStep = agents.length > 260 ? 4 : agents.length > 180 ? 3 : agents.length > 120 ? 2 : 1;
   // Rituals
   for (const ritual of symbols.rituals) {
     const rcx = cx(ritual.x, cw);
@@ -524,7 +652,7 @@ function renderSymbols(
     ctx.globalAlpha = 1;
 
     // Semantic label: what is this ritual doing right now?
-    const inRange = _countAgentsIn(agents, ritual.x, ritual.y, ritual.radius);
+    const inRange = _countAgentsIn(agents, ritual.x, ritual.y, ritual.radius, sampleStep);
     const rlbl = ritual.kind === 'GATHER' ? '◎ Gather' : ritual.kind === 'OFFERING' ? '🎁 Offering' : ritual.kind === 'REVOLT' ? '🔥 Revolt' : '🥁 Procession';
     const activity = ritual.active ? ` · ${inRange} in` : ` · ${inRange} near`;
     _labelSymbol(ctx, rcx, rcy - rr - 12, rlbl, col);
@@ -551,7 +679,7 @@ function renderSymbols(
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    const inT = _countAgentsIn(agents, tabu.x, tabu.y, tabu.radius);
+    const inT = _countAgentsIn(agents, tabu.x, tabu.y, tabu.radius, sampleStep);
     const tname = tabu.kind === 'NO_ENTER' ? '⛔ No-Enter' : '⚔ No-Mix';
     const viol = tabu.violationCount > 0 ? ` · ${tabu.violationCount} violations` : '';
     _labelSymbol(ctx, tcx, tcy - tr - 12, tname, col);
@@ -595,7 +723,7 @@ function renderSymbols(
     // Semantic label: what is this totem depositing?
     const tlbl: Record<string, string> = { BOND: '⊕ Bond', RIFT: '⊖ Rift', ORACLE: '🔮 Oracle', ARCHIVE: '📜 Archive', PANOPTICON: '👁 Panopticon' };
     const tact: Record<string, string> = { BOND: 'deposits N+L', RIFT: 'erodes N · faction L', ORACLE: 'amplifies charisma', ARCHIVE: 'locks memory', PANOPTICON: 'surveils · conformity' };
-    const inRange = _countAgentsIn(agents, totem.x, totem.y, totem.radius);
+    const inRange = _countAgentsIn(agents, totem.x, totem.y, totem.radius, sampleStep);
     _labelSymbol(ctx, tcx, tcy - tr - 20, tlbl[totem.kind] || totem.kind, col);
     _labelSymbol(ctx, tcx, tcy - tr - 11, tact[totem.kind] || '', col);
     _labelSymbol(ctx, tcx, tcy - tr - 2, `${inRange} agents`, col);

@@ -649,6 +649,57 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
   },
 
   {
+    id: 'panopticon_regime', name: 'Panopticon Regime', icon: '👁️', category: 'power',
+    description: 'PANOPTICON + PROCESSION + strict tabus · fear rises · dictators emerge',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 170; cfg.groupCount = 4; cfg.speed = 0.44;
+      cfg.trustBase = 0.38; cfg.aggressionBase = 0.32;
+      cfg.kBelief = 0.62; cfg.kFear = 0.70; cfg.conformity = 0.70;
+      cfg.hierarchyStrength = 0.85; cfg.panopticism = 0.95;
+      cfg.ideologyPressure = 0.45; cfg.violationThreshold = 2; cfg.exceptionDuration = 45;
+      cfg.autoSymbols = true;
+      fcfg.decayN = 0.010; fcfg.diffuseN = 0.10; fcfg.decayL = 0.006; fcfg.regenR = 0.014;
+    },
+    setupWorld(f, s) {
+      // High N everywhere (discipline baseline)
+      for (let i = 0; i < f.n.length; i++) f.n[i] = Math.min(1, f.n[i] + 0.30);
+      // Central surveillance + legitimacy source
+      s.totems.push(totem('PANOPTICON', 0, 0, 0.62, 0, 1.0));
+      s.rituals.push(ritual('PROCESSION', 0, 0, 0.62, 8));
+      // Tabus around the center to create transgression/justice dynamics
+      s.tabus.push(tabu('NO_ENTER',  0.18, 0.08, 0.16, 0.70));
+      s.tabus.push(tabu('NO_ENTER', -0.22,-0.12, 0.16, 0.70));
+      // Scarce resources → hierarchy + coercion feedback
+      for (let i = 0; i < f.r.length; i++) f.r[i] = 0.12;
+      depositR(f,  0.65,  0.00, 0.70, 0.18);
+      depositR(f, -0.65,  0.00, 0.55, 0.16);
+      depositL(f, 0, 0, 0.55, 0.35);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'state_church', name: 'State Church', icon: '⛪', category: 'power',
+    description: 'BOND + ARCHIVE + GATHER · high belief · priests legitimize authority',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 160; cfg.groupCount = 4; cfg.speed = 0.40;
+      cfg.kBelief = 0.75; cfg.kFear = 0.35; cfg.kDesire = 0.22;
+      cfg.hierarchyStrength = 0.70; cfg.conformity = 0.60; cfg.empathy = 0.35;
+      cfg.cooperationBias = 0.25; cfg.culturalInertia = 0.70;
+      cfg.panopticism = 0.25; cfg.autoSymbols = true;
+      fcfg.decayN = 0.006; fcfg.diffuseN = 0.12; fcfg.decayL = 0.003; fcfg.regenR = 0.018;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('BOND', 0, 0, 0.48, 0, 1.15));
+      s.totems.push(totem('ARCHIVE', 0.00, 0.38, 0.28, 0, 0.70));
+      s.rituals.push(ritual('GATHER', 0, 0, 0.50, 9));
+      depositN(f, 0, 0, 0.65, 0.45);
+      depositL(f, 0, 0, 0.70, 0.40);
+      f.dirty = true;
+    },
+  },
+
+  {
     id: 'empire_collapse', name: 'Empire Collapse', icon: '🏚️', category: 'power',
     description: 'Archive crumbles · high innovation + mobility → fragmentation',
     apply(cfg) {

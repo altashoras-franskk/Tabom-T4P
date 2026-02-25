@@ -393,7 +393,13 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
     if (!container) return;
     const apply = (w: number, h: number) => setCsz({ w: Math.max(1, Math.floor(w)), h: Math.max(1, Math.floor(h)) });
     apply(container.clientWidth, container.clientHeight);
-    const ro = new ResizeObserver(e => { for (const v of e) apply(v.contentRect.width, v.contentRect.height); });
+    const RO = (globalThis as any).ResizeObserver as (typeof ResizeObserver | undefined);
+    if (!RO) {
+      const onResize = () => apply(container.clientWidth, container.clientHeight);
+      addEventListener('resize', onResize);
+      return () => removeEventListener('resize', onResize);
+    }
+    const ro = new RO(e => { for (const v of e) apply(v.contentRect.width, v.contentRect.height); });
     ro.observe(container);
     return () => ro.disconnect();
   }, [fullscreen]);
@@ -1918,13 +1924,15 @@ function render(
 
   if (ov.paths) {
     for (const path of PATHS) {
-      const fromS = SEPHIRAH_MAP.get(path.from)!;
-      const toS   = SEPHIRAH_MAP.get(path.to)!;
+      const fromS = SEPHIRAH_MAP.get(path.from);
+      const toS   = SEPHIRAH_MAP.get(path.to);
+      if (!fromS || !toS) continue;
       const fx2 = wx(fromS.nx), fy2 = wy(fromS.ny);
       const tx2 = wx(toS.nx),   ty2 = wy(toS.ny);
       const cp  = ctrlPt(fx2, fy2, tx2, ty2);
 
-      const pState  = state.paths.get(path.pathId)!;
+      const pState  = state.paths.get(path.pathId);
+      if (!pState) continue;
       const flow    = pState.flow;
       const block   = pState.blockage;
       const isSel   = selPath === path.pathId;
@@ -1935,33 +1943,36 @@ function render(
 
       ctx.save();
 
-      const pathObj = new Path2D();
-      pathObj.moveTo(fx2, fy2);
-      pathObj.quadraticCurveTo(cp.x, cp.y, tx2, ty2);
+      const strokeBezier = () => {
+        ctx.beginPath();
+        ctx.moveTo(fx2, fy2);
+        ctx.quadraticCurveTo(cp.x, cp.y, tx2, ty2);
+        ctx.stroke();
+      };
 
       ctx.strokeStyle = `rgba(${r},${g},${b},${0.04 + flow * 0.06 + actPulse * 0.12})`;
       ctx.lineWidth = 12 + actPulse * 8;
       ctx.filter = 'blur(4px)';
-      ctx.stroke(pathObj);
+      strokeBezier();
       ctx.filter = 'none';
 
       ctx.strokeStyle = `rgba(${r},${g},${b},${0.08 + flow * 0.12 + actPulse * 0.2})`;
       ctx.lineWidth = 4;
-      ctx.stroke(pathObj);
+      strokeBezier();
 
       if (block > 0.3) ctx.setLineDash([5, 5]);
       ctx.strokeStyle = isSel
         ? `rgba(255,220,80,${0.4 + flow * 0.4})`
         : `rgba(${r},${g},${b},${0.2 + flow * 0.4 + actPulse * 0.3})`;
       ctx.lineWidth = isSel ? 2 : (0.6 + flow * 1.4);
-      ctx.stroke(pathObj);
+      strokeBezier();
       ctx.setLineDash([]);
 
       if (ov.orChozer && serpent.level > 0.15) {
         ctx.strokeStyle = `rgba(140,60,255,${serpent.level * 0.06 * flow})`;
         ctx.lineWidth = 6;
         ctx.filter = 'blur(2px)';
-        ctx.stroke(pathObj);
+        strokeBezier();
         ctx.filter = 'none';
       }
 
@@ -1969,7 +1980,8 @@ function render(
       ctx.fillStyle = `rgba(${r},${g},${b},${0.3 + flow * 0.25})`;
       ctx.font = `${Math.round(10 + flow * 3)}px serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(ARCANA_MAP.get(path.arcanaId)!.hebrewLetter, lp.x, lp.y);
+      const arc = ARCANA_MAP.get(path.arcanaId);
+      if (arc) ctx.fillText(arc.hebrewLetter, lp.x, lp.y);
 
       if (ov.orYashar) {
         const ps = streams.get(path.pathId) ?? [];

@@ -13,6 +13,14 @@ export const GROUP_COLORS: readonly string[] = [
   '#a78bfa', // purple  — Group 4
 ];
 
+export type StudySpawnLayout =
+  | 'unified_center'
+  | 'separated_clusters'
+  | 'corners'
+  | 'ring'
+  | 'line'
+  | 'random';
+
 // ── Encounter memory ──────────────────────────────────────────────────────────
 export interface Encounter {
   agentIdx: number;
@@ -71,6 +79,15 @@ export interface StudyAgent {
   trailY: Float32Array;
   trailIdx: number;
   lastGroupChange: number; // timestamp of last group change for visual effects
+
+  // ── Archetype identity (stabilized) ─────────────────────────────────────
+  // Packed numeric key representing the agent's archetypic combination.
+  // We keep both a "moment" key and a "stable" key to avoid flicker.
+  archKeyMoment: number;
+  archKeyStable: number;
+  archKeyCandidate: number;
+  archCandidateAt: number; // seconds
+  archStableAt: number;    // seconds
 }
 
 // ── Symbols — laws inscribed in field + behaviour ─────────────────────────────
@@ -163,6 +180,9 @@ export interface StudyConfig {
   violationThreshold: number;  // violations per minute to trigger exception
   exceptionDuration:  number;  // seconds
   autoSymbols: boolean;         // engine auto-places symbols when conditions emerge
+
+  // Archetype identity
+  archetypeHoldSec: number;     // seconds candidate must persist before committing stable archetype
 }
 
 // ── World state (mutable, passed by ref to macroTick) ────────────────────────
@@ -174,6 +194,7 @@ export interface StudyWorldState {
   violationsWindow:    number;  // count in last minute
   meanWealth:          number;
   gini:                number;
+  rngState:            number;  // deterministic RNG state for reproducible runs
 }
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
@@ -201,7 +222,20 @@ export interface StudyMetrics {
 
 // ── Lens / Tool ───────────────────────────────────────────────────────────────
 export type StudyLens = 'off' | 'groups' | 'power' | 'economy' | 'events' | 'field' | 'archetype';
-export type StudyTool = 'select' | 'totem_bond' | 'totem_rift' | 'totem_oracle' | 'totem_archive' | 'totem_panopticon' | 'tabu_enter' | 'tabu_mix' | 'ritual_gather' | 'ritual_procession' | 'ritual_offering' | 'ritual_revolt';
+export type StudyTool =
+  | 'select'
+  | 'spawn_agent'
+  | 'totem_bond'
+  | 'totem_rift'
+  | 'totem_oracle'
+  | 'totem_archive'
+  | 'totem_panopticon'
+  | 'tabu_enter'
+  | 'tabu_mix'
+  | 'ritual_gather'
+  | 'ritual_procession'
+  | 'ritual_offering'
+  | 'ritual_revolt';
 
 // ── Events / Pings ────────────────────────────────────────────────────────────
 export interface StudyEvent {
@@ -236,6 +270,7 @@ export function createStudyConfig(): StudyConfig {
     panopticism: 0.50,
     violationThreshold: 3, exceptionDuration: 25,
     autoSymbols: true,
+    archetypeHoldSec: 2.2,
   };
 }
 
@@ -248,6 +283,7 @@ export function createStudyWorldState(): StudyWorldState {
     exceptionActive: false, exceptionStartTime: 0,
     violationCount: 0, violationsWindowStart: 0, violationsWindow: 0,
     meanWealth: 0.25, gini: 0,
+    rngState: 1,
   };
 }
 

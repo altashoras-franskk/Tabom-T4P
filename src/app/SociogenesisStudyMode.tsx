@@ -13,7 +13,7 @@ import {
   GROUP_COLORS,
   type StudyAgent, type StudyConfig, type StudyMetrics,
   type StudySymbols, type StudyTotem, type StudyTabu, type StudyRitual,
-  type StudyLens, type StudyTool, type StudyWorldState,
+  type StudyLens, type StudyTool, type StudyWorldState, type StudySpawnLayout,
   type StudyPing, type StudyEvent,
 } from '../sim/study/studyTypes';
 import {
@@ -27,6 +27,7 @@ import {
   type SocialFields, type SocialFieldConfig,
 } from '../sim/study/socialFields';
 import { STUDY_SCENARIOS, SCENARIO_CATEGORIES, type StudyScenario } from '../sim/study/studyScenarios';
+import { computeArchetypeKey } from '../sim/study/studyArchetypes';
 
 function makeRng(seed: number) {
   let s = seed;
@@ -46,6 +47,7 @@ const PHASE_ICONS: Record<string, string> = {
 
 const TOOLS: { id: StudyTool; icon: string; label: string; desc: string; color: string }[] = [
   { id: 'select',            icon: '◇', label: 'Select',      color: '#94a3b8', desc: 'Click agent to inspect' },
+  { id: 'spawn_agent',       icon: '+', label: 'Spawn',       color: '#60a5fa', desc: 'Place agents 1-by-1 (template or custom archetype)' },
   { id: 'totem_bond',        icon: '⊕', label: 'Bond Totem',  color: '#34d399', desc: 'N+L deposit · grows leaders · draws believers' },
   { id: 'totem_rift',        icon: '⊖', label: 'Rift Totem',  color: '#ff6b6b', desc: 'Anti-N · factional L · drives polarization' },
   { id: 'totem_oracle',      icon: '🔮', label: 'Oracle',      color: '#c084fc', desc: 'High L deposit · amplifies charismatic authority' },
@@ -62,6 +64,7 @@ const TOOLS: { id: StudyTool; icon: string; label: string; desc: string; color: 
 const LENSES: { id: StudyLens; label: string; desc: string }[] = [
   { id: 'off',     label: 'Off',     desc: 'Plain canvas' },
   { id: 'groups',  label: 'Groups',  desc: 'Group color + psychology rings + roles' },
+  { id: 'archetype', label: 'Archetype', desc: 'Unique color per archetype-combination (not start groups)' },
   { id: 'power',   label: 'Power',   desc: 'L/N fields + status auras + fear tint' },
   { id: 'economy', label: 'Economy', desc: 'R field + wealth halos (top 10)' },
   { id: 'events',  label: 'Events',  desc: 'Event pings only' },
@@ -186,11 +189,34 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   // UI state
   const [paused, setPaused]       = useState(false);
   const pausedRef                 = useRef(false);
-  const [lens, setLens]           = useState<StudyLens>('groups');
-  const lensRef                   = useRef<StudyLens>('groups');
+  const [lens, setLens]           = useState<StudyLens>('archetype');
+  const lensRef                   = useRef<StudyLens>('archetype');
   const [tool, setTool]           = useState<StudyTool>('select');
   const toolRef                   = useRef<StudyTool>('select');
   const [scenario, setScenario]   = useState('discipline_state');
+  const [seed, setSeed]           = useState<number>(() => ((Date.now() >>> 0) % 1_000_000_000));
+  const seedRef                   = useRef<number>(seed);
+  const [spawnLayout, setSpawnLayout] = useState<StudySpawnLayout>('separated_clusters');
+  const spawnLayoutRef            = useRef<StudySpawnLayout>('separated_clusters');
+  const [spawnTemplate, setSpawnTemplate] = useState<'neutral' | 'leader' | 'authority' | 'dictator' | 'priest' | 'rebel'>('neutral');
+  const [spawnAdvanced, setSpawnAdvanced] = useState(false);
+  const [spawnCustom, setSpawnCustom] = useState({
+    belief: 0.45,
+    fear: 0.18,
+    desire: 0.35,
+    resistance: 0.18,
+    status: 0.18,
+    wealth: 0.25,
+    aggression: 0.30,
+    trust: 0.55,
+    need: 0.60,
+    conformity: 0.45,
+    empathy: 0.30,
+    charisma: 0.22,
+    ideology: 0.0,
+  });
+  const [spawnGroupId, setSpawnGroupId] = useState(0);
+  const [spawnMemeId, setSpawnMemeId] = useState(0);
   const [metricsUI, setMetricsUI] = useState<StudyMetrics>(createStudyMetrics());
   const [wsUI, setWsUI]           = useState<StudyWorldState>(createStudyWorldState());
   const [eventsUI, setEventsUI]   = useState<StudyEvent[]>([]);
@@ -220,6 +246,19 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     return () => window.removeEventListener('resize', fn);
   }, []);
 
+  useEffect(() => { seedRef.current = seed; }, [seed]);
+  useEffect(() => { spawnLayoutRef.current = spawnLayout; }, [spawnLayout]);
+  const spawnTemplateRef = useRef(spawnTemplate);
+  const spawnAdvancedRef = useRef(spawnAdvanced);
+  const spawnCustomRef   = useRef(spawnCustom);
+  const spawnGroupIdRef  = useRef(spawnGroupId);
+  const spawnMemeIdRef   = useRef(spawnMemeId);
+  useEffect(() => { spawnTemplateRef.current = spawnTemplate; }, [spawnTemplate]);
+  useEffect(() => { spawnAdvancedRef.current = spawnAdvanced; }, [spawnAdvanced]);
+  useEffect(() => { spawnCustomRef.current = spawnCustom; }, [spawnCustom]);
+  useEffect(() => { spawnGroupIdRef.current = spawnGroupId; }, [spawnGroupId]);
+  useEffect(() => { spawnMemeIdRef.current = spawnMemeId; }, [spawnMemeId]);
+
   // ── Reset ──────────────────────────────────────────────────────────────────
   const resetWorld = useCallback((scId: string, keepAutoSymbols?: boolean) => {
     const sc: StudyScenario = STUDY_SCENARIOS.find(s => s.id === scId) ?? STUDY_SCENARIOS[0];
@@ -230,8 +269,8 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     cfgRef.current    = newCfg;
     fieldCfgRef.current = newFCfg;
 
-    const rng = makeRng(Date.now());
-    agentsRef.current = spawnStudyAgents(newCfg, rng);
+    const rng = makeRng(seedRef.current >>> 0);
+    agentsRef.current = spawnStudyAgents(newCfg, rng, spawnLayoutRef.current);
     rolesRef.current  = new Array(agentsRef.current.length).fill('normal');
 
     const newFields  = createSocialFields();
@@ -241,12 +280,13 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     symbolsRef.current = newSymbols;
 
     wsRef.current     = createStudyWorldState();
+    wsRef.current.rngState = seedRef.current >>> 0;
     pingsRef.current  = [];
     eventsRef.current = [];
     clockRef.current  = { elapsed: 0, lastMacro: -99, lastRole: -99 };
 
     setMetricsUI(createStudyMetrics());
-    setWsUI(createStudyWorldState());
+    setWsUI({ ...wsRef.current });
     setEventsUI([]);
     setScenario(scId);
     setAutoSymbols(newCfg.autoSymbols);
@@ -765,7 +805,56 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
           {/* AGENTS */}
           <Section title="Agents" badge={agentsRef.current.length} open={showAgents} onToggle={() => setShowAgents(v => !v)}>
-            <SliderRow label="Count" v={cfgRef.current.agentCount} min={50} max={200} step={10}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+                <span className="text-[9px] w-12 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }}>Seed</span>
+                <input
+                  type="number"
+                  value={seed}
+                  onChange={(e) => setSeed(Math.max(0, Math.min(2_147_483_647, parseInt(e.target.value || '0', 10) || 0)))}
+                  className="flex-1 px-2 py-1 text-[10px] rounded border border-white/[0.08] bg-white/[0.03] text-white/70"
+                />
+                <button
+                  onClick={() => setSeed(((Date.now() >>> 0) % 1_000_000_000))}
+                  className="px-2 py-1 rounded text-[9px] border border-white/[0.08] text-white/50 hover:text-white/80 hover:border-white/20 transition-all"
+                  style={{ fontFamily: MONO, background: 'rgba(255,255,255,0.02)' }}
+                >
+                  Rand
+                </button>
+                <button
+                  onClick={() => { try { navigator.clipboard?.writeText(String(seedRef.current)); } catch { /* ignore */ } }}
+                  className="px-2 py-1 rounded text-[9px] border border-white/[0.08] text-white/50 hover:text-white/80 hover:border-white/20 transition-all"
+                  style={{ fontFamily: MONO, background: 'rgba(255,255,255,0.02)' }}
+                >
+                  Copy
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+                <span className="text-[9px] w-12 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }}>Start</span>
+                <select
+                  value={spawnLayout}
+                  onChange={(e) => setSpawnLayout(e.target.value as StudySpawnLayout)}
+                  className="flex-1 px-2 py-1 text-[10px] rounded border border-white/[0.08] bg-white/[0.03] text-white/70"
+                >
+                  <option value="unified_center">Unified</option>
+                  <option value="separated_clusters">Clusters</option>
+                  <option value="corners">Corners</option>
+                  <option value="ring">Ring</option>
+                  <option value="line">Line</option>
+                  <option value="random">Random</option>
+                </select>
+                <button
+                  onClick={() => resetWorld(scenario, autoSymbols)}
+                  className="px-2 py-1 rounded text-[9px] border border-white/[0.08] text-white/50 hover:text-white/80 hover:border-white/20 transition-all"
+                  style={{ fontFamily: MONO, background: 'rgba(255,255,255,0.02)' }}
+                >
+                  Respawn
+                </button>
+              </div>
+            </div>
+
+            <SliderRow label="Count" v={cfgRef.current.agentCount} min={10} max={300} step={5}
               onChange={v => { cfgRef.current.agentCount = v; }} />
             <SliderRow label="Groups" v={cfgRef.current.groupCount} min={2} max={5} step={1}
               onChange={v => { cfgRef.current.groupCount = v; }} />
@@ -797,6 +886,8 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               onChange={v => patchCfg({ cooperationBias: v })} />
             <SliderRow label="Inertia" v={cfgRef.current.culturalInertia} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ culturalInertia: v })} />
+            <SliderRow label="ArchHold" v={cfgRef.current.archetypeHoldSec} min={0.4} max={5.0} step={0.1}
+              onChange={v => patchCfg({ archetypeHoldSec: v })} />
             <SliderRow label="Scarcity" v={cfgRef.current.resourceScarcity} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ resourceScarcity: v })} />
             <SliderRow label="Panoptic." v={cfgRef.current.panopticism} min={0} max={1} step={0.05}

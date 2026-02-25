@@ -106,6 +106,7 @@ import { LanguageLab } from '../ui/labs/LanguageLab';
 import { TreeOfLifeLab } from '../ui/labs/TreeOfLifeLab';
 import { MilPlatosLab } from '../ui/labs/MilPlatosLab';
 import { HomePage } from './components/HomePage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Renderer3D, View3DConfig, DEFAULT_VIEW3D, typeColor, getZMicro, clamp3d, Particle3D } from '../render/Renderer3D';
 import { getPsycheState, registerPsycheState } from '../sim/psyche/psycheLabGlobal';
 import { View3DControls } from '../ui/View3DControls';
@@ -4523,7 +4524,88 @@ const App: React.FC = () => {
       <LanguageLab active={!showHome && activeLab === 'languageLab'} />
 
       {/* Tree of Life Lab — Kabbalah + Tarot Journey */}
-      <TreeOfLifeLab active={!showHome && activeLab === 'treeOfLife'} />
+      <ErrorBoundary
+        resetKeys={[showHome, activeLab]}
+        fallbackRender={({ error, reset }) => {
+          if (showHome || activeLab !== 'treeOfLife') return null;
+          return (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 500,
+                background: 'rgba(0,0,0,0.92)',
+                color: 'rgba(255,255,255,0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 24,
+                fontFamily: 'system-ui, sans-serif',
+              }}
+            >
+              <div style={{ width: 720, maxWidth: '95vw' }}>
+                <div style={{ fontSize: 16, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Tree of Life falhou ao carregar
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                  O lab disparou um erro de runtime. Você pode tentar novamente ou voltar para a Home.
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                  <button
+                    onClick={() => reset()}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.18)',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: 'rgba(255,255,255,0.9)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Tentar novamente
+                  </button>
+                  <button
+                    onClick={() => {
+                      reset();
+                      setShowHome(true);
+                    }}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.18)',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: 'rgba(255,255,255,0.9)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Voltar pra Home
+                  </button>
+                </div>
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: 12,
+                    border: '1px dashed rgba(255,255,255,0.14)',
+                    background: 'rgba(0,0,0,0.35)',
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                    fontSize: 11,
+                    color: 'rgba(255,255,255,0.75)',
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: 1.45,
+                    maxHeight: '40vh',
+                    overflow: 'auto',
+                  }}
+                >
+                  {String(error?.stack ?? error?.message ?? error)}
+                </div>
+              </div>
+            </div>
+          );
+        }}
+      >
+        <TreeOfLifeLab active={!showHome && activeLab === 'treeOfLife'} />
+      </ErrorBoundary>
 
       {/* Physics Sandbox — modular robot builder + CEM learning */}
       <PhysicsSandbox active={!showHome && activeLab === 'physicsSandbox'} />

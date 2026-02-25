@@ -7,11 +7,12 @@
 // (belief/fear/desire), psychology drives goals, goals drive movement.
 
 import type {
-  StudyAgent, StudyConfig, StudyMetrics, StudyWorldState,
+  StudyAgent, StudyConfig, StudyMetrics, StudyWorldState, StudySpawnLayout,
   StudySymbols, StudyEvent, StudyPing, Encounter,
   StudyTotem, StudyTabu, StudyRitual,
 } from './studyTypes';
 import { GROUP_COLORS } from './studyTypes';
+import { computeArchetypeKey } from './studyArchetypes';
 import {
   type SocialFields, type SocialFieldConfig,
   sampleN, sampleL, sampleR,
@@ -63,27 +64,61 @@ function getNeighbors(
 }
 
 // ── 1. Spawn ─────────────────────────────────────────────────────────────────
-export function spawnStudyAgents(cfg: StudyConfig, rng: () => number): StudyAgent[] {
+export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: StudySpawnLayout): StudyAgent[] {
   const { agentCount, groupCount } = cfg;
   const agents: StudyAgent[] = [];
 
+  const clampPos = (v: number) => Math.max(-0.95, Math.min(0.95, v));
+
   const centers: [number, number][] = [];
-  for (let g = 0; g < groupCount; g++) {
-    const angle = (g / groupCount) * Math.PI * 2 - Math.PI / 2;
-    centers.push([Math.cos(angle) * 0.52, Math.sin(angle) * 0.52]);
+  if (layout === 'unified_center') {
+    for (let g = 0; g < groupCount; g++) centers.push([0, 0]);
+  } else if (layout === 'corners') {
+    const pts: [number, number][] = [
+      [-0.68, -0.68], [0.68, -0.68], [0.68, 0.68], [-0.68, 0.68],
+      [0, -0.78], [0.78, 0], [0, 0.78], [-0.78, 0],
+    ];
+    for (let g = 0; g < groupCount; g++) centers.push(pts[g % pts.length]);
+  } else {
+    // default: separated clusters on a ring
+    for (let g = 0; g < groupCount; g++) {
+      const angle = (g / groupCount) * Math.PI * 2 - Math.PI / 2;
+      centers.push([Math.cos(angle) * 0.52, Math.sin(angle) * 0.52]);
+    }
   }
 
   for (let i = 0; i < agentCount; i++) {
     const g = i % groupCount;
-    const [cx, cy] = centers[g];
+    const [cx, cy] = centers[g] ?? [0, 0];
     const angle = rng() * Math.PI * 2;
     const r = rng() * 0.17 + 0.02;
     const groupOp = (g / Math.max(groupCount - 1, 1)) * 2 - 1;
     const ideology = Math.max(-1, Math.min(1, groupOp + (rng() - 0.5) * 0.6));
 
-    agents.push({
-      x: cx + Math.cos(angle) * r,
-      y: cy + Math.sin(angle) * r,
+    let px = cx + Math.cos(angle) * r;
+    let py = cy + Math.sin(angle) * r;
+
+    if (layout === 'ring') {
+      const sectorAngle = (g / Math.max(groupCount, 1)) * Math.PI * 2 - Math.PI / 2;
+      const spread = (Math.PI * 2) / Math.max(groupCount, 1) * 0.8;
+      const a2 = sectorAngle + (rng() - 0.5) * spread;
+      const rr = 0.55 + (rng() - 0.5) * 0.22;
+      px = Math.cos(a2) * rr;
+      py = Math.sin(a2) * rr;
+    } else if (layout === 'line') {
+      const band = g / Math.max(groupCount - 1, 1);
+      const along = rng();
+      const across = (rng() - 0.5) * 0.28;
+      px = (along - 0.5) * 1.6 + across;
+      py = (band - 0.5) * 1.6 + (along - 0.5) * 0.4 + (rng() - 0.5) * 0.12;
+    } else if (layout === 'random') {
+      px = (rng() - 0.5) * 1.8;
+      py = (rng() - 0.5) * 1.8;
+    }
+
+    const a: StudyAgent = {
+      x: clampPos(px),
+      y: clampPos(py),
       vx: (rng() - 0.5) * 0.07,
       vy: (rng() - 0.5) * 0.07,
       groupId: g,
@@ -107,11 +142,21 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number): StudyAgen
       memeId:       g,
       visibility:   0,
       resistance:   0.1 + rng() * 0.2,
-      trailX:       new Float32Array(15).fill(cx + Math.cos(angle) * r),
-      trailY:       new Float32Array(15).fill(cy + Math.sin(angle) * r),
+      trailX:       new Float32Array(15).fill(clampPos(px)),
+      trailY:       new Float32Array(15).fill(clampPos(py)),
       trailIdx:     0,
       lastGroupChange: 0,
-    });
+      archKeyMoment: 0,
+      archKeyStable: 0,
+      archKeyCandidate: 0,
+      archCandidateAt: 0,
+      archStableAt: 0,
+    };
+    const k = computeArchetypeKey(a);
+    a.archKeyMoment = k;
+    a.archKeyStable = k;
+    a.archKeyCandidate = k;
+    agents.push(a);
   }
   return agents;
 }
@@ -214,6 +259,16 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, dt
 // ── 3. macroTick — social decisions ──────────────────────────────────────────
 const MAX_NEIGH  = 12;
 const MEMORY_CAP = 3;
+
+function rand01(ws: StudyWorldState): number {
+  // LCG (Numerical Recipes). Deterministic per seed via ws.rngState.
+  ws.rngState = (Math.imul(ws.rngState >>> 0, 1664525) + 1013904223) >>> 0;
+  return ws.rngState / 4294967296;
+}
+
+function randSigned(ws: StudyWorldState): number {
+  return rand01(ws) - 0.5;
+}
 
 export function macroTick(
   agents:    StudyAgent[],
@@ -349,10 +404,38 @@ export function macroTick(
     let inGroupCx = a.x, inGroupCy = a.y;
     let centralN = 0;
     let empFear = 0, empDesire = 0, empBelief = 0, empN2 = 0;
+    let coercion = 0;   // coercive authority pressure from nearby high-status actors
+    let legit = 0;      // legitimating authority pressure (belief/status/charisma)
 
     for (const j of neighbors) {
       const b = agents[j];
       centralN++;
+
+      // ── Authority channels (local micro-power) ──
+      // Model: high-status + charisma amplifies both coercion and legitimation.
+      const bPower = (0.35 + b.centrality * 0.65) * b.status * (0.55 + b.charisma);
+      const bDictatorLike =
+        b.status > 0.72 &&
+        b.centrality > 0.28 &&
+        b.aggression > 0.62 &&
+        b.belief > 0.55 &&
+        b.ideology < -0.15;
+      const bPriestLike = b.belief > 0.70 && b.status > 0.45 && b.charisma > 0.4 && b.aggression < 0.55;
+
+      if (bDictatorLike) {
+        coercion += bPower * (0.9 + b.aggression * 0.6);
+      } else {
+        // Generic coercion is mostly aggression + order-leaning ideology
+        coercion += bPower * b.aggression * (b.ideology < -0.15 ? 0.85 : 0.45);
+      }
+
+      if (bPriestLike) {
+        legit += bPower * 1.05;
+      } else {
+        // Generic legitimation is belief + status, stronger for order-leaning ideologies
+        legit += bPower * b.belief * (b.ideology < -0.15 ? 0.85 : 0.55);
+      }
+
       if (b.groupId === a.groupId) {
         inGroupCount++;
         const influenceW = 1 + (cfg.hierarchyStrength * b.status * b.charisma);
@@ -381,6 +464,23 @@ export function macroTick(
     }
     a.centrality = Math.min(1, centralN / MAX_NEIGH);
 
+    // ── Local authority effects (separate from fields) ─────────────────────
+    if (centralN > 0) {
+      const invN = 1 / centralN;
+      const coercionLevel = Math.max(0, Math.min(1, coercion * invN));
+      const legitLevel    = Math.max(0, Math.min(1, legit * invN));
+
+      // Coercion mostly increases fear/conformity (muted by resistance)
+      const resistShield = 1 - a.resistance * 0.65;
+      a.fear = clamp(a.fear + coercionLevel * 0.10 * dt * resistShield, 0, 1);
+      a.conformity = clamp(a.conformity + coercionLevel * 0.06 * dt * resistShield, 0, 1);
+
+      // Legitimation increases belief and lowers fear for believers (muted by desire)
+      const desireNoise = 1 - a.desire * 0.55;
+      a.belief = clamp(a.belief + legitLevel * 0.08 * dt * desireNoise, 0, 1);
+      a.fear = clamp(a.fear - legitLevel * a.belief * 0.05 * dt, 0, 1);
+    }
+
     // ── Empathy contagion ──────────────────────────────────────────────────
     if (empN2 > 0) {
       const empScale = 0.06 * dt;
@@ -400,14 +500,14 @@ export function macroTick(
       for (let m = 0; m < memeCounts.length; m++) {
         if (memeCounts[m] > bestCount) { bestCount = memeCounts[m]; bestMeme = m; }
       }
-      if (bestMeme !== a.memeId && Math.random() < cfg.contagion * 0.12 * (1 - cfg.culturalInertia * 0.6)) {
+      if (bestMeme !== a.memeId && rand01(ws) < cfg.contagion * 0.12 * (1 - cfg.culturalInertia * 0.6)) {
         a.memeId = bestMeme;
       }
     }
 
     // ── Innovation (spontaneous ideology mutation) ─────────────────────────
-    if (cfg.innovationRate > 0 && Math.random() < cfg.innovationRate * 0.03) {
-      a.ideology = clamp(a.ideology + (Math.random() - 0.5) * 0.4, -1, 1);
+    if (cfg.innovationRate > 0 && rand01(ws) < cfg.innovationRate * 0.03) {
+      a.ideology = clamp(a.ideology + randSigned(ws) * 0.4, -1, 1);
       a.desire = clamp(a.desire + 0.05, 0, 1);
     }
 
@@ -475,8 +575,8 @@ export function macroTick(
         a.goalX = tabu.x + (a.x - tabu.x) * 0.4;
         a.goalY = tabu.y + (a.y - tabu.y) * 0.4;
       } else {
-        a.goalX = (Math.random() - 0.5) * 1.4;
-        a.goalY = (Math.random() - 0.5) * 1.4;
+        a.goalX = randSigned(ws) * 1.4;
+        a.goalY = randSigned(ws) * 1.4;
       }
     } else if (a.need > 0.5 || cfg.cohesion > 0.5) {
       a.goalX = inAvgX; a.goalY = inAvgY;
@@ -536,6 +636,20 @@ export function macroTick(
       }
     }
 
+    // ── Archetype identity (stable) ───────────────────────────────────────
+    const kNow = computeArchetypeKey(a);
+    a.archKeyMoment = kNow;
+    if (kNow !== a.archKeyCandidate) {
+      a.archKeyCandidate = kNow;
+      a.archCandidateAt = t;
+    } else if (kNow !== a.archKeyStable) {
+      const hold = Math.max(0.2, cfg.archetypeHoldSec || 0);
+      if (t - a.archCandidateAt >= hold) {
+        a.archKeyStable = kNow;
+        a.archStableAt = t;
+      }
+    }
+
     a.goalX = clamp(a.goalX, -0.95, 0.95);
     a.goalY = clamp(a.goalY, -0.95, 0.95);
   }
@@ -553,7 +667,7 @@ export function macroTick(
   if (cfg.mobility > 0) {
     for (let i = 0; i < agents.length; i++) {
       const a = agents[i];
-      if (Math.random() > cfg.mobility * 0.02 * (1 - a.groupLoyalty)) continue;
+      if (rand01(ws) > cfg.mobility * 0.02 * (1 - a.groupLoyalty)) continue;
       const neighbors2 = getNeighbors(i, agents, grid, cfg.rMax, cfg.rMax * 1.1, MAX_NEIGH);
       const neighborGroups: number[] = new Array(cfg.groupCount).fill(0);
       for (const j of neighbors2) neighborGroups[agents[j].groupId]++;
@@ -794,7 +908,7 @@ function _generateEvents(
   }
 
   // Wealth gap
-  if (ws.gini > 0.55 && Math.random() < 0.2) {
+  if (ws.gini > 0.55 && rand01(ws) < 0.2) {
     events.push({ time: t, icon: '💰', message: `Wealth gap — Gini ${ws.gini.toFixed(2)}`, color: '#fbbf24' });
   }
 
@@ -802,7 +916,7 @@ function _generateEvents(
   const groups: number[] = new Array(cfg.groupCount).fill(0);
   for (const a of agents) { if (a.groupId < groups.length) groups[a.groupId]++; }
   const maxG = Math.max(...groups);
-  if (maxG > agents.length * 0.55 && Math.random() < 0.15) {
+  if (maxG > agents.length * 0.55 && rand01(ws) < 0.15) {
     const domGroup = groups.indexOf(maxG);
     const c = GROUP_COLORS[domGroup % GROUP_COLORS.length];
     events.push({ time: t, icon: '🤝', message: `Coalition — Group ${domGroup} (${Math.round(maxG/agents.length*100)}%)`, color: c });
@@ -892,7 +1006,16 @@ export function computeStudyMetrics(agents: StudyAgent[], cfg: StudyConfig): Stu
 }
 
 // ── 5. Agent Roles ────────────────────────────────────────────────────────────
-export type AgentRole = 'normal' | 'leader' | 'aggressor' | 'mediator' | 'guardian' | 'rebel' | 'priest';
+export type AgentRole =
+  | 'normal'
+  | 'leader'
+  | 'authority'
+  | 'dictator'
+  | 'priest'
+  | 'guardian'
+  | 'mediator'
+  | 'aggressor'
+  | 'rebel';
 
 export function computeAgentRoles(agents: StudyAgent[]): AgentRole[] {
   const roles: AgentRole[] = new Array(agents.length).fill('normal');
@@ -906,15 +1029,32 @@ export function computeAgentRoles(agents: StudyAgent[]): AgentRole[] {
 
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
-    if (roles[i] === 'leader') continue;
+    // Dictator: coercive high-status central figure (often also a leader)
+    const dictatorLike =
+      a.status > 0.72 &&
+      a.centrality > 0.28 &&
+      a.aggression > 0.62 &&
+      a.belief > 0.55 &&
+      a.ideology < -0.15;
+    if (dictatorLike) { roles[i] = 'dictator'; continue; }
+
+    // Priest: high belief + status + charisma (legitimation)
+    const priestLike = a.belief > 0.70 && a.status > 0.45 && a.charisma > 0.4 && a.aggression < 0.55;
+    if (priestLike)  { roles[i] = 'priest';  continue; }
+
     // Rebel: high resistance or freedom ideology + desire + low fear
     if (a.resistance > 0.7 || (a.ideology > 0.5 && a.desire > 0.65 && a.fear < 0.35)) { roles[i] = 'rebel'; continue; }
-    // Priest: high belief + status + low aggression
-    if (a.belief > 0.70 && a.status > 0.45 && a.charisma > 0.4)  { roles[i] = 'priest';  continue; }
+
+    // Authority: high status + high conformity/belief (institutional power)
+    const authorityLike = a.status > 0.58 && (a.belief > 0.62 || a.conformity > 0.70) && a.charisma > 0.18;
+    if (authorityLike) { roles[i] = 'authority'; continue; }
+
     // Aggressor
     if (a.aggression > 0.65 && a.hostileCount >= 2) { roles[i] = 'aggressor'; continue; }
-    // Guardian
+
+    // Guardian (kept for backwards-compat semantics; overlaps with authority)
     if (a.belief > 0.65 && a.status > 0.40)         { roles[i] = 'guardian';  continue; }
+
     // Mediator
     const crossFriendly = a.memory.filter(m =>
       m.agentIdx < agents.length && agents[m.agentIdx].groupId !== a.groupId && m.friendly
@@ -943,7 +1083,7 @@ export function _tryAutoPlaceSymbols(
 ): void {
   const total = symbols.totems.length + symbols.tabus.length + symbols.rituals.length;
   if (total >= 12) return; // raised cap for richer ecosystems
-  if (Math.random() > 0.12) return; // ~12% chance per macroTick (doubled)
+  if (rand01(ws) > 0.12) return; // ~12% chance per macroTick (doubled)
 
   // ── Emergent BOND: group cluster with high belief + high status ──
   if (symbols.totems.length < 4) {
