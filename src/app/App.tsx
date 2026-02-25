@@ -569,6 +569,7 @@ const App: React.FC = () => {
   // SOCIOGENESIS: Lab mode & state
   const [showHome, setShowHome] = useState(true); // start on homepage
   const [activeLab, setActiveLab] = useState<LabId>('complexityLife');
+  const activeLabRef = useRef<LabId>(activeLab);
   const [asimovUnlocked, setAsimovUnlocked] = useState(false);
   const [adminMode, setAdminMode] = useState<boolean>(() => {
     try { return localStorage.getItem(ADMIN_MODE_KEY) === '1'; }
@@ -580,6 +581,11 @@ const App: React.FC = () => {
   const socioPointerRef = useRef({ cursorX: -1, cursorY: -1 });
   // Overlay rect cache — avoids getBoundingClientRect() on every frame (layout reflow)
   const overlayRectRef = useRef({ width: 0, height: 0, valid: false });
+
+  // Keep an always-fresh activeLab value for global event listeners (keydown, etc.)
+  useEffect(() => {
+    activeLabRef.current = activeLab;
+  }, [activeLab]);
 
   // ECONOMY-LITE
   const economyStateRef  = useRef<EconomyState>(createEconomyState());
@@ -869,12 +875,17 @@ const App: React.FC = () => {
 
     // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Let focused lab-level handlers win (e.g. MusicLab uses H/V)
+      if (e.defaultPrevented) return;
+
       // Never intercept keys when user is typing in an input/textarea/select
       const tag = (document.activeElement as HTMLElement)?.tagName;
       const isEditable = (document.activeElement as HTMLElement)?.isContentEditable;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || isEditable) return;
 
       if (e.key === 'h' || e.key === 'H') {
+        // MusicLab binds H to cinematic/HUD; don't also hide the global TopHUD.
+        if (activeLabRef.current === 'musicLab') return;
         setHideUI(v => !v);
       } else if (e.key === 'Tab') {
         e.preventDefault();

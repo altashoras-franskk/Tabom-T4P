@@ -157,13 +157,22 @@ export class MusicAudioEngine {
   // dur = time until release starts (NOT including release duration)
   private _applyEnv(g: AudioParam, now: number, amp: number, env: Envelope, dur: number): void {
     const A = Math.max(0.002, env.attack);
-    // Percussive notes (sustain≈0) use a tight time constant so they actually decay fast
     const decayTau = env.sustain < 0.05
-      ? env.decay * 0.10 + 0.001   // percussive: snappy
-      : env.decay * 0.28 + 0.001;  // sustained: smooth
+      ? env.decay * 0.10 + 0.001
+      : env.decay * 0.28 + 0.001;
     g.cancelScheduledValues(now);
-    g.setValueAtTime(0.0001, now);
-    g.linearRampToValueAtTime(amp, now + A);
+    if (A > 0.06) {
+      // Slow-attack voices: inject a micro-transient so the ear
+      // registers the event at the moment of gate crossing, then
+      // continue with the real envelope swell.
+      const tap = Math.min(amp * 0.12, 0.08);
+      g.setValueAtTime(tap, now);
+      g.linearRampToValueAtTime(tap * 0.6, now + 0.025);
+      g.linearRampToValueAtTime(amp, now + A);
+    } else {
+      g.setValueAtTime(0.0001, now);
+      g.linearRampToValueAtTime(amp, now + A);
+    }
     g.setTargetAtTime(amp * env.sustain, now + A, decayTau);
     g.setTargetAtTime(0.0001, now + dur, Math.max(0.01, env.release) * 0.38 + 0.001);
   }

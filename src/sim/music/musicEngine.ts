@@ -540,8 +540,7 @@ export function stepMusic(
       case 'swarm': {
         const R=phys.zoneRadius; const R2=R*R;
         let cx2=0,cy2=0,avgVx=0,avgVy=0,cnt=0;
-        const sStride = n > 120 ? 2 : 1;
-        for (let j=0;j<n;j+=sStride) {
+        for (let j=0;j<n;j++) {
           if (j===i) continue;
           const dx=state.quanta[j].x-q.x, dy=state.quanta[j].y-q.y;
           const d2=dx*dx+dy*dy;
@@ -884,13 +883,12 @@ export function stepMusic(
       }
     }
 
-    // ── User Interaction Matrix forces (sparse check) ──────────────────────
-    if (state.userMatrix && state.tick % 3 === 0) {
+    // ── User Interaction Matrix forces ────────────────────────────────────
+    if (state.userMatrix && state.tick % 2 === 0) {
       const IR2 = 0.09;
       const rowA = state.userMatrix[q.role];
       if (rowA) {
-        const stride = n > 100 ? 2 : 1;
-        for (let j = 0; j < n; j += stride) {
+        for (let j = 0; j < n; j++) {
           if (j === i) continue;
           const qj = state.quanta[j];
           const mVal = rowA[qj.role] ?? 0;
@@ -905,11 +903,10 @@ export function stepMusic(
       }
     }
 
-    if (phys.predatorPrey && state.tick%3===0) {
+    if (phys.predatorPrey && state.tick%2===0) {
       const roleI = ROLE_MATRIX[q.role];
       if (roleI) {
-        const stride = n > 100 ? 2 : 1;
-        for (let j=0;j<n;j+=stride) {
+        for (let j=0;j<n;j++) {
           if (j===i) continue;
           const qj=state.quanta[j];
           const force=roleI[qj.role];
