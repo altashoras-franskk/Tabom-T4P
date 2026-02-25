@@ -10,6 +10,17 @@ import {
 const rng  = () => Math.random();
 const rng2 = () => (Math.random() - 0.5) * 2;
 
+function computeZoneBB(zone: { pts: [number,number][] }): [number,number,number,number] {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [x,y] of zone.pts) {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }
+  const bb: [number,number,number,number] = [minX, maxX, minY, maxY];
+  (zone as any)._bb = bb;
+  return bb;
+}
+
 // ── Deterministic-but-variable RNG for preset scenes ──────────────────────────
 function fnv1a32(str: string): number {
   // 32-bit FNV-1a
@@ -529,7 +540,8 @@ export function stepMusic(
       case 'swarm': {
         const R=phys.zoneRadius; const R2=R*R;
         let cx2=0,cy2=0,avgVx=0,avgVy=0,cnt=0;
-        for (let j=0;j<n;j++) {
+        const sStride = n > 120 ? 2 : 1;
+        for (let j=0;j<n;j+=sStride) {
           if (j===i) continue;
           const dx=state.quanta[j].x-q.x, dy=state.quanta[j].y-q.y;
           const d2=dx*dx+dy*dy;
@@ -872,12 +884,13 @@ export function stepMusic(
       }
     }
 
-    // ── User Interaction Matrix forces ────────────────────────────────────
-    if (state.userMatrix && state.tick % 2 === 0) {
-      const IR2 = 0.09; // influence radius squared
+    // ── User Interaction Matrix forces (sparse check) ──────────────────────
+    if (state.userMatrix && state.tick % 3 === 0) {
+      const IR2 = 0.09;
       const rowA = state.userMatrix[q.role];
       if (rowA) {
-        for (let j = 0; j < n; j++) {
+        const stride = n > 100 ? 2 : 1;
+        for (let j = 0; j < n; j += stride) {
           if (j === i) continue;
           const qj = state.quanta[j];
           const mVal = rowA[qj.role] ?? 0;
@@ -892,10 +905,11 @@ export function stepMusic(
       }
     }
 
-    if (phys.predatorPrey && state.tick%2===0) {
+    if (phys.predatorPrey && state.tick%3===0) {
       const roleI = ROLE_MATRIX[q.role];
       if (roleI) {
-        for (let j=0;j<n;j++) {
+        const stride = n > 100 ? 2 : 1;
+        for (let j=0;j<n;j+=stride) {
           if (j===i) continue;
           const qj=state.quanta[j];
           const force=roleI[qj.role];
@@ -976,7 +990,9 @@ export function stepMusic(
     // ── FX Zone effects ──────────────────────────────────────────────────────
     for (const zone of (state.fxZones ?? [])) {
       if (zone.pts.length < 3) continue;
-      // Point-in-polygon (ray casting)
+      // Quick AABB rejection before expensive point-in-polygon
+      const zb = (zone as any)._bb ?? computeZoneBB(zone);
+      if (q.x < zb[0] || q.x > zb[1] || q.y < zb[2] || q.y > zb[3]) continue;
       let inside = false;
       for (let pi = 0, pj = zone.pts.length-1; pi < zone.pts.length; pj = pi++) {
         const xi = zone.pts[pi][0], yi = zone.pts[pi][1];
@@ -1104,7 +1120,8 @@ export function stepMusic(
 
     if (preset.trailLen>0) {
       q.trailX.push(q.x); q.trailY.push(q.y);
-      if (q.trailX.length>preset.trailLen) { q.trailX.shift(); q.trailY.shift(); }
+      const over = q.trailX.length - preset.trailLen;
+      if (over > 16) { q.trailX.splice(0, over); q.trailY.splice(0, over); }
     }
   }
 

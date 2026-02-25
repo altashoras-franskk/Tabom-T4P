@@ -25,8 +25,14 @@ function getGrain(): HTMLCanvasElement {
   return grainCvs;
 }
 
+// ── Cached grain pattern ──────────────────────────────────────────────────────
+let grainPattern: CanvasPattern | null = null;
+
+// ── Cached vignette ──────────────────────────────────────────────────────────
+const vigCache: { key: string; cvs: HTMLCanvasElement | null } = { key: '', cvs: null };
+
 // ── Offscreen layers (lightweight stack) ──────────────────────────────────────
-type LayerId = 'trail' | 'scene';
+type LayerId = 'trail' | 'scene' | 'bloom';
 const layerCanvases: Partial<Record<LayerId, HTMLCanvasElement>> = {};
 
 function getLayerCanvas(id: LayerId, wPx: number, hPx: number): HTMLCanvasElement {
@@ -63,6 +69,10 @@ function blendToGCO(blend: string | undefined): GlobalCompositeOperation {
 const wx2s = (x:number,W:number) => (x+1)*W*.5;
 const wy2s = (y:number,H:number) => (y+1)*H*.5;
 
+// ── Hex alpha LUT (avoids toString(16).padStart per particle) ──────────────
+const HEX_ALPHA: string[] = [];
+for (let i = 0; i < 256; i++) HEX_ALPHA[i] = i.toString(16).padStart(2, '0');
+
 // ── Quantum color by lens (+ palette override) ────────────────────────────────
 function qColor(
   q: {role:VoiceRole;pitch:number;charge:number;brightness:number;phase:number},
@@ -71,49 +81,36 @@ function qColor(
   paletteMode: PaletteMode = 'role',
   roleOverrides?: Partial<Record<VoiceRole, string>>,
 ): string {
-  // Per-role color override (only in 'role' mode — raw palette)
   if (paletteMode === 'role' && roleOverrides?.[q.role]) {
-    const c = roleOverrides[q.role]!;
-    return c + Math.round(a * 255).toString(16).padStart(2, '0');
+    return roleOverrides[q.role]! + HEX_ALPHA[Math.round(a * 255)];
   }
   if (paletteMode === 'mono') return `rgba(255,255,255,${a * (0.4 + q.charge * 0.6)})`;
   if (paletteMode === 'neon') {
-    const h = (q.pitch * 3.5) % 360;
-    return `hsla(${h},100%,68%,${a})`;
+    return `hsla(${(q.pitch * 3.5) % 360 | 0},100%,68%,${a})`;
   }
   if (paletteMode === 'heat') {
-    const h = 0 + (1 - q.charge) * 60;
-    return `hsla(${h},95%,${45 + q.charge * 25}%,${a})`;
+    return `hsla(${((1 - q.charge) * 60) | 0},95%,${(45 + q.charge * 25) | 0}%,${a})`;
   }
   if (paletteMode === 'earth') {
     const earthH = [32, 20, 50, 38, 44, 28, 38, 35] as const;
-    const ROLES: VoiceRole[] = ['KICK','BASS','PERC','PAD','LEAD','ARP','STRINGS','CHOIR'];
     const hi = earthH[ROLES.indexOf(q.role)] ?? 35;
-    return `hsla(${hi},55%,${38 + q.charge * 22}%,${a})`;
+    return `hsla(${hi},55%,${(38 + q.charge * 22) | 0}%,${a})`;
   }
   if (paletteMode === 'plasma') {
-    const h = (q.phase * 360 + q.charge * 120) % 360;
-    return `hsla(${h},90%,65%,${a})`;
+    return `hsla(${((q.phase * 360 + q.charge * 120) % 360) | 0},90%,65%,${a})`;
   }
-  // default 'role' — check overrides first
   const roleCol = roleOverrides?.[q.role] ?? ROLE_COLORS[q.role];
   switch (lens) {
     case 'Off': case 'Events':
-      return roleCol + (Math.round(a*255).toString(16).padStart(2,'0'));
-    case 'Notes': {
-      const h=250-((q.pitch-33)/72)*190;
-      return `hsla(${h},80%,${55+q.charge*25}%,${a})`;
-    }
+      return roleCol + HEX_ALPHA[Math.round(a*255)];
+    case 'Notes':
+      return `hsla(${(250-((q.pitch-33)/72)*190) | 0},80%,${(55+q.charge*25) | 0}%,${a})`;
     case 'Harmony':
-      return roleCol + (Math.round(a*200).toString(16).padStart(2,'0'));
-    case 'Rhythm': {
-      const h=q.phase*360;
-      return `hsla(${h},90%,62%,${a})`;
-    }
-    case 'Tension': {
-      const h=40-q.charge*40;
-      return `hsla(${h},90%,${45+q.brightness*25}%,${a})`;
-    }
+      return roleCol + HEX_ALPHA[Math.round(a*200)];
+    case 'Rhythm':
+      return `hsla(${(q.phase*360) | 0},90%,62%,${a})`;
+    case 'Tension':
+      return `hsla(${(40-q.charge*40) | 0},90%,${(45+q.brightness*25) | 0}%,${a})`;
   }
 }
 
@@ -326,12 +323,13 @@ function drawCages(c: CanvasRenderingContext2D, state: MusicState, W: number, H:
       const sx1 = wx2s(cage.x - cage.w/2, W), sy1 = wy2s(cage.y - cage.h/2, H);
       const sx2 = wx2s(cage.x + cage.w/2, W), sy2 = wy2s(cage.y + cage.h/2, H);
       const sw = sx2 - sx1, sh = sy2 - sy1;
-      // Outer glow
-      c.shadowColor = cage.color; c.shadowBlur = 12 * pulse;
+      // Outer glow (wide faint stroke instead of expensive shadowBlur)
+      c.globalAlpha = 0.12 * pulse;
+      c.strokeStyle = cage.color; c.lineWidth = 6;
+      c.beginPath(); c.rect(sx1, sy1, sw, sh); c.stroke();
       c.strokeStyle = cage.color; c.lineWidth = 1.5;
       c.globalAlpha = 0.7;
       c.beginPath(); c.rect(sx1, sy1, sw, sh); c.stroke();
-      c.shadowBlur = 0;
       // Corner ticks
       const tick = 8;
       c.strokeStyle = cage.color; c.lineWidth = 2.5; c.globalAlpha = 0.9;
@@ -361,7 +359,6 @@ function drawCages(c: CanvasRenderingContext2D, state: MusicState, W: number, H:
       c.beginPath(); c.arc(sx, sy2, sr, 0, Math.PI*2); c.fill();
     }
   }
-  c.shadowBlur = 0;
   c.restore();
 }
 
@@ -378,12 +375,13 @@ function drawStrings(c: CanvasRenderingContext2D, state: MusicState, W: number, 
     const nSegs = 20;
     const vibScale = hs.vibAmp * 12 * (0.8 + 0.2 * Math.sin(t * 8));
 
-    // Glow behind string
-    c.globalAlpha = 0.08 + hs.vibAmp * 0.25;
-    c.strokeStyle = hs.color; c.lineWidth = 8 + hs.vibAmp * 10;
-    c.filter = 'blur(4px)';
+    // Glow behind string (soft wide stroke instead of expensive filter blur)
+    c.globalAlpha = 0.06 + hs.vibAmp * 0.18;
+    c.strokeStyle = hs.color; c.lineWidth = 10 + hs.vibAmp * 12;
     c.beginPath(); c.moveTo(sx1, sy1); c.lineTo(sx2, sy2); c.stroke();
-    c.filter = 'none';
+    c.globalAlpha = 0.03 + hs.vibAmp * 0.08;
+    c.lineWidth = 18 + hs.vibAmp * 16;
+    c.beginPath(); c.moveTo(sx1, sy1); c.lineTo(sx2, sy2); c.stroke();
 
     // Vibrating string path
     c.globalAlpha = 0.8 + hs.vibAmp * 0.2;
@@ -405,18 +403,18 @@ function drawStrings(c: CanvasRenderingContext2D, state: MusicState, W: number, 
     c.beginPath(); c.arc(sx1, sy1, 4, 0, Math.PI*2); c.fill();
     c.beginPath(); c.arc(sx2, sy2, 4, 0, Math.PI*2); c.fill();
 
-    // Resonance glow when vibrating
+    // Resonance glow when vibrating (radial gradient only, no filter blur)
     if (hs.vibAmp > 0.05) {
       const mx = (sx1+sx2)/2, my = (sy1+sy2)/2;
       const [hr, hg, hb] = hexToRgb(hs.color);
-      c.filter = 'blur(6px)';
       c.globalAlpha = hs.vibAmp * 0.4;
-      const grd = c.createRadialGradient(mx, my, 0, mx, my, 30 + hs.vibAmp*40);
-      grd.addColorStop(0, `rgba(${hr},${hg},${hb},0.8)`);
+      const glowR = 30 + hs.vibAmp*40;
+      const grd = c.createRadialGradient(mx, my, 0, mx, my, glowR);
+      grd.addColorStop(0, `rgba(${hr},${hg},${hb},0.6)`);
+      grd.addColorStop(0.4, `rgba(${hr},${hg},${hb},0.2)`);
       grd.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
       c.fillStyle = grd;
-      c.beginPath(); c.arc(mx, my, 30 + hs.vibAmp*40, 0, Math.PI*2); c.fill();
-      c.filter = 'none';
+      c.beginPath(); c.arc(mx, my, glowR, 0, Math.PI*2); c.fill();
     }
   }
   c.restore();
@@ -527,14 +525,20 @@ export function renderMusic(
     main.fillStyle=radGrad; main.fillRect(0,0,W,H);
   }
 
-  // Grain
+  // Grain (skip when negligible)
   const grainA = 0.01 + (aesthetic.canvas.grain ?? 0.5) * 0.09;
-  if (grainA > 0.001) {
-    main.save();
-    main.globalAlpha = grainA;
-    const pat=main.createPattern(getGrain(),'repeat');
-    if (pat){main.fillStyle=pat;main.fillRect(0,0,W,H);}
-    main.restore();
+  if (grainA > 0.02) {
+    if (!grainPattern) {
+      const pat = main.createPattern(getGrain(), 'repeat');
+      if (pat) grainPattern = pat;
+    }
+    if (grainPattern) {
+      main.save();
+      main.globalAlpha = grainA;
+      main.fillStyle = grainPattern;
+      main.fillRect(0,0,W,H);
+      main.restore();
+    }
   }
 
   // ── 2. Trail layer (persistent) ───────────────────────────────────────────
@@ -542,9 +546,8 @@ export function renderMusic(
   const trail = trailCanvas.getContext('2d')!;
   trail.setTransform(dpr,0,0,dpr,0,0);
   if (aesthetic.trails.enabled) {
-    // Fade memory curve (Meta-Arte style)
     const mem = Math.max(0, Math.min(1, aesthetic.trails.persistence ?? 0.55));
-    const baseDecay = 0.35 + Math.pow(mem, 0.55) * 0.645; // 0.35..0.995
+    const baseDecay = 0.35 + Math.pow(mem, 0.55) * 0.645;
     trail.save();
     trail.globalCompositeOperation = 'destination-in';
     trail.globalAlpha = baseDecay;
@@ -552,15 +555,13 @@ export function renderMusic(
     trail.fillRect(0,0,W,H);
     trail.restore();
 
-    // Draw streaks in world-space
     trail.save();
     trail.translate(W / 2 + panX, H / 2 + panY);
     trail.scale(zoom, zoom);
     trail.translate(-W / 2, -H / 2);
     trail.globalCompositeOperation = blendToGCO(aesthetic.trails.blend);
     trail.lineCap = 'round';
-    const blurPx = (aesthetic.trails.blur ?? 0) * 3.0;
-    if (blurPx > 0.01) trail.shadowBlur = blurPx;
+    const trailW = aesthetic.trails.width ?? 1.0;
     for (const q of state.quanta) {
       const dx = q.x - q.prevX, dy = q.y - q.prevY;
       if (dx*dx + dy*dy < 1e-8) continue;
@@ -568,9 +569,8 @@ export function renderMusic(
       const ex=wx2s(q.x,W),    ey=wy2s(q.y,H);
       const col=qColor(q,lens,1,palette.mode,palette.roleColorOverrides);
       trail.strokeStyle = col;
-      trail.shadowColor = col;
       trail.globalAlpha = 0.05 + q.charge * 0.16;
-      trail.lineWidth = (0.25 + q.charge * 1.15) * (aesthetic.trails.width ?? 1.0);
+      trail.lineWidth = (0.25 + q.charge * 1.15) * trailW;
       trail.beginPath(); trail.moveTo(sx,sy); trail.lineTo(ex,ey); trail.stroke();
     }
     trail.restore();
@@ -635,28 +635,26 @@ export function renderMusic(
     c.restore();
   }
 
-  // ── 3. Harmonic links ─────────────────────────────────────────────────────
+  // ── 3. Harmonic links (capped + batched) ──────────────────────────────────
   if (lens!=='Off'&&lens!=='Rhythm') {
     c.save(); c.lineCap='round';
-    const lR2=.12*.12, maxL=200; let links=0;
-    for (let i=0;i<state.count&&links<maxL;i++) {
+    const lR2=.12*.12, maxL=120; let links=0;
+    const stride = state.count > 80 ? 2 : 1;
+    for (let i=0;i<state.count&&links<maxL;i+=stride) {
       const qi=state.quanta[i];
-      for (let j=i+1;j<state.count&&links<maxL;j++) {
+      for (let j=i+1;j<state.count&&links<maxL;j+=stride) {
         const qj=state.quanta[j];
         const dx=qi.x-qj.x,dy=qi.y-qj.y;
         if (dx*dx+dy*dy>lR2) continue;
         const d=Math.sqrt(dx*dx+dy*dy);
         const cons=consonanceScore(qi.pitch,qj.pitch);
         const a=(1-d/.12)*.28;
-        const col = lens==='Harmony'
-          ? `hsla(${cons*140},70%,55%,${a*(0.4+cons*.6)})`
-          : `rgba(255,255,255,${a*.22})`;
-        c.globalAlpha=1;
-        c.strokeStyle=col;
+        c.globalAlpha = lens==='Harmony' ? a*(0.4+cons*.6) : a*.22;
+        c.strokeStyle = lens==='Harmony'
+          ? `hsl(${cons*140},70%,55%)`
+          : 'rgba(255,255,255,0.7)';
         c.lineWidth=.5+cons*.7;
-        const sxi=wx2s(qi.x,W),syi=wy2s(qi.y,H);
-        const sxj=wx2s(qj.x,W),syj=wy2s(qj.y,H);
-        c.beginPath();c.moveTo(sxi,syi);c.lineTo(sxj,syj);c.stroke();
+        c.beginPath();c.moveTo(wx2s(qi.x,W),wy2s(qi.y,H));c.lineTo(wx2s(qj.x,W),wy2s(qj.y,H));c.stroke();
         links++;
       }
     }
@@ -905,7 +903,7 @@ export function renderMusic(
     c.restore();
   }
 
-  // ── 9. Quanta particles ───────────────────────────────────────────────────
+  // ── 9. Quanta particles (optimised: 2 arcs per particle, batch specials) ──
   c.save();
   const glow=preset.particleGlow;
   const pm = palette.mode;
@@ -915,53 +913,37 @@ export function renderMusic(
     const sx=wx2s(q.x,W),sy=wy2s(q.y,H);
     const baseR=3.0+q.charge*2.8;
     const col=qColor(q,lens,1,pm,ro);
-    const isHovered = qi === hoverIdx;
 
-    // Discharge aura (charge > 0.82)
-    if (q.charge>0.82) {
-      const pulse=Math.sin(state.elapsed*20+q.phase*8)*.5+.5;
-      c.globalAlpha=.08+pulse*.12;
-      c.fillStyle='#ffff80';
-      c.beginPath();c.arc(sx,sy,baseR*glow*4,0,Math.PI*2);c.fill();
-    }
-
-    // Hover ring — pulsing white ring around nearest quantum under cursor
-    if (isHovered) {
-      const hp = 0.55 + 0.45 * Math.sin(state.elapsed * 8);
-      c.globalAlpha = hp * 0.85;
-      c.strokeStyle = '#ffffff';
-      c.lineWidth = 1.5;
-      c.beginPath(); c.arc(sx, sy, baseR * glow * 3.2, 0, Math.PI * 2); c.stroke();
-      c.globalAlpha = hp * 0.25;
-      c.beginPath(); c.arc(sx, sy, baseR * glow * 4.4, 0, Math.PI * 2); c.stroke();
-      c.globalAlpha = 1;
-    }
-
-    // Selected highlight
-    if (q.selected) {
-      c.globalAlpha=.55;
-      c.strokeStyle='#ffffff';c.lineWidth=1.5;
-      c.beginPath();c.arc(sx,sy,baseR*glow*2.8,0,Math.PI*2);c.stroke();
-    }
-
-    // Outer glow
-    c.globalAlpha=.15+q.charge*.10;
+    // Glow halo (single wider circle instead of outer + mid)
+    c.globalAlpha=.22+q.charge*.10;
     c.fillStyle=col;
-    c.beginPath();c.arc(sx,sy,baseR*glow*2.4,0,Math.PI*2);c.fill();
-
-    // Mid glow
-    c.globalAlpha=.36;
-    c.beginPath();c.arc(sx,sy,baseR*glow,0,Math.PI*2);c.fill();
+    c.beginPath();c.arc(sx,sy,baseR*glow*1.6,0,Math.PI*2);c.fill();
 
     // Bright core
     c.globalAlpha=.90;
     c.beginPath();c.arc(sx,sy,baseR*.52,0,Math.PI*2);c.fill();
 
-    // Event flash
+    // Event flash (only when needed)
     if (q.recentlyFired>0) {
       c.globalAlpha=q.recentlyFired*.7;
       c.fillStyle='#ffffff';
       c.beginPath();c.arc(sx,sy,baseR*2.8,0,Math.PI*2);c.fill();
+    }
+
+    // Hover ring (rare)
+    if (qi === hoverIdx) {
+      const hp = 0.55 + 0.45 * Math.sin(state.elapsed * 8);
+      c.globalAlpha = hp * 0.7;
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(sx, sy, baseR * glow * 3.2, 0, Math.PI * 2); c.stroke();
+    }
+
+    // Selected highlight (rare)
+    if (q.selected) {
+      c.globalAlpha=.55;
+      c.strokeStyle='#ffffff';c.lineWidth=1.5;
+      c.beginPath();c.arc(sx,sy,baseR*glow*2.8,0,Math.PI*2);c.stroke();
     }
   }
   c.restore();
@@ -1121,30 +1103,52 @@ export function renderMusic(
   if (aesthetic.trails.enabled) main.drawImage(trailCanvas, 0, 0);
   main.drawImage(sceneCanvas, 0, 0);
 
-  // Bloom / post from trails (cheap)
+  // Bloom from trails — downsample approach instead of full-res blur
   const bloom = Math.max(0, Math.min(1, aesthetic.post.bloom ?? 0));
   if (bloom > 0.01 && aesthetic.trails.enabled) {
+    const bScale = 0.125;
+    const bW = Math.max(1, Math.round(wPx * bScale));
+    const bH = Math.max(1, Math.round(hPx * bScale));
+    let bloomCvs = layerCanvases['bloom' as LayerId];
+    if (!bloomCvs) {
+      bloomCvs = document.createElement('canvas');
+      layerCanvases['bloom' as LayerId] = bloomCvs;
+    }
+    if (bloomCvs.width !== bW || bloomCvs.height !== bH) {
+      bloomCvs.width = bW; bloomCvs.height = bH;
+    }
+    const bCtx = bloomCvs.getContext('2d')!;
+    bCtx.imageSmoothingEnabled = true;
+    bCtx.imageSmoothingQuality = 'low';
+    bCtx.drawImage(trailCanvas, 0, 0, bW, bH);
     main.save();
     main.globalCompositeOperation = 'screen';
-    main.globalAlpha = 0.10 + bloom * 0.55;
-    main.filter = `blur(${Math.round(2 + bloom * 12)}px)`;
-    main.drawImage(trailCanvas, 0, 0);
-    main.filter = 'none';
+    main.globalAlpha = 0.10 + bloom * 0.45;
+    main.imageSmoothingEnabled = true;
+    main.imageSmoothingQuality = 'low';
+    main.drawImage(bloomCvs, 0, 0, wPx, hPx);
     main.restore();
   }
 
-  // Vignette
+  // Vignette (cached offscreen)
   const vig = Math.max(0, Math.min(1, aesthetic.canvas.vignette ?? 0));
   if (vig > 0.01) {
+    const vKey = `${W}|${H}|${(vig*100)|0}`;
+    if (vigCache.key !== vKey) {
+      if (!vigCache.cvs) vigCache.cvs = document.createElement('canvas');
+      vigCache.cvs.width = W; vigCache.cvs.height = H;
+      const vc = vigCache.cvs.getContext('2d')!;
+      const g = vc.createRadialGradient(W/2,H/2,Math.min(W,H)*0.12,W/2,H/2,Math.max(W,H)*0.78);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(0.6, `rgba(0,0,0,${0.05 + vig * 0.22})`);
+      g.addColorStop(1, `rgba(0,0,0,${0.18 + vig * 0.60})`);
+      vc.fillStyle = g;
+      vc.fillRect(0,0,W,H);
+      vigCache.key = vKey;
+    }
     main.save();
-    // draw vignette in CSS-space
     main.setTransform(dpr,0,0,dpr,0,0);
-    const g = main.createRadialGradient(W/2,H/2,Math.min(W,H)*0.12,W/2,H/2,Math.max(W,H)*0.78);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(0.6, `rgba(0,0,0,${0.05 + vig * 0.22})`);
-    g.addColorStop(1, `rgba(0,0,0,${0.18 + vig * 0.60})`);
-    main.fillStyle = g;
-    main.fillRect(0,0,W,H);
+    main.drawImage(vigCache.cvs!, 0, 0);
     main.restore();
   }
 

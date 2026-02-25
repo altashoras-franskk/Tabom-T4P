@@ -13,7 +13,7 @@ export const DEFAULT_MUSIC_AESTHETIC: MusicAesthetic = {
     outline: 0.15,
   },
   trails: {
-    enabled: true,
+    enabled: false,
     style: 'line',
     persistence: 0.55,
     width: 1.0,
@@ -57,7 +57,7 @@ export const MUSIC_VISUAL_PRESETS: MusicVisualPreset[] = [
     palette: P({ mode: 'plasma', bgColor: '#04060a', accent: '#ff0084' }),
     aesthetic: A({
       canvas: { bgStyle: 'radial', grain: 0.75, vignette: 0.55 },
-      trails: { persistence: 0.72, blur: 0.25, blend: 'screen' },
+      trails: { enabled: false, persistence: 0.72, blur: 0.25, blend: 'screen' },
       post: { bloom: 0.35 },
       connections: { alpha: 0.42, width: 0.85, blend: 'screen' },
       quanta: { glow: 0.75, outline: 0.10 },
@@ -70,7 +70,7 @@ export const MUSIC_VISUAL_PRESETS: MusicVisualPreset[] = [
     palette: P({ mode: 'neon', bgColor: '#020208', accent: '#00d4ff' }),
     aesthetic: A({
       canvas: { bgStyle: 'solid', grain: 0.35, vignette: 0.65 },
-      trails: { persistence: 0.52, width: 1.1, blur: 0.08, blend: 'lighter' },
+      trails: { enabled: false, persistence: 0.52, width: 1.1, blur: 0.08, blend: 'lighter' },
       post: { bloom: 0.18 },
       connections: { alpha: 0.30, blend: 'lighter' },
       quanta: { glow: 0.9, outline: 0.22 },
@@ -85,7 +85,7 @@ export const MUSIC_VISUAL_PRESETS: MusicVisualPreset[] = [
     palette: P({ mode: 'mono', bgColor: '#f6f3ea', accent: '#111111' }),
     aesthetic: A({
       canvas: { bgStyle: 'solid', grain: 0.22, vignette: 0.12 },
-      trails: { persistence: 0.82, width: 0.9, blur: 0.0, blend: 'multiply' },
+      trails: { enabled: false, persistence: 0.82, width: 0.9, blur: 0.0, blend: 'multiply' },
       connections: { alpha: 0.18, blend: 'multiply', width: 0.7 },
       quanta: { shape: 'diamond', glow: 0.05, outline: 0.55 },
       tools: { intensity: 0.55, labels: false },
@@ -101,7 +101,7 @@ export const MUSIC_VISUAL_PRESETS: MusicVisualPreset[] = [
     palette: P({ mode: 'earth', bgColor: '#02050a', accent: '#ffd700' }),
     aesthetic: A({
       canvas: { bgStyle: 'radial', grain: 0.62, vignette: 0.58 },
-      trails: { persistence: 0.88, width: 1.2, blur: 0.35, blend: 'screen' },
+      trails: { enabled: false, persistence: 0.88, width: 1.2, blur: 0.35, blend: 'screen' },
       connections: { alpha: 0.55, width: 1.0, blend: 'screen' },
       quanta: { shape: 'spark', glow: 0.85, outline: 0.05 },
       post: { bloom: 0.45, chroma: 0.12 },

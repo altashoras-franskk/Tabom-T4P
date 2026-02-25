@@ -824,15 +824,15 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         }
         const effectivePreset = { ...preset, roles: effectiveRoles };
 
-        // ── Pitch mapping modes ────────────────────────────────────────────
-        if (pitchMapModeRef.current === 'canvas') {
+        // ── Pitch mapping modes (run every 3 ticks to save CPU) ────────────
+        if (pitchMapModeRef.current === 'canvas' && state.tick % 3 === 0) {
           const iv = SCALE_INTERVALS[effectivePreset.scale];
           const degN = Math.max(1, iv.length);
           for (const q of state.quanta) {
             const cfg = effectiveRoles[q.role] ?? preset.roles[q.role] ?? ROLE_DEFAULTS[q.role];
             const [minP, maxP] = cfg.pitchRange ?? [48, 84];
             const x01 = clamp((q.x + 1) / 2, 0, 1);
-            const y01 = clamp((1 - (q.y + 1) / 2), 0, 1); // top = high
+            const y01 = clamp((1 - (q.y + 1) / 2), 0, 1);
             const deg = Math.floor(x01 * degN) % degN;
             const pc = (effectivePreset.root + iv[deg]) % 12;
             const octMin = Math.floor((minP - pc) / 12);
