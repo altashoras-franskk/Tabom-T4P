@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "figma-my-make-file",
+  "name": "tabom-t4p",
   "compatibility_date": "2026-02-24",
   "observability": {
     "enabled": true
