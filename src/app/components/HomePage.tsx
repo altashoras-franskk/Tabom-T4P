@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { LabId } from '../../ui/TopHUD';
-import svgPaths from '../../imports/svg-0y4jkqpiw6';
+import logoDevicesForIntuition from '../../assets/devices-for-intuition-logo-transparent.png';
 
 const MONO = "'IBM Plex Mono', monospace";
 const DOTO = "'Doto', monospace";
@@ -26,14 +26,6 @@ const LABS: LabEntry[] = [
   { id: 'languageLab', num: '10.', symbol: '\u{1F714}', name: 'Recursive Language', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
   { id: 'asimovTheater', num: '11.', symbol: '\u{1F733}', name: 'Psico-history Theater', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
   { id: 'physicsSandbox', num: '12.', symbol: '\u{1F719}', name: 'Physics Sandbox', tag: '', tagColor: '#141414', statusLabel: '', description: 'EM BREVE', enabled: false },
-];
-
-const heroPaths = [
-  svgPaths.p127a1200, svgPaths.p39a3e180, svgPaths.p3116aa00, svgPaths.p21125400,
-  svgPaths.p3810b500, svgPaths.pbcf7c00, svgPaths.p3dc6840, svgPaths.p2b8b7000,
-  svgPaths.p2d0f700, svgPaths.p17fb5300, svgPaths.p161bb100, svgPaths.p21538800,
-  svgPaths.p3459ed80, svgPaths.p7993e00, svgPaths.p25265000, svgPaths.p1fde8480,
-  svgPaths.p2fae140, svgPaths.p3f52de00,
 ];
 
 // ── T4P Intro ─────────────────────────────────────────────────────────────────
@@ -245,16 +237,21 @@ function ScrollLogo({ scrollTarget }: { scrollTarget: { current: number } }) {
   );
 }
 
-// ── Boids Background ──────────────────────────────────────────────────────────
-type Boid = { x: number; y: number; vx: number; vy: number; z: number; predator: boolean; kind: 'duelist' | 'swarm' };
+// ── Particle-life-ish Background (homepage) ───────────────────────────────────
+type Boid = {
+  x: number; y: number; vx: number; vy: number;
+  z: number; ph: number;
+  t: number; // type 0..3
+};
 
 function BoidsBackground({ active }: { active: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boidsRef = useRef<Boid[]>([]);
   const frameRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
-  const w1 = useRef(false), w2 = useRef(false), w3 = useRef(false);
-  const trails = useRef<{ x: number; y: number }[][]>([[], []]);
+  const mouseRef = useRef<{ x: number; y: number; has: boolean; down: boolean }>({ x: 0, y: 0, has: false, down: false });
+  const matRef = useRef<{ a: number[][]; r: number[][] }>({ a: [], r: [] });
+  const gridRef = useRef<number[][]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -276,138 +273,212 @@ function BoidsBackground({ active }: { active: boolean }) {
     const init = () => {
       resize();
       const ww = canvas.clientWidth, hh = canvas.clientHeight;
-      boidsRef.current = [
-        { x: -20, y: hh * 0.42, vx: 2.4, vy: 0.4, z: 1.0, predator: true, kind: 'duelist' },
-        { x: ww + 20, y: hh * 0.58, vx: -2.4, vy: -0.4, z: 1.0, predator: true, kind: 'duelist' },
-      ];
-      trails.current = [[], []];
-      w1.current = w2.current = w3.current = false;
+      const bandTop = hh * 0.52; // only show activity in lower band
+      // Random interaction matrix (stable per mount) for quick emergence.
+      const types = 4;
+      const a: number[][] = Array.from({ length: types }, () => Array(types).fill(0));
+      const r: number[][] = Array.from({ length: types }, () => Array(types).fill(0));
+      for (let i = 0; i < types; i++) {
+        for (let j = 0; j < types; j++) {
+          // Bias toward structure: mixed attract/repel, not too extreme.
+          const v = (Math.random() * 2 - 1) * (0.55 + Math.random() * 0.35);
+          a[i][j] = Math.max(-1, Math.min(1, v));
+          r[i][j] = 80 + Math.random() * 120; // px
+        }
+      }
+      matRef.current = { a, r };
+
+      // Build a fixed grid for neighbor queries (cellSize ~= typical radius)
+      const cellSize = 120;
+      const cols = Math.max(6, Math.floor(ww / cellSize));
+      const rows = Math.max(6, Math.floor(hh / cellSize));
+      gridRef.current = Array.from({ length: cols * rows }, () => []);
+
+      const N = Math.max(220, Math.min(520, Math.floor((ww * hh) / 3800)));
+      const boids: Boid[] = [];
+      for (let i = 0; i < N; i++) {
+        const t = i % 4;
+        const x = Math.random() * ww;
+        const y = bandTop + Math.random() * Math.max(1, (hh - bandTop));
+        const ang = Math.random() * Math.PI * 2;
+        const sp = 0.4 + Math.random() * 1.2;
+        boids.push({
+          x,
+          y,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp,
+          z: 0.4 + Math.random() * 1.2,
+          ph: Math.random() * Math.PI * 2,
+          t,
+        });
+      }
+      boidsRef.current = boids;
       startRef.current = null;
     };
 
-    const clampSpd = (b: Boid, mn: number, mx: number) => {
+    const clampSpd = (b: Boid, mx: number) => {
       const s = Math.hypot(b.vx, b.vy) || 0.001;
       if (s > mx) { b.vx = (b.vx / s) * mx; b.vy = (b.vy / s) * mx; }
-      else if (s < mn) { b.vx = (b.vx / s) * mn; b.vy = (b.vy / s) * mn; }
     };
 
-    const spawn = (left: boolean, n: number, pf: number) => {
-      const ww = canvas.clientWidth, hh = canvas.clientHeight;
-      for (let i = 0; i < n; i++) {
-        const r = Math.random();
-        const zv = r < 0.06 ? 1.5 + Math.random() * 0.4
-                 : r < 0.22 ? 1.15 + Math.random() * 0.35
-                 : 0.35 + Math.random() * 0.8;
-        const zSpd = 0.55 + zv * 0.45;
-        boidsRef.current.push({
-          x: left ? -8 - Math.random() * 40 : ww + 8 + Math.random() * 40,
-          y: hh * 0.15 + Math.random() * hh * 0.7,
-          vx: (left ? 1 : -1) * (1.2 + Math.random() * 1.6) * zSpd,
-          vy: (Math.random() - 0.5) * 1.8 * zSpd,
-          z: zv,
-          predator: i >= n * (1 - pf), kind: 'swarm',
-        });
-      }
+    const gridIndex = (x: number, y: number, cols: number, rows: number, cellSize: number) => {
+      const gx = Math.max(0, Math.min(cols - 1, Math.floor(x / cellSize)));
+      const gy = Math.max(0, Math.min(rows - 1, Math.floor(y / cellSize)));
+      return gy * cols + gx;
     };
 
     const step = (time: number) => {
       if (!startRef.current) startRef.current = time;
-      const el = (time - startRef.current) / 1000;
       const ww = canvas.clientWidth, hh = canvas.clientHeight;
+      const bandTop = hh * 0.52;
       const boids = boidsRef.current;
-      const cx = ww / 2, cy = hh / 2;
+      const mat = matRef.current;
 
-      if (el > 6.0 && !w1.current) { spawn(true, 30, 0); w1.current = true; }
-      if (el > 6.5 && !w2.current) { spawn(false, 30, 0); w2.current = true; }
-      if (el > 7.2 && !w3.current) { spawn(Math.random() < 0.5, 6, 1); w3.current = true; }
+      // Trail fade (keep some persistence)
+      ctx.fillStyle = 'rgba(0,0,0,0.10)';
+      ctx.fillRect(0, 0, ww, hh);
 
-      ctx.clearRect(0, 0, ww, hh);
-
-      if (el > 1.2 && el < 7 && boids.length >= 2) {
-        const d1 = boids[0], d2 = boids[1];
-        const dd = Math.hypot(d1.x - d2.x, d1.y - d2.y);
-        const tn = Math.max(0, 1 - dd / 220);
-        ctx.save();
-        ctx.beginPath(); ctx.moveTo(d1.x, d1.y); ctx.lineTo(d2.x, d2.y);
-        ctx.strokeStyle = `rgba(255,255,255,${(0.06 + Math.sin(el * 4.5) * 0.04) * tn})`;
-        ctx.lineWidth = 0.4; ctx.setLineDash([3, 4]); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+      const cellSize = 120;
+      const cols = Math.max(6, Math.floor(ww / cellSize));
+      const rows = Math.max(6, Math.floor(hh / cellSize));
+      const grid = gridRef.current;
+      if (grid.length !== cols * rows) {
+        gridRef.current = Array.from({ length: cols * rows }, () => []);
+      } else {
+        for (let i = 0; i < grid.length; i++) grid[i].length = 0;
       }
 
+      // Rebuild grid
       for (let i = 0; i < boids.length; i++) {
         const b = boids[i];
-        if (el < 7 && b.kind === 'duelist') {
-          const o = boids[i === 0 ? 1 : 0];
-          const ox = o.x - b.x, oy = o.y - b.y, od = Math.hypot(ox, oy) || 0.001;
-          const nx = ox / od, ny = oy / od;
-          const tcx = cx - b.x, tcy = cy - b.y, tcd = Math.hypot(tcx, tcy) || 0.001;
-          const td = Math.max(24, 100 - el * 14);
-          const de = od - td;
-          const int = 0.6 + el * 0.12;
-          b.vx += (tcx / tcd) * 0.065 + (-ny) * 0.13 * int + nx * de * 0.0035 + Math.sin(el * 8.1 + i * 3) * 0.12;
-          b.vy += (tcy / tcd) * 0.065 + nx * 0.13 * int + ny * de * 0.0035 + Math.cos(el * 6.3 + i * 5) * 0.12;
-          if (el % 1.2 < 0.15 && i === Math.floor(el / 1.2) % 2) { b.vx += nx * 0.65; b.vy += ny * 0.65; }
-          clampSpd(b, 1.4, 3.2);
-          if (i < 2) { trails.current[i].push({ x: b.x, y: b.y }); if (trails.current[i].length > 20) trails.current[i].shift(); }
-        } else {
-          let alX = 0, alY = 0, coX = 0, coY = 0, spX = 0, spY = 0, n = 0;
-          let chX = 0, chY = 0, ps = 0, frX = 0, frY = 0;
-          for (let j = 0; j < boids.length; j++) {
-            if (i === j) continue;
-            const o = boids[j], dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy) || 0.001;
-            if (!b.predator && o.predator && d < 150) { frX -= dx / d; frY -= dy / d; }
-            if (b.predator && !o.predator && d < 190) { chX += dx / d; chY += dy / d; ps++; }
-            if (b.predator !== o.predator) continue;
-            if (d < (b.predator ? 130 : 95)) {
-              alX += o.vx; alY += o.vy; coX += o.x; coY += o.y; n++;
-              if (d < 22) { spX -= dx / d; spY -= dy / d; }
+        const gi = gridIndex(b.x, b.y, cols, rows, cellSize);
+        gridRef.current[gi].push(i);
+      }
+
+      const mouse = mouseRef.current;
+      const beta = 0.30;
+      const coreRepel = 1.0;
+      const dt = 1;
+
+      // Forces
+      for (let i = 0; i < boids.length; i++) {
+        const b = boids[i];
+        const gi = gridIndex(b.x, b.y, cols, rows, cellSize);
+        const gx = gi % cols;
+        const gy = Math.floor(gi / cols);
+
+        let fx = 0;
+        let fy = 0;
+
+        for (let oy = -1; oy <= 1; oy++) {
+          for (let ox = -1; ox <= 1; ox++) {
+            const nx = gx + ox;
+            const ny = gy + oy;
+            if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+            const cell = gridRef.current[ny * cols + nx];
+            for (let k = 0; k < cell.length; k++) {
+              const j = cell[k];
+              if (j === i) continue;
+              const o = boids[j];
+              const dx = o.x - b.x;
+              const dy = o.y - b.y;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < 1e-6) continue;
+              const dist = Math.sqrt(d2);
+              const rr = mat.r[b.t][o.t];
+              if (dist >= rr) continue;
+              const nrm = dist / rr;
+
+              let forceMag = 0;
+              if (nrm < beta) {
+                forceMag = (nrm / beta - 1.0) * coreRepel;
+              } else {
+                forceMag = mat.a[b.t][o.t] * (1.0 - Math.abs(1.0 + beta - 2.0 * nrm) / (1.0 - beta));
+              }
+
+              const inv = 1.0 / (dist + 0.001);
+              fx += dx * inv * forceMag;
+              fy += dy * inv * forceMag;
             }
           }
-          if (n > 0) { alX /= n; alY /= n; coX = coX / n - b.x; coY = coY / n - b.y; }
-          if (b.predator) {
-            b.vx += alX * 0.022 + coX * 0.0006 + spX * 0.12;
-            b.vy += alY * 0.022 + coY * 0.0006 + spY * 0.12;
-            if (ps > 0) { b.vx += (chX / ps) * 0.1; b.vy += (chY / ps) * 0.1; }
-            clampSpd(b, 1.3, 2.8);
-          } else {
-            b.vx += alX * 0.034 + coX * 0.0018 + spX * 0.15 + frX * 0.09;
-            b.vy += alY * 0.034 + coY * 0.0018 + spY * 0.15 + frY * 0.09;
-            clampSpd(b, 0.7, 2.3);
-          }
         }
 
-        b.x += b.vx; b.y += b.vy;
-        if (b.x < -30) b.x += ww + 60; if (b.x > ww + 30) b.x -= ww + 60;
-        if (b.y < -30) b.y += hh + 60; if (b.y > hh + 30) b.y -= hh + 60;
+        // Mouse/touch: "curiosity" — approach, orbit, keep distance.
+        if (mouse.has) {
+          const mx = mouse.x - b.x;
+          const my = mouse.y - b.y;
+          const md = Math.hypot(mx, my) || 0.001;
+          const mr = 520;
+          const tn = Math.max(0, 1 - md / mr);
+          const desired = mouse.down ? 60 : 95;
 
-        if (b.kind === 'duelist' && i < 2 && el < 9) {
-          const tr = trails.current[i];
-          for (let t = 1; t < tr.length; t++) {
-            ctx.beginPath(); ctx.moveTo(tr[t - 1].x, tr[t - 1].y); ctx.lineTo(tr[t].x, tr[t].y);
-            ctx.strokeStyle = `rgba(255,255,255,${(t / tr.length) * 0.2})`;
-            ctx.lineWidth = 1.2 * (t / tr.length); ctx.stroke();
-          }
-          const gl = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, 12);
-          gl.addColorStop(0, 'rgba(255,255,255,0.12)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(b.x, b.y, 12, 0, Math.PI * 2); ctx.fill();
+          // radial: pull if far, push if too close
+          const radialK = (mouse.down ? 0.008 : 0.004) * tn;
+          const radial = (md - desired) * radialK;
+          fx += (mx / md) * radial;
+          fy += (my / md) * radial;
+
+          // orbit: makes them "look" around the pointer
+          const orbit = (mouse.down ? 0.30 : 0.18) * tn * tn;
+          fx += (-my / md) * orbit;
+          fy += (mx / md) * orbit;
         }
 
-        const hd = Math.atan2(b.vy, b.vx);
+        // Gentle noise + depth breathing
+        const t = (time * 0.001);
+        b.z = 0.45 + 1.1 * (0.5 + 0.5 * Math.sin(t * 0.7 + b.ph));
+        fx += Math.sin(t * 1.7 + b.ph * 1.3) * 0.04;
+        fy += Math.cos(t * 1.4 + b.ph * 1.1) * 0.04;
+
+        // Integrate
+        const zSp = 0.55 + b.z * 0.55;
+        b.vx = (b.vx + fx * 0.75 * zSp) * 0.984;
+        b.vy = (b.vy + fy * 0.75 * zSp) * 0.984;
+        // extra damping near pointer (gives "attention")
+        if (mouse.has) {
+          const mx = mouse.x - b.x;
+          const my = mouse.y - b.y;
+          const md = Math.hypot(mx, my) || 0.001;
+          const tn = Math.max(0, 1 - md / 420);
+          const damp = 1 - tn * 0.045;
+          b.vx *= damp;
+          b.vy *= damp;
+        }
+        clampSpd(b, 3.2 * zSp);
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+
+        // Wrap screen
+        if (b.x < -40) b.x += ww + 80; if (b.x > ww + 40) b.x -= ww + 80;
+        const bandH = Math.max(1, (hh - bandTop));
+        if (b.y < bandTop - 40) b.y += bandH + 80;
+        if (b.y > hh + 40) b.y -= bandH + 80;
+      }
+
+      // Render (front-to-back via z sort)
+      const order = boids.map((_, i) => i).sort((ia, ib) => boids[ia].z - boids[ib].z);
+
+      for (let ii = 0; ii < order.length; ii++) {
+        const b = boids[order[ii]];
         const zs = b.z;
-        const sz = (b.kind === 'duelist' ? 4.5 : b.predator ? 3.2 : 2) * zs;
-        const zA = b.kind === 'duelist' ? 1.0 : clamp01(0.25 + zs * 0.55);
+        const r0 = 1.6 + zs * 2.8;
+        const yT = clamp01((b.y - bandTop) / Math.max(1, (hh - bandTop)));
+        const bandA = yT * yT; // fade-in from band top downward
+        const a0 = clamp01((0.10 + zs * 0.28) * bandA);
+        if (a0 <= 0.001) continue;
 
-        if (zs > 1.2 && b.kind !== 'duelist') {
-          const gr = sz * 4;
-          const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, gr);
-          g.addColorStop(0, `rgba(255,255,255,${0.05 * zs})`);
-          g.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, gr, 0, Math.PI * 2); ctx.fill();
-        }
+        // Glow
+        const gr = r0 * 7.5;
+        const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, gr);
+        g.addColorStop(0, `rgba(255,255,255,${0.08 * a0})`);
+        g.addColorStop(0.35, `rgba(255,255,255,${0.03 * a0})`);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(b.x, b.y, gr, 0, Math.PI * 2); ctx.fill();
 
-        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(hd);
-        ctx.beginPath(); ctx.moveTo(sz * 2.2, 0); ctx.lineTo(-sz, sz * 0.85); ctx.lineTo(-sz * 0.3, 0); ctx.lineTo(-sz, -sz * 0.85); ctx.closePath();
-        ctx.fillStyle = b.kind === 'duelist' ? '#fff' : b.predator ? `rgba(255,255,255,${0.92 * zA})` : `rgba(200,200,200,${0.72 * zA})`;
-        ctx.fill(); ctx.restore();
+        // Core dot
+        ctx.fillStyle = `rgba(255,255,255,${a0})`;
+        ctx.beginPath(); ctx.arc(b.x, b.y, r0, 0, Math.PI * 2); ctx.fill();
       }
 
       if (active) frameRef.current = requestAnimationFrame(step);
@@ -416,20 +487,49 @@ function BoidsBackground({ active }: { active: boolean }) {
     if (active) { init(); frameRef.current = requestAnimationFrame(step); }
     const onR = () => resize();
     addEventListener('resize', onR);
-    return () => { removeEventListener('resize', onR); if (frameRef.current) cancelAnimationFrame(frameRef.current); };
+    const onMove = (e: PointerEvent) => {
+      const r = canvas.getBoundingClientRect();
+      mouseRef.current.x = e.clientX - r.left;
+      mouseRef.current.y = e.clientY - r.top;
+      mouseRef.current.has = true;
+    };
+    const onDown = () => { mouseRef.current.down = true; mouseRef.current.has = true; };
+    const onUp = () => { mouseRef.current.down = false; };
+    addEventListener('pointermove', onMove, { passive: true });
+    addEventListener('pointerdown', onDown, { passive: true });
+    addEventListener('pointerup', onUp, { passive: true });
+    addEventListener('pointercancel', onUp, { passive: true });
+    return () => {
+      removeEventListener('resize', onR);
+      removeEventListener('pointermove', onMove as any);
+      removeEventListener('pointerdown', onDown as any);
+      removeEventListener('pointerup', onUp as any);
+      removeEventListener('pointercancel', onUp as any);
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
   }, [active]);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-55" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full opacity-85"
+      style={{
+        // keep it mostly in the lower area even if some particles wrap up
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.9) 62%, rgba(0,0,0,1) 100%)',
+        maskImage: 'linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.9) 62%, rgba(0,0,0,1) 100%)',
+      }}
+    />
+  );
 }
 
 // ── Tools Nav ─────────────────────────────────────────────────────────────────
 function ToolsNav({ onClick }: { onClick: () => void }) {
-  const c = ['#FF0084', '#FFD500', '#37B2DA', '#14801A', '#601480'];
+  const c = ['#FF0084', '#FFD500', '#37B2DA', '#14801A', '#601480', '#f97316', '#8b5cf6'];
   return (
-    <motion.div className="flex gap-2 cursor-pointer group justify-center" whileHover={{ gap: '12px' }} onClick={onClick}>
-      {['T', 'O', 'O', 'L', 'S'].map((l, i) => (
-        <motion.div key={i} className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-800 border border-transparent group-hover:border-white/20 transition-all"
-          whileHover={{ scale: 1.2, backgroundColor: c[i] }}>
+    <motion.div className="flex gap-1.5 cursor-pointer group justify-center" whileHover={{ gap: '10px' }} onClick={onClick}>
+      {['D', 'E', 'V', 'I', 'C', 'E', 'S'].map((l, i) => (
+        <motion.div key={i} className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center bg-zinc-800 border border-transparent group-hover:border-white/20 transition-all"
+          whileHover={{ scale: 1.15, backgroundColor: c[i % c.length] }}>
           <span className="font-bold text-sm text-white/50 group-hover:text-white transition-colors" style={{ fontFamily: DOTO }}>{l}</span>
         </motion.div>
       ))}
@@ -451,15 +551,6 @@ export function HomePage({
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTarget = useRef(0);
   const diagRef = useRef<HTMLElement>(null);
-  const [boidsOn, setBoidsOn] = useState(false);
-
-  useEffect(() => {
-    const el = diagRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([e]) => setBoidsOn(e.isIntersecting && e.intersectionRatio >= 0.4), { threshold: [0.15, 0.4, 0.7] });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -471,6 +562,8 @@ export function HomePage({
 
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
+      {/* Immersive background life (particle-life-ish). */}
+      <BoidsBackground active={true} />
       {onOpenAdmin && (
         <button
           onClick={onOpenAdmin}
@@ -503,13 +596,20 @@ export function HomePage({
           <motion.div className="w-[min(92vw,1040px)]"
             initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.5 }} transition={{ duration: 1, delay: 0.15 }}>
-            <svg className="w-full" viewBox="0 0 1313.7 430.6" fill="white">
-              {heroPaths.map((d, i) => <path key={i} d={d} />)}
-            </svg>
+            <img
+              src={logoDevicesForIntuition}
+              alt="Devices for Intuition"
+              draggable={false}
+              loading="eager"
+              className="w-full h-auto select-none"
+              style={{
+                filter: 'drop-shadow(0 0 18px rgba(255,255,255,0.10))',
+              }}
+            />
           </motion.div>
 
           <motion.p className="mt-5 text-zinc-500 text-[10px] md:text-xs tracking-[0.5em] text-center" style={{ fontFamily: MONO }}
-            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.4, duration: 0.7 }}>
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.45, duration: 0.7 }}>
             ALPHA TEST
           </motion.p>
 
@@ -521,20 +621,21 @@ export function HomePage({
           <div style={{ flex: '1.6 1 0', minHeight: '16vh' }} />
         </section>
 
-        {/* ═══ S2 — EPISTEMOLÓGICO OPERACIONAL ═══ */}
+        {/* ═══ S2 — PROJECT ═══ */}
         <section className="h-[100svh] snap-start flex items-center px-6 lg:px-16 py-16">
           <motion.div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 lg:gap-16 items-center"
             initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ amount: 0.4 }} transition={{ duration: 1 }}>
             <div className="space-y-5 text-center lg:text-left">
-              <p className="text-zinc-500 text-[10px] tracking-[0.35em] uppercase" style={{ fontFamily: MONO }}>é um projeto</p>
+              <p className="text-zinc-500 text-[10px] tracking-[0.35em] uppercase" style={{ fontFamily: MONO }}>devices for intuition</p>
               <h2 className="text-[clamp(30px,5.6vw,72px)] leading-[0.92] uppercase" style={{ fontFamily: DOTO }}>
-                Epistemológico Operacional
+                Um laboratório vivo para pensar com o corpo — e percepção.
               </h2>
               <p className="text-zinc-400 text-[11px] md:text-xs leading-relaxed uppercase max-w-lg mx-auto lg:mx-0" style={{ fontFamily: MONO }}>
-                Criamos ferramentas para perceber e estudar de forma heurística, sistemas dinâmicos e complexos, através de processos semióticos, experimentais, metafóricos e não-lineares.
+                Criamos ferramentas para perceber e estudar, de forma heurística, visual e não linear, dinâmicas complexas: sistemas que mudam, se organizam, entram em crise, se reinventam.
               </p>
               <p className="text-zinc-500 text-[10px] md:text-[11px] leading-relaxed uppercase max-w-lg mx-auto lg:mx-0 pt-2" style={{ fontFamily: MONO }}>
-                Queremos propor um processo operacional epistemológico contínuo e recursivo para experimentar processos de auto-percepção, criação e formulação de hipóteses.
+                Construímos lentes pra testar hipóteses em tempo real.<br />
+                É uma máquina de gerar perguntas. Não buscamos &quot;verdade final.&quot;
               </p>
             </div>
             <div className="text-center lg:text-right space-y-2 lg:pr-4">
@@ -546,7 +647,6 @@ export function HomePage({
 
         {/* ═══ S3 — ALGORITMO + BOIDS ═══ */}
         <section ref={diagRef} className="h-[100svh] snap-start relative overflow-hidden flex items-center px-6 py-16">
-          <BoidsBackground active={boidsOn} />
 
           <motion.div className="relative z-10 w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"
             initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ amount: 0.35 }} transition={{ duration: 1 }}>
@@ -627,11 +727,18 @@ export function HomePage({
 
         <footer className="py-24 text-center snap-start">
           <div className="flex justify-center gap-2 mb-8">
-            {['T', 'O', 'O', 'L', 'S'].map((l, i) => (
+            {['D', 'E', 'V', 'I', 'C', 'E', 'S'].map((l, i) => (
               <div key={i} className="w-6 h-6 rounded-full bg-zinc-900 text-zinc-600 flex items-center justify-center text-[10px] font-bold" style={{ fontFamily: MONO }}>{l}</div>
             ))}
           </div>
-          <p className="text-zinc-700 text-[10px] tracking-widest uppercase" style={{ fontFamily: MONO }}>Tools for Perception © 2026</p>
+          <p className="text-zinc-700 text-[10px] tracking-widest uppercase" style={{ fontFamily: MONO }}>Devices for Intuition © 2026</p>
+          <a
+            href="mailto:frans@radical.vision"
+            className="inline-block mt-3 text-zinc-500 text-[10px] tracking-widest uppercase hover:text-zinc-300 transition-colors"
+            style={{ fontFamily: MONO }}
+          >
+            frans@radical.vision
+          </a>
         </footer>
 
       </motion.div>

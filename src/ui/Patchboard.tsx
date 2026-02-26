@@ -76,6 +76,8 @@ interface PatchboardProps {
   onSigilConfigChange?: (cfg: Partial<SigilConfig>) => void;
   archetypesDetected?: ArchetypeArtifact[];
   onClearSigils?: () => void;
+  /** If true, hide core algo sliders to avoid redundancy with ComplexityPanel. */
+  hideCoreControls?: boolean;
 }
 
 const Knob: React.FC<{
@@ -197,6 +199,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
   onSigilConfigChange,
   archetypesDetected,
   onClearSigils,
+  hideCoreControls = false,
 }) => {
   return (
     <div className="space-y-6">
@@ -548,6 +551,7 @@ export const Patchboard: React.FC<PatchboardProps> = ({
       <div className="h-px bg-white/[0.04]" />
 
       {/* Physics */}
+      {!hideCoreControls && (
       <div className="space-y-3">
         <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           Física
@@ -615,12 +619,13 @@ export const Patchboard: React.FC<PatchboardProps> = ({
           onChange={(v) => onMicroChange({ beta: v })}
         />
       </div>
+      )}
 
       <div className="h-px bg-white/[0.04]" />
 
       {/* Metamorfose / Mutações */}
       {/* PATCH 04.5: SISTEMA VIDA (Unificado) */}
-      {life && onLifeChange && (
+      {!hideCoreControls && life && onLifeChange && (
         <div className="space-y-3">
           <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
             VIDA (4.5)
@@ -790,27 +795,29 @@ export const Patchboard: React.FC<PatchboardProps> = ({
       <div className="h-px bg-white/[0.04]" />
 
       {/* Field */}
+      {!hideCoreControls && (
       <div className="space-y-3">
         <h3 className="text-[10px] uppercase pb-1.5" style={{ fontFamily: "'Doto', monospace", color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
           Campo
         </h3>
         <Knob
           label="Difusão (Espalha)"
-          value={fieldConfig.diffusionRate}
+          value={fieldConfig.diffusion}
           min={0.3}
           max={0.99}
           step={0.01}
-          onChange={(v) => onFieldChange({ diffusionRate: v })}
+          onChange={(v) => onFieldChange({ diffusion: v })}
         />
         <Knob
           label="Decaimento (Evap.)"
-          value={fieldConfig.decayRate}
+          value={fieldConfig.decay}
           min={0.0}
           max={0.2}
           step={0.001}
-          onChange={(v) => onFieldChange({ decayRate: v })}
+          onChange={(v) => onFieldChange({ decay: v })}
         />
       </div>
+      )}
 
       <div className="h-px bg-white/[0.04]" />
 
@@ -1160,12 +1167,12 @@ export const Patchboard: React.FC<PatchboardProps> = ({
           Detection interval controls when macro mutations can occur. Mutation rate/amount now controlled by Life Dial.
         </p>
         <Knob
-          label="Detection Interval"
-          value={reconfigConfig.detectionInterval}
-          min={1.0}
-          max={10.0}
+          label="Interval (Reconfig Tick)"
+          value={reconfigConfig.interval}
+          min={0.5}
+          max={12.0}
           step={0.5}
-          onChange={(v) => onReconfigChange({ detectionInterval: v })}
+          onChange={(v) => onReconfigChange({ interval: v })}
           unit="s"
         />
       </div>

@@ -44,28 +44,23 @@ export const runDetectors = (
   // Detect stable clusters (simplified: count high-cohesion cells)
   let stableClusters = 0;
   for (let i = 0; i < size; i++) {
-    if (field.cohesion[i] > 0.4) {
+    if (field.cohesion[i] > 0.12) {
       stableClusters++;
     }
   }
 
   // Detect borders (high tension + high density variance)
-  let borderStrength = 0;
-  for (let i = 0; i < size; i++) {
-    if (field.tension[i] > 0.3) {
-      borderStrength += field.tension[i];
-    }
-  }
-  borderStrength /= size;
+  // (use avgTension as a stable proxy; old thresholded version under-reported in low-density regimes)
+  const borderStrength = Math.max(0, Math.min(1, avgTension * 1.25));
 
   // Detect oscillation (tension vs cohesion)
   const oscillation = Math.abs(avgTension - avgCohesion);
 
   // Scarcity crisis
-  const scarcityCrisis = avgScarcity > 0.25;
+  const scarcityCrisis = avgScarcity > 0.18;
 
   // Novelty burst
-  const noveltyBurst = avgNovelty > 0.3;
+  const noveltyBurst = avgNovelty > 0.14;
 
   return {
     stableClusters,

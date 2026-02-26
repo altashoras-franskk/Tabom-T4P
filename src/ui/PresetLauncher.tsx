@@ -143,7 +143,7 @@ export const PresetLauncher: React.FC<PresetLauncherProps> = ({ onSelectPreset, 
       <div className="text-center mb-12 px-4 max-w-3xl">
         <div className="inline-block mb-6 px-4 py-1 border border-white/10 rounded-full">
           <span className="text-white/50 text-xs tracking-[0.2em] uppercase font-light">
-            Recursive Particle Life
+            Devices for Intuition
           </span>
         </div>
         

@@ -29,10 +29,10 @@ export function drawSigils(
   const h = sigils.height;
   
   // Sample sparse grid (every 3rd cell to avoid clutter)
-  const step = 3;
+  const step = 4;
   
   ctx.save();
-  ctx.font = '16px monospace';
+  ctx.font = '12px serif, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   
@@ -47,7 +47,7 @@ export function drawSigils(
       
       // Find dominant sigil
       const max = Math.max(b, r, l, o);
-      if (max < 0.25) continue; // threshold for visibility
+      if (max < 0.33) continue; // threshold for visibility (subtle)
       
       let glyph = '';
       let color = '';
@@ -57,16 +57,15 @@ export function drawSigils(
       else if (l === max) { glyph = GLYPHS.bloom; color = COLORS.bloom; }
       else if (o === max) { glyph = GLYPHS.oath; color = COLORS.oath; }
       
-      // Convert grid coords to normalized (-1..1)
-      const nx = (gx / w) * 2 - 1;
-      const ny = (gy / h) * 2 - 1;
-      
-      // Convert normalized to canvas coords
-      const cx = ((nx + 1) / 2) * canvasWidth;
-      const cy = ((ny + 1) / 2) * canvasHeight;
+      // Convert grid coords to canvas coords (cover full extent; avoid left-bias)
+      const fx = w <= 1 ? 0.5 : gx / (w - 1);
+      const fy = h <= 1 ? 0.5 : gy / (h - 1);
+      const pad = 10;
+      const cx = pad + fx * Math.max(1, canvasWidth - pad * 2);
+      const cy = pad + fy * Math.max(1, canvasHeight - pad * 2);
       
       // Alpha based on intensity
-      const alpha = Math.min(0.6, max * 0.8);
+      const alpha = Math.min(0.26, Math.pow(max, 1.6) * 0.32);
       
       ctx.fillStyle = color + alpha + ')';
       ctx.fillText(glyph, cx, cy);

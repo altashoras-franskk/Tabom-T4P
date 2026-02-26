@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from 'lucide-react';
 import { Patchboard } from './Patchboard';
 import { MatrixEditor } from './MatrixEditor';
 import { SeedPanel } from './SeedPanel';
 import { Codex } from './Codex';
 import { PerformanceStats } from './PerformanceStats';
 import { ArchetypesPanel } from './ArchetypesPanel'; // PATCH 04.3
+import { useIsMobile } from '../app/components/ui/use-mobile';
 import { MicroConfig, MicroState } from '../sim/micro/microState';
 import { FieldConfig } from '../sim/field/fieldState';
 import { ReconfigConfig, SemanticArtifact } from '../sim/reconfig/reconfigState';
@@ -149,6 +150,8 @@ interface RightDockProps {
   archetypesDetected?: ArchetypeArtifact[];
   archetypeRegistry?: ArchetypeRegistry;
   onClearSigils?: () => void;
+  /** If true, Patchboard hides core algo controls (dedupe vs ComplexityPanel). */
+  hideCoreControls?: boolean;
 }
 
 // ── Slider component matching the Swiss identity ────────────────────────────
@@ -218,6 +221,7 @@ const HUDSlider: React.FC<{
 };
 
 export const RightDock: React.FC<RightDockProps> = (props) => {
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
   const [tab, setTab] = useState<'patchboard' | 'powers' | 'matrix' | 'seed' | 'stats' | 'codex' | 'archetypes'>('patchboard');
   const [firstLoad, setFirstLoad] = useState(true);
@@ -227,6 +231,354 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
     const timer = setTimeout(() => setFirstLoad(false), 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  if (isMobile) {
+    const tabs = [
+      { id: 'patchboard' as const, label: 'ALGO' },
+      { id: 'archetypes' as const, label: 'ARCH' },
+      { id: 'powers' as const,     label: 'PWR'  },
+      { id: 'matrix' as const,     label: 'MTX'  },
+      { id: 'seed' as const,       label: 'SEED' },
+      { id: 'stats' as const,      label: 'STAT' },
+      { id: 'codex' as const,      label: 'CDX'  },
+    ];
+
+    if (collapsed) {
+      return (
+        <div className="fixed left-0 right-0 bottom-3 z-20 pointer-events-none" style={{ fontFamily: MONO }}>
+          <div className="flex justify-center">
+            <button
+              onClick={() => setCollapsed(false)}
+              className="pointer-events-auto flex items-center gap-2 px-4 py-2 transition-all"
+              style={{
+                background: 'rgba(0,0,0,0.92)',
+                border: '1px dashed rgba(255,255,255,0.10)',
+                color: 'rgba(255,255,255,0.55)',
+                borderRadius: 12,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                fontSize: 10,
+                paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+              }}
+            >
+              <ChevronUp size={14} strokeWidth={1.5} />
+              Painel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="fixed left-0 right-0 bottom-0 z-20 pointer-events-none" style={{ fontFamily: MONO }}>
+        <div
+          className="pointer-events-auto"
+          style={{
+            background: 'rgba(0,0,0,0.94)',
+            borderTop: '1px dashed rgba(255,255,255,0.10)',
+            maxHeight: 'min(72vh, 560px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          }}
+        >
+          {/* Header row: tabs + collapse */}
+          <div
+            className="flex items-center gap-2 px-3 py-2"
+            style={{ borderBottom: '1px dashed rgba(255,255,255,0.08)' }}
+          >
+            <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              <div className="flex gap-1">
+                {tabs.map((t) => {
+                  const isActive = tab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setTab(t.id)}
+                      className="px-3 py-2 transition-all shrink-0"
+                      style={{
+                        fontSize: 10,
+                        letterSpacing: '0.10em',
+                        textTransform: 'uppercase',
+                        borderRadius: 10,
+                        color: isActive ? '#ffd400' : 'rgba(255,255,255,0.32)',
+                        background: isActive ? 'rgba(255,212,0,0.06)' : 'transparent',
+                        border: isActive ? '1px dashed rgba(255,212,0,0.25)' : '1px dashed rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      {t.label}
+                      {firstLoad && t.id === 'patchboard' && (
+                        <span style={{ marginLeft: 6, color: '#ffd400' }}>•</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setCollapsed(true)}
+              title="Fechar painel"
+              className="p-2 transition-all"
+              style={{
+                background: 'transparent',
+                border: '1px dashed rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.35)',
+                borderRadius: 10,
+              }}
+            >
+              <ChevronDown size={14} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="overflow-auto p-3" style={{ maxHeight: 'calc(min(72vh, 560px) - 48px)' }}>
+            {tab === 'patchboard' && (
+              <Patchboard
+                microConfig={props.microConfig}
+                fieldConfig={props.fieldConfig}
+                reconfigConfig={props.reconfigConfig}
+                targetParticleCount={props.targetParticleCount}
+                onMicroChange={props.onMicroChange}
+                onFieldChange={props.onFieldChange}
+                onReconfigChange={props.onReconfigChange}
+                onTargetParticleCountChange={props.onTargetParticleCountChange}
+                onRandomizeAll={props.onRandomizeAll}
+                life={props.life}
+                onLifeChange={props.onLifeChange}
+                lifeStats={props.lifeStats}
+                pointSize={props.pointSize}
+                fadeFactor={props.fadeFactor}
+                glowIntensity={props.glowIntensity}
+                paletteIndex={props.paletteIndex}
+                onPointSizeChange={props.onPointSizeChange}
+                onFadeFactorChange={props.onFadeFactorChange}
+                onGlowIntensityChange={props.onGlowIntensityChange}
+                onPaletteIndexChange={props.onPaletteIndexChange}
+                onBackgroundClick={props.onBackgroundClick}
+                trails={props.trails}
+                fieldHeatmap={props.fieldHeatmap}
+                onToggleTrails={props.onToggleTrails}
+                onToggleFieldHeatmap={props.onToggleFieldHeatmap}
+                onApplyRecipe={props.onApplyRecipe}
+                onNewUniverse={props.onNewUniverse}
+                onChaosSeed={props.onChaosSeed}
+                onLoadPreset={props.onLoadCreativePreset}
+                renderMode={props.renderMode}
+                streakLength={props.streakLength}
+                onRenderModeChange={props.onRenderModeChange}
+                onStreakLengthChange={props.onStreakLengthChange}
+                simQuality={props.simQuality}
+                dotSize={props.dotSize}
+                onSimQualityChange={props.onSimQualityChange}
+                onDotSizeChange={props.onDotSizeChange}
+                spawnPattern={props.spawnPattern}
+                onSpawnPatternChange={props.onSpawnPatternChange}
+                showBonds={props.showBonds}
+                bondsDistance={props.bondsDistance}
+                bondsOpacity={props.bondsOpacity}
+                showTrails={props.showTrails}
+                trailsLength={props.trailsLength}
+                trailsOpacity={props.trailsOpacity}
+                onShowBondsChange={props.onShowBondsChange}
+                onBondsDistanceChange={props.onBondsDistanceChange}
+                onBondsOpacityChange={props.onBondsOpacityChange}
+                onShowTrailsChange={props.onShowTrailsChange}
+                onTrailsLengthChange={props.onTrailsLengthChange}
+                onTrailsOpacityChange={props.onTrailsOpacityChange}
+                sigilConfig={props.sigilConfig}
+                onSigilConfigChange={props.onSigilConfigChange}
+                archetypesDetected={props.archetypesDetected}
+                onClearSigils={props.onClearSigils}
+                hideCoreControls={props.hideCoreControls}
+              />
+            )}
+
+            {tab === 'powers' && (
+              <div className="space-y-5">
+                <div className="space-y-3">
+                  {/* Power Selection — 10 poderes em grid 2x5 */}
+                  <div className="space-y-2">
+                    {(() => {
+                      type PowerId = 'pulse' | 'white-hole' | 'black-hole' | 'wind' | 'vortex' | 'freeze' | 'chaos' | 'quake' | 'nova' | 'magnetize';
+                      const POWERS: {
+                        id: PowerId;
+                        icon: string;
+                        label: string;
+                        desc: string;
+                        color: string;
+                      }[] = [
+                        { id: 'pulse',      icon: '·', label: 'Pulso',      desc: 'Expansao radial',             color: '#37b2da' },
+                        { id: 'white-hole', icon: 'O', label: 'White Hole', desc: 'Mega-repulsao quadratica',    color: '#ffd400' },
+                        { id: 'black-hole', icon: '●', label: 'Black Hole', desc: 'Mega-atracao quadratica',     color: '#8b5cf6' },
+                        { id: 'wind',       icon: '~', label: 'Vento',      desc: 'Arrasta na direcao',          color: '#37b2da' },
+                        { id: 'vortex',     icon: '◌', label: 'Vortice',    desc: 'Rotacao tangencial',          color: '#10d45b' },
+                        { id: 'freeze',     icon: '*', label: 'Congelar',   desc: 'Drena energia cinetica',      color: '#60a5fa' },
+                        { id: 'chaos',      icon: '!', label: 'Caos',       desc: 'Injeta ruido aleatorio',      color: '#d6552d' },
+                        { id: 'quake',      icon: '≈', label: 'Quake',      desc: 'Ondas de pressao',            color: '#ffaa44' },
+                        { id: 'nova',       icon: '+', label: 'Nova',       desc: 'Implosao / explosao',         color: '#ff4444' },
+                        { id: 'magnetize',  icon: '⊕', label: 'Magnetizar', desc: 'Converte especie proxima',    color: '#ff0084' },
+                      ];
+
+                      const active = POWERS.find(p => p.id === props.selectedPower);
+
+                      return (
+                        <>
+                          <div className="grid grid-cols-5 gap-1">
+                            {POWERS.map(p => {
+                              const isActive = props.selectedPower === p.id;
+                              return (
+                                <button
+                                  key={p.id}
+                                  onClick={() => props.onSelectedPowerChange(p.id)}
+                                  title={p.label + ' — ' + p.desc}
+                                  className="flex flex-col items-center justify-center py-2 px-0.5 transition-all"
+                                  style={{
+                                    border: `1px dashed ${isActive ? p.color + '50' : 'rgba(255,255,255,0.08)'}`,
+                                    background: isActive ? p.color + '10' : 'transparent',
+                                    color: isActive ? p.color : 'rgba(255,255,255,0.35)',
+                                  }}
+                                >
+                                  <span style={{ fontSize: '16px', lineHeight: 1, marginBottom: '3px' }}>{p.icon}</span>
+                                  <span style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.3px', fontWeight: 200, lineHeight: 1 }}>{p.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {active && (
+                            <div className="flex items-start gap-2 px-2 py-1.5"
+                              style={{
+                                border: `1px dashed ${active.color}25`,
+                                background: `${active.color}04`,
+                              }}>
+                              <span style={{ fontSize: '16px', lineHeight: 1, color: active.color, marginTop: '2px' }}>{active.icon}</span>
+                              <div>
+                                <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 300, color: active.color, marginBottom: '2px' }}>
+                                  {active.label}
+                                </div>
+                                <div style={{ fontSize: '10px', fontWeight: 200, color: 'rgba(255,255,255,0.40)', lineHeight: 1.3 }}>
+                                  {active.desc}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="h-px" style={{ borderBottom: '1px dashed rgba(255,255,255,0.08)' }} />
+
+                  {/* Touch hints */}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5"
+                    style={{ fontSize: '9px', fontWeight: 200, color: 'rgba(255,255,255,0.25)' }}>
+                    <span>Tap — instantâneo</span>
+                    <span>Arrastar — contínuo</span>
+                    <span>2 dedos — pan/zoom</span>
+                    <span>Alt/Shift — desktop</span>
+                  </div>
+
+                  <div className="h-px" style={{ borderBottom: '1px dashed rgba(255,255,255,0.08)' }} />
+
+                  {/* Brush controls */}
+                  <div className="space-y-2 pt-1">
+                    {/* Species selector */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-baseline justify-between">
+                        <label style={{ fontSize: '10px', fontWeight: 200, letterSpacing: '0.5px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>
+                          Espécie
+                        </label>
+                        <span style={{ fontSize: '10px', fontWeight: 300, color: 'rgba(255,255,255,0.55)', fontVariantNumeric: 'tabular-nums' }}>
+                          {props.selectedType}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {Array.from({ length: props.microConfig.typesCount }).map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => props.onSelectedTypeChange(i)}
+                            className="transition-all"
+                            style={{
+                              width: '26px',
+                              height: '26px',
+                              border: props.selectedType === i
+                                ? '1px solid rgba(255,255,255,0.70)'
+                                : '1px dashed rgba(255,255,255,0.14)',
+                              backgroundColor: `hsl(${(i * 360) / props.microConfig.typesCount}, 70%, 60%)`,
+                              transform: props.selectedType === i ? 'scale(1.06)' : 'scale(1)',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="h-px" style={{ borderBottom: '1px dashed rgba(255,255,255,0.08)' }} />
+
+                    <HUDSlider label="Raio" value={props.brushRadius} min={20} max={220} step={5}
+                      onChange={props.onBrushRadiusChange} unit="px" />
+                    <HUDSlider label="Força" value={props.brushStrength} min={0} max={100} step={1}
+                      onChange={props.onBrushStrengthChange} />
+                    <HUDSlider label="Taxa Semeadura" value={props.seedRate} min={0} max={200} step={5}
+                      onChange={props.onSeedRateChange} unit="/s" />
+                    <HUDSlider label="Taxa Apagamento" value={props.eraseRate} min={0} max={1} step={0.05}
+                      onChange={props.onEraseRateChange} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tab === 'matrix' && (
+              <MatrixEditor
+                matrix={props.matrix}
+                typesCount={props.microConfig.typesCount}
+                onMatrixChange={props.onMatrixChange}
+                onRandomize={props.onMatrixRandomize}
+                onSoften={props.onMatrixSoften}
+                onSymmetrize={props.onMatrixSymmetrize}
+                onInvert={props.onMatrixInvert}
+                onNormalize={props.onMatrixNormalize}
+              />
+            )}
+
+            {tab === 'seed' && (
+              <SeedPanel
+                currentSeed={props.currentSeed || Date.now()}
+                onLoadSeed={props.onLoadSeed || (() => {})}
+              />
+            )}
+
+            {tab === 'stats' && (
+              <PerformanceStats
+                fps={props.fps}
+                particleCount={props.particleCount}
+                speciesCount={props.speciesCount}
+                fieldCellCount={props.fieldCellCount}
+                artifactCount={props.artifactCount}
+                diversity={props.diversity}
+                clusterCount={props.clusterCount}
+                borderStrength={props.borderStrength}
+                avgTension={props.avgTension}
+                avgCohesion={props.avgCohesion}
+                avgScarcity={props.avgScarcity}
+              />
+            )}
+
+            {tab === 'codex' && (
+              <Codex chronicle={props.chronicle} artifacts={props.artifacts} />
+            )}
+
+            {tab === 'archetypes' && props.archetypesDetected && props.sigilConfig && props.onSigilConfigChange && (
+              <ArchetypesPanel
+                archetypesDetected={props.archetypesDetected}
+                sigilConfig={props.sigilConfig}
+                onSigilConfigChange={props.onSigilConfigChange}
+                archetypeRegistry={props.archetypeRegistry || { nextId: 100, list: [] }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (collapsed) {
     return (
@@ -399,6 +751,7 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
                 onSigilConfigChange={props.onSigilConfigChange}
                 archetypesDetected={props.archetypesDetected}
                 onClearSigils={props.onClearSigils}
+                hideCoreControls={props.hideCoreControls}
               />
             )}
 

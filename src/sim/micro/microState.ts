@@ -53,6 +53,8 @@ export interface MicroConfig {
   metamorphosisEnabled: boolean;
   mutationRate: number; // Base mutation probability per frame (0-0.01)
   typeStability: number; // Resistance to mutation (0-1)
+  /** PATCH R1: Sigil Bond/Rift causal forces (low impact). */
+  enableSigilForces?: boolean;
 }
 
 // Food type is always 255 (reserved)
@@ -123,6 +125,7 @@ export const createMicroConfig = (): MicroConfig => ({
   metamorphosisEnabled: true, // ENABLED by default for emergent behavior
   mutationRate: 0.0008, // 0.08% per frame = ~5% per second
   typeStability: 0.985, // 98.5% stable
+  enableSigilForces: true,
 });
 
 export const spawnParticles = (
@@ -169,7 +172,8 @@ export const addParticle = (
   state: MicroState,
   x: number,
   y: number,
-  type: number
+  type: number,
+  rng: { next: () => number } = { next: () => Math.random() },
 ): boolean => {
   if (state.count >= state.maxCount) return false;
   const i = state.count++;
@@ -184,10 +188,10 @@ export const addParticle = (
   state.mutationPotential[i] = 0;
   state.size[i] = 1.0;
   // PATCH 04.3: Initialize genes
-  state.geneA[i] = Math.random();
-  state.geneB[i] = Math.random();
-  state.geneC[i] = Math.random();
-  state.geneD[i] = Math.random();
+  state.geneA[i] = rng.next();
+  state.geneB[i] = rng.next();
+  state.geneC[i] = rng.next();
+  state.geneD[i] = rng.next();
   state.archetypeId[i] = type;
   return true;
 };

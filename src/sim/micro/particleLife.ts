@@ -108,9 +108,13 @@ export const updateParticleLife = (
     const nutrient = fieldNew.nutrient || 0.5;
     const entropy = fieldNew.entropy || 0;
     
-    // PATCH 04.3: Sigil feedback (sigil→micro)
-    const sigilBond = fieldNew.sigilBond || 0;
-    const sigilRift = fieldNew.sigilRift || 0;
+    // PATCH R1: Sigil Bond/Rift causal forces (toggle + clamp 0..1, low impact)
+    const sigilOn = config.enableSigilForces !== false;
+    const K_SIGIL = 0.05;
+    const _b = Number(fieldNew.sigilBond ?? 0);
+    const _r = Number(fieldNew.sigilRift ?? 0);
+    const sigilBond = sigilOn && Number.isFinite(_b) ? Math.max(0, Math.min(1, _b)) : 0;
+    const sigilRift = sigilOn && Number.isFinite(_r) ? Math.max(0, Math.min(1, _r)) : 0;
     const sigilBloom = fieldNew.sigilBloom || 0;
     const sigilOath = fieldNew.sigilOath || 0;
     
@@ -180,8 +184,8 @@ export const updateParticleLife = (
       }
 
       // MEADOWS MODULATION: nutrient/volatility affects force magnitude
-      // PATCH 04.3: Sigil modulation - Bond increases attraction, Rift increases repulsion
-      const attractMod = 1 + (nutrient - 0.5) * 0.35 - volatility * 0.20 + sigilBond * 0.25 - sigilRift * 0.18;
+      // PATCH R1: Sigil modulation - Bond increases attraction, Rift increases repulsion (K_SIGIL)
+      const attractMod = 1 + (nutrient - 0.5) * 0.35 - volatility * 0.20 + (sigilBond - sigilRift) * K_SIGIL;
       forceMag *= attractMod;
 
       // PATCH 04.5: Generate sigils from LOCAL INTERACTIONS (micro→sigil)
@@ -204,9 +208,9 @@ export const updateParticleLife = (
     });
 
     // MORIN ENTROPY NOISE: add tiny deterministic force based on entropy
-    // PATCH 04.3: sigilRift increases noise, sigilBond reduces it
+    // PATCH R1: sigilRift increases noise, sigilBond reduces it (K_SIGIL)
     // DETERMINISTIC: use rngMicro instead of Math.random()
-    const noise = (entropy + sigilRift * 0.10 - sigilBond * 0.05) * 0.015;
+    const noise = (entropy + (sigilRift - sigilBond) * K_SIGIL) * 0.015;
     fx[i] += (rngMicro.next() - 0.5) * noise;
     fy[i] += (rngMicro.next() - 0.5) * noise;
 

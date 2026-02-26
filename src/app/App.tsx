@@ -22,6 +22,9 @@ import { depositMicroMetrics } from '../sim/field/fieldSampling';
 import { createReconfigState, createReconfigConfig, updateArtifacts, ReconfigState, ReconfigConfig } from '../sim/reconfig/reconfigState';
 import { runDetectors, computeDiversity, DetectorResults } from '../sim/reconfig/detectors';
 import { runOperators, Beat } from '../sim/reconfig/operators';
+import { detectEmergences } from '../sim/metrics/emergenceDetector';
+import { applyEmergenceEvents, buildEmergenceObservables } from '../sim/reconfig/emergenceBridge';
+import type { Observables } from '../sim/metrics/observables';
 import { createChronicle, addBeat, Chronicle } from '../story/beats';
 import { createUndoBuffer, takeSnapshot, canUndo as canUndoFunc, undo as undoFunc, UndoBuffer } from '../engine/undo';
 import { createSnapshot, restoreSnapshot, SimulationSnapshot } from '../engine/snapshot';
@@ -146,8 +149,8 @@ import {
   renderEconomyLens, renderTerritoryLens,
 } from '../sim/sociogenesis/sociogenesisOverlay';
 
-// OBSERVABLES & EVENTS: Recursive readability
-import { computeObservables, type Observables } from '../sim/observables';
+// OBSERVABLES & EVENTS: Recursive readability (alias to avoid clash with metrics/observables)
+import { computeObservables, type Observables as SociogenesisObservables } from '../sim/observables';
 import { detectEvents, initDetector, resetDetector } from '../sim/eventDetector';
 
 // RECURSIVE FIELD ENGINE (new system)
@@ -417,6 +420,8 @@ const App: React.FC = () => {
   const [archetypesDetected, setArchetypesDetected] = useState<ArchetypeArtifact[]>([]);
   const archetypesDetectedRef = useRef<ArchetypeArtifact[]>([]);
   const lastArchetypeCheckRef = useRef(0);
+  const lastSigilDebugRef = useRef(0);
+  const lastBeatToastRef = useRef<Record<string, number>>({});
   
   // PATCH 04.5: Life System (single source of truth)
   const [life, setLife] = useState(() => applyLifeDial(DEFAULT_LIFE));
@@ -459,6 +464,10 @@ const App: React.FC = () => {
     avgNovelty: 0,
     avgMythic: 0,
   });
+  // PATCH R1: Emergence detector bridge (metrics → events → operators)
+  const lastEmergenceObsRef = useRef<Observables | null>(null);
+  const lastEmergenceApplyRef = useRef(0);
+  const emergenceCooldownSec = 6;
 
   // Renderer
   const webglRendererRef = useRef<WebGLRenderer | null>(null);
@@ -597,7 +606,7 @@ const App: React.FC = () => {
   const [economyMetricsUI, setEconomyMetricsUI] = useState<EconomyMetrics>(economyMetricsRef.current);
   
   // OBSERVABLES & EMERGENCE LENS
-  const observablesRef = useRef<Observables | null>(null);
+  const observablesRef = useRef<SociogenesisObservables | null>(null);
   const lastObservablesTime = useRef<number>(0);
   const [emergenceLens, setEmergenceLens] = useState<SocioLens>('off');
   const [memeStatsUI, setMemeStatsUI] = useState<MemeStats | null>(null);
@@ -697,6 +706,7 @@ const App: React.FC = () => {
   // Particle count control (Start with 300 for better initial performance)
   const targetParticleCountRef = useRef(300);
   const [targetParticleCountUI, setTargetParticleCountUI] = useState(300);
+  const [maintainPopulation, setMaintainPopulation] = useState(true);
 
   // Pointer state
   const pointerRef = useRef({ 
@@ -710,7 +720,25 @@ const App: React.FC = () => {
     cursorY: 0,
     shift: false, 
     alt: false,
-    mode: 'PULSE' as 'PULSE' | 'WHITE-HOLE' | 'BLACK-HOLE' | 'WIND' | 'SEED' | 'ERASE' | 'CAPTURE' | 'VORTEX' | 'FREEZE' | 'CHAOS' | 'QUAKE' | 'NOVA' | 'MAGNETIZE'
+    mode: 'PULSE' as 'PULSE' | 'WHITE-HOLE' | 'BLACK-HOLE' | 'WIND' | 'SEED' | 'ERASE' | 'CAPTURE' | 'VORTEX' | 'FREEZE' | 'CHAOS' | 'QUAKE' | 'NOVA' | 'MAGNETIZE',
+    pointerType: 'mouse' as 'mouse' | 'touch' | 'pen',
+    moved: false,
+    downWX: 0,
+    downWY: 0,
+    downRadiusWorld: 0,
+  });
+
+  // Mobile gestures: 2-finger pinch + pan for Complexity Life viewport
+  const touchGestureRef = useRef({
+    points: new Map<number, { x: number; y: number }>(),
+    active: false,
+    wasPinching: false,
+    startDist: 0,
+    startZoom: 1,
+    startPanX: 0,
+    startPanY: 0,
+    startMX: 0,
+    startMY: 0,
   });
 
   // ── Recorder lifecycle ────────────────────────────────────────────────────
@@ -908,9 +936,20 @@ const App: React.FC = () => {
         timeRef.current.speed = 5;
         setForceUpdate(v => v + 1);
       } else if (e.key === 's' || e.key === 'S') {
-        // PATCH 04.5-SIGILS: Toggle sigil overlay (S key) - controls both old and new system
-        setShowSigils(v => !v);
-        setSigilConfig(prev => ({ ...prev, showOverlay: !prev.showOverlay }));
+        // PATCH 04.5-SIGILS: Cycle sigil overlay (S key)
+        // off → on (enabled+overlay) → overlay off (but system still enabled) → fully off
+        setSigilConfig(prev => {
+          if (!prev.enabled) {
+            setShowSigils(true);
+            return { ...prev, enabled: true, showOverlay: true };
+          }
+          if (prev.showOverlay) {
+            setShowSigils(false);
+            return { ...prev, showOverlay: false };
+          }
+          setShowSigils(false);
+          return { ...prev, enabled: false, showOverlay: false };
+        });
       }
     };
 
@@ -1124,10 +1163,11 @@ const App: React.FC = () => {
       // Update maxStepsPerFrame from performance config
       timeRef.current.maxStepsPerFrame = perfConfigRef.current.maxStepsPerFrame;
       
+      const reconfigIntervalSec = Math.max(0.5, Number.isFinite(reconfigConfigRef.current.interval) ? reconfigConfigRef.current.interval : 3.0);
       const { stepCount, fieldTick, reconfigTick } = updateTime(
         timeRef.current,
         time,
-        reconfigConfigRef.current.interval
+        reconfigIntervalSec
       );
       
 
@@ -1158,8 +1198,9 @@ const App: React.FC = () => {
         microConfigRef.current.typeStability = L.typeStability;
         
         // Reconfig
-        reconfigConfigRef.current.mutationRate = L.reconfigRate;
-        reconfigConfigRef.current.mutationAmount = L.reconfigAmount;
+        // (coupling explicit + real)
+        reconfigConfigRef.current.mutationStrength = L.reconfigEnabled ? L.reconfigRate : 0;
+        reconfigStateRef.current.mutationAmount = L.reconfigAmount;
         
         // COMPLEXITY LENS / OR CHOZER: Apply feedback modulation (non-destructive save + restore)
         // Uses shared FeedbackState via complexityLensRef.feedback
@@ -1212,29 +1253,32 @@ const App: React.FC = () => {
           restoreParams(microConfigRef.current, savedParams);
         }
         
-        // H) Energy/reproduction system — timed for telemetry
-        if (microConfigRef.current.energyEnabled && microStateRef.current.count < 1500) {
-          const e = energyConfigRef.current;
-          e.enabled = true;
+      }
+      
+      // H) Energy/reproduction system (run ONCE per frame; avoids stepCount× cost/freezes)
+      {
+        const L = lifeRef.current;
+        const e = energyConfigRef.current;
+        e.enabled = microConfigRef.current.energyEnabled;
+        if (e.enabled) {
           e.baseDecay = L.energyDecay;
           e.feedRate = L.energyFeedRate;
           e.reproductionThreshold = L.energyReproThreshold;
-          
+
           // Map dial → energy mutation chance & death threshold
           e.mutationChance = 0.02 + L.mutationDial * 0.18;       // 0.02..0.20
           e.deathThreshold = 0.18 + (1 - L.mutationDial) * 0.12; // stable worlds die less
-          
+
           const _t_en0 = performance.now();
           const res = updateEnergy(
             microStateRef.current,
             matrixRef.current,
             e,
             rngRef.current,
-            microStateRef.current.maxCount
+            microStateRef.current.maxCount,
           );
           recordModuleMs(lensState.moduleTelemetry, 'energy', performance.now() - _t_en0);
-          
-          // Track births/deaths for Life stats AND vital rate accumulator
+
           const births  = res.births  ?? 0;
           const deaths  = res.deaths  ?? 0;
           if (births) {
@@ -1245,7 +1289,6 @@ const App: React.FC = () => {
             lifeStatsRef.current.deaths += deaths;
             populationAccumulator.current.deaths += deaths;
           }
-          // Feed vital rate accumulator (frameMs approximated per-step)
           tickVitalRates(vitalAccRef.current, 1000 / 60, births, deaths, 0);
         }
       }
@@ -1299,7 +1342,8 @@ const App: React.FC = () => {
           return { nutrient, tension, memory, entropy, scarcity, cohesion, volatility };
         },
         simulatedDt,
-        mutationCfg
+        mutationCfg,
+        rngRef.current
         );
         recordModuleMs(complexityLensRef.current.moduleTelemetry, 'genes', performance.now() - _t_gn0);
       }
@@ -1396,6 +1440,34 @@ const App: React.FC = () => {
       // PATCH 04.5-SIGILS: Update sigil fields (diffusion + decay) - only if enabled
       if (sigilCfgRef.current.enabled) {
         updateSigils(sigilStateRef.current, sigilCfgRef.current, simulatedDt);
+        if (t - lastSigilDebugRef.current > 3.0) {
+          lastSigilDebugRef.current = t;
+          const s = sigilStateRef.current;
+          const n = s.width * s.height;
+          let sb = 0, sr = 0, sl = 0, so = 0;
+          let mb = 0, mr = 0, ml = 0, mo = 0;
+          for (let i = 0; i < n; i++) {
+            const b = s.bond[i]; const r = s.rift[i]; const l = s.bloom[i]; const o = s.oath[i];
+            sb += b; sr += r; sl += l; so += o;
+            if (b > mb) mb = b;
+            if (r > mr) mr = r;
+            if (l > ml) ml = l;
+            if (o > mo) mo = o;
+          }
+          console.debug('[Sigils]', {
+            avgBond: (sb / n).toFixed(3),
+            avgRift: (sr / n).toFixed(3),
+            avgBloom: (sl / n).toFixed(3),
+            avgOath: (so / n).toFixed(3),
+            maxBond: mb.toFixed(2),
+            maxRift: mr.toFixed(2),
+            maxBloom: ml.toFixed(2),
+            maxOath: mo.toFixed(2),
+            archetypes: archetypesDetectedRef.current.length,
+            influence: sigilCfgRef.current.influence.toFixed(2),
+            deposit: sigilCfgRef.current.deposit.toFixed(2),
+          });
+        }
       }
       
       // PATCH 04.5-SIGILS: Update cluster trackers and detect archetypes (every ~1.5s) - only if enabled
@@ -1569,7 +1641,7 @@ const App: React.FC = () => {
       const simMs = simEnd - simStart;
 
       // Field tick
-      if (fieldTick && microStateRef.current.count < 2000) {
+      if (fieldTick) {
         depositMicroMetrics(microStateRef.current, fieldStateRef.current, fieldConfigRef.current.depositStrength);
         updateField(fieldStateRef.current, fieldConfigRef.current);
 
@@ -1600,8 +1672,10 @@ const App: React.FC = () => {
       }
 
       // Reconfig tick
-      if (reconfigTick && microStateRef.current.count < 1200) {
+      if (reconfigTick) {
         detectorsRef.current = runDetectors(microStateRef.current, fieldStateRef.current);
+        // PATCH R1: share current field reference with operators (no signature changes)
+        reconfigStateRef.current.field = fieldStateRef.current;
         
         const beat = runOperators(
           microStateRef.current,
@@ -1615,6 +1689,29 @@ const App: React.FC = () => {
           rngRef.current,
           timeRef.current.elapsed
         );
+
+        // PATCH R1: Emergence events → structural operators (cooldown to avoid chaos)
+        const obs = buildEmergenceObservables(
+          fieldStateRef.current,
+          detectorsRef.current,
+          lastEmergenceObsRef.current,
+        );
+        lastEmergenceObsRef.current = obs;
+        const nowT = timeRef.current.elapsed;
+        const events = detectEmergences(obs, nowT);
+        if (events.length > 0 && nowT - lastEmergenceApplyRef.current >= emergenceCooldownSec) {
+            applyEmergenceEvents(events, {
+              micro: microStateRef.current,
+              microConfig: microConfigRef.current,
+              matrix: matrixRef.current,
+              field: fieldStateRef.current,
+              reconfig: reconfigStateRef.current,
+              reconfigConfig: reconfigConfigRef.current,
+              rng: rngRef.current,
+              time: nowT,
+            });
+            lastEmergenceApplyRef.current = nowT;
+        }
 
         if (beat) {
           addBeat(chronicleRef.current, beat);
@@ -1646,11 +1743,23 @@ const App: React.FC = () => {
             }
           });
           
-          // Show toast with narrative
-          toast.success(narrative.title, {
-            description: narrative.description,
-            duration: 4000,
-          });
+          // Show toast with narrative (throttled to prevent spam)
+          {
+            const nowT = timeRef.current.elapsed;
+            const key = `beat:${beat.type}`;
+            const minGap =
+              beat.type === 'institution' ? 25 :
+              beat.type === 'speciation' ? 18 :
+              10;
+            const last = lastBeatToastRef.current[key] ?? -1e9;
+            if (nowT - last >= minGap) {
+              lastBeatToastRef.current[key] = nowT;
+              toast.success(narrative.title, {
+                description: narrative.description,
+                duration: 3500,
+              });
+            }
+          }
           
           takeSnapshot(
             undoBufferRef.current,
@@ -1703,10 +1812,18 @@ const App: React.FC = () => {
               }
             });
             
-            toast.success(narrative.title, {
-              description: narrative.description,
-              duration: 4000,
-            });
+            {
+              const nowT = timeRef.current.elapsed;
+              const key = `mitosis`;
+              const last = lastBeatToastRef.current[key] ?? -1e9;
+              if (nowT - last >= 12) {
+                lastBeatToastRef.current[key] = nowT;
+                toast.success(narrative.title, {
+                  description: narrative.description,
+                  duration: 3500,
+                });
+              }
+            }
           }
         }
       }
@@ -2102,7 +2219,7 @@ const App: React.FC = () => {
       }
 
       // Adjust particle count gradually (ULTRA: only check every 30 frames)
-      if (timeRef.current.tick % 30 === 0) {
+      if (maintainPopulation && timeRef.current.tick % 30 === 0) {
         const currentCount = microStateRef.current.count;
         const targetCount = targetParticleCountRef.current;
         if (currentCount < targetCount) {
@@ -2129,7 +2246,8 @@ const App: React.FC = () => {
               microStateRef.current,
               rngRef.current.next() * 2 - 1,
               rngRef.current.next() * 2 - 1,
-              type
+              type,
+              rngRef.current
             );
           }
         } else if (currentCount > targetCount) {
@@ -2263,15 +2381,11 @@ const App: React.FC = () => {
       // (overlay elements are soft indicators, not crisp UI — barely noticeable)
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
-      // Sync overlay canvas size — use cached rect, only recompute when invalidated
-      if (!overlayRectRef.current.valid) {
-        const r = overlayCanvas.getBoundingClientRect();
-        overlayRectRef.current.width  = r.width;
-        overlayRectRef.current.height = r.height;
-        overlayRectRef.current.valid  = true;
-      }
-      const rW = overlayRectRef.current.width;
-      const rH = overlayRectRef.current.height;
+      // IMPORTANT: overlay canvas lives under CSS pan/zoom transforms.
+      // Using getBoundingClientRect() here will include those transforms and causes overlays to drift/stick.
+      // Always render in the base viewport size and let CSS transforms apply uniformly to both canvases.
+      const rW = dimensions.width;
+      const rH = dimensions.height;
       const targetW = Math.floor(rW * dpr);
       const targetH = Math.floor(rH * dpr);
       if (overlayCanvas.width !== targetW || overlayCanvas.height !== targetH) {
@@ -2318,8 +2432,8 @@ const App: React.FC = () => {
         renderTrails(ctx, microStateRef.current, trailsConfig, paletteIndex);
       }
 
-      // PATCH 04.6: Sigil pings
-      if (showSigils) {
+      // PATCH 04.6: Sigil pings (follow sigil overlay toggle)
+      if (sigilCfgRef.current.enabled && sigilCfgRef.current.showOverlay) {
         renderSigilPings(ctx, sigilPingsRef.current.pings, rW, rH);
       }
 
@@ -2438,8 +2552,9 @@ const App: React.FC = () => {
       setSocioForce(v => v + 1);
     }
     
-    // PATCH 04.3: Auto-enable sigils for archetype presets
+    // PATCH: Auto-enable sigil overlay for presets that request it
     if (preset.showSigils) {
+      setSigilConfig(prev => ({ ...prev, enabled: true, showOverlay: true }));
       setShowSigils(true);
     }
     
@@ -2582,6 +2697,7 @@ const App: React.FC = () => {
     
     // PATCH 04.3: Auto-enable sigil overlay for Archetype presets
     if (preset.id.includes('sigil') || preset.id.includes('archetype')) {
+      setSigilConfig(prev => ({ ...prev, enabled: true, showOverlay: true }));
       setShowSigils(true);
       toast.info('Sigil Overlay Ativado', {
         description: 'Observe os símbolos emergentes aparecerem nos campos!',
@@ -3542,6 +3658,8 @@ const App: React.FC = () => {
     const rect = canvas.getBoundingClientRect();
     pointerRef.current.down = true;
     pointerRef.current.id = e.pointerId;
+    pointerRef.current.pointerType = (e.pointerType as any) || 'mouse';
+    pointerRef.current.moved = false;
     pointerRef.current.x = e.clientX;
     pointerRef.current.y = e.clientY;
     pointerRef.current.prevX = e.clientX;
@@ -3550,6 +3668,36 @@ const App: React.FC = () => {
     pointerRef.current.cursorY = e.clientY - rect.top;
     pointerRef.current.shift = e.shiftKey;
     pointerRef.current.alt = e.altKey;
+
+    // Touch 2-finger gesture (pinch/pan) — Complexity Life only
+    if (pointerRef.current.pointerType === 'touch' && activeLab === 'complexityLife') {
+      const g = touchGestureRef.current;
+      g.points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (g.points.size === 2) {
+        const pts = Array.from(g.points.values());
+        const dx = pts[0].x - pts[1].x;
+        const dy = pts[0].y - pts[1].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const midX = (pts[0].x + pts[1].x) * 0.5;
+        const midY = (pts[0].y + pts[1].y) * 0.5;
+        const container = canvasContainerRef.current;
+        const r = container ? container.getBoundingClientRect() : rect;
+        const mx = midX - r.left - r.width / 2;
+        const my = midY - r.top - r.height / 2;
+        g.active = true;
+        g.wasPinching = true;
+        g.startDist = Math.max(1, dist);
+        g.startZoom = vpRef.current.zoom;
+        g.startPanX = vpRef.current.panX;
+        g.startPanY = vpRef.current.panY;
+        g.startMX = mx;
+        g.startMY = my;
+        // Cancel any pending brush interaction
+        pointerRef.current.down = false;
+        pointerRef.current.id = -1;
+        return;
+      }
+    }
 
     // SOCIOGENESIS: Handle sociogenesis tool clicks
     if (activeLab === 'sociogenesis') {
@@ -3572,6 +3720,14 @@ const App: React.FC = () => {
 
     const [wx, wy] = screenToWorldCorrect(e.clientX, e.clientY);
     const radiusWorld = (brushRadius / Math.min(rect.width, rect.height)) * 2;
+    pointerRef.current.downWX = wx;
+    pointerRef.current.downWY = wy;
+    pointerRef.current.downRadiusWorld = radiusWorld;
+
+    // Touch: defer single-shot to pointerUp; drag behavior stays in pointerMove
+    if (pointerRef.current.pointerType === 'touch') {
+      return;
+    }
 
     if (pointerRef.current.mode === 'CAPTURE') {
       // Capture thumbnail
@@ -3637,6 +3793,42 @@ const App: React.FC = () => {
 
     const rect = canvas.getBoundingClientRect();
 
+    // Touch pinch/pan gesture — Complexity Life only
+    if (e.pointerType === 'touch' && activeLab === 'complexityLife') {
+      const g = touchGestureRef.current;
+      if (g.points.has(e.pointerId)) {
+        g.points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      }
+      if (g.active && g.points.size >= 2) {
+        const pts = Array.from(g.points.values());
+        const dx = pts[0].x - pts[1].x;
+        const dy = pts[0].y - pts[1].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const ratio = dist / Math.max(1, g.startDist);
+        const container = canvasContainerRef.current;
+        const r = container ? container.getBoundingClientRect() : rect;
+        const midX = (pts[0].x + pts[1].x) * 0.5;
+        const midY = (pts[0].y + pts[1].y) * 0.5;
+        const mx = midX - r.left - r.width / 2;
+        const my = midY - r.top - r.height / 2;
+        const newZoom = Math.max(0.12, Math.min(14, g.startZoom * ratio));
+        const zoomRatio = newZoom / g.startZoom;
+        vpRef.current = {
+          zoom: newZoom,
+          panX: mx + (g.startPanX - g.startMX) * zoomRatio,
+          panY: my + (g.startPanY - g.startMY) * zoomRatio,
+        };
+        const inner = canvasInnerRef.current;
+        if (inner) {
+          inner.style.transform = `translate(${vpRef.current.panX}px,${vpRef.current.panY}px) scale(${vpRef.current.zoom})`;
+          inner.style.transformOrigin = '50% 50%';
+        }
+        setVpZoom(newZoom);
+        setVpPanned(Math.abs(vpRef.current.panX) > 2 || Math.abs(vpRef.current.panY) > 2);
+        return;
+      }
+    }
+
     // SOCIOGENESIS: Track cursor for tool preview
     if (activeLab === 'sociogenesis') {
       socioPointerRef.current.cursorX = e.clientX - rect.left;
@@ -3656,6 +3848,15 @@ const App: React.FC = () => {
     }
 
     if (!pointerRef.current.down || pointerRef.current.id !== e.pointerId) return;
+
+    // Mark movement for touch-tap detection
+    if (e.pointerType === 'touch' && !pointerRef.current.moved) {
+      const ddx = e.clientX - pointerRef.current.x;
+      const ddy = e.clientY - pointerRef.current.y;
+      if ((ddx * ddx + ddy * ddy) > 36) { // ~6px
+        pointerRef.current.moved = true;
+      }
+    }
 
     const [wx, wy] = screenToWorldCorrect(e.clientX, e.clientY);
     const [pwx, pwy] = screenToWorldCorrect(pointerRef.current.prevX, pointerRef.current.prevY);
@@ -3692,9 +3893,10 @@ const App: React.FC = () => {
       for (let i = 0; i < count; i++) {
         addParticle(
           microStateRef.current,
-          wx + (Math.random() - 0.5) * radiusWorld * 0.5,
-          wy + (Math.random() - 0.5) * radiusWorld * 0.5,
-          selectedType
+          wx + (rngRef.current.next() - 0.5) * radiusWorld * 0.5,
+          wy + (rngRef.current.next() - 0.5) * radiusWorld * 0.5,
+          selectedType,
+          rngRef.current
         );
       }
     } else if (pointerRef.current.mode === 'ERASE') {
@@ -3710,7 +3912,52 @@ const App: React.FC = () => {
     if (canvas && pointerRef.current.id === e.pointerId) {
       canvas.releasePointerCapture(e.pointerId);
     }
-    
+
+    // End touch gesture tracking
+    if (e.pointerType === 'touch' && activeLab === 'complexityLife') {
+      const g = touchGestureRef.current;
+      g.points.delete(e.pointerId);
+      if (g.points.size < 2) {
+        g.active = false;
+      }
+      if (g.points.size === 0) {
+        g.wasPinching = false;
+      }
+    }
+
+    // Touch tap: apply a single-shot power on release (if it didn't move)
+    if (pointerRef.current.pointerType === 'touch' && !pointerRef.current.moved && !touchGestureRef.current.wasPinching) {
+      const wx = pointerRef.current.downWX;
+      const wy = pointerRef.current.downWY;
+      const radiusWorld = pointerRef.current.downRadiusWorld || 0;
+      if (activeLab !== 'sociogenesis') {
+        if (pointerRef.current.mode === 'PULSE') {
+          applyImpulse(microStateRef.current, wx, wy, radiusWorld, 50.0 * (brushStrength / 100));
+        } else if (pointerRef.current.mode === 'WHITE-HOLE') {
+          applyWhiteHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * (brushStrength / 100));
+          depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 400.0 * (brushStrength / 100), 0, 0, 0, 0);
+        } else if (pointerRef.current.mode === 'BLACK-HOLE') {
+          applyBlackHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * (brushStrength / 100));
+          depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 0, 400.0 * (brushStrength / 100), 0, 0, 0);
+        } else if (pointerRef.current.mode === 'VORTEX') {
+          applyVortex(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100));
+        } else if (pointerRef.current.mode === 'FREEZE') {
+          applyFreeze(microStateRef.current, wx, wy, radiusWorld, Math.min(0.98, 0.6 * (brushStrength / 100)));
+        } else if (pointerRef.current.mode === 'CHAOS') {
+          applyChaos(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100));
+        } else if (pointerRef.current.mode === 'QUAKE') {
+          applyQuake(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100), timeRef.current.elapsed);
+        } else if (pointerRef.current.mode === 'NOVA') {
+          applyNova(microStateRef.current, wx, wy, radiusWorld, 500.0 * (brushStrength / 100), novaPhaseRef.current);
+          novaPhaseRef.current = novaPhaseRef.current === 0 ? 1 : 0;
+        } else if (pointerRef.current.mode === 'MAGNETIZE') {
+          applyMagnetize(microStateRef.current, wx, wy, radiusWorld, 0.25 * (brushStrength / 100), selectedType);
+        } else if (pointerRef.current.mode === 'ERASE') {
+          removeParticlesInRadius(microStateRef.current, wx, wy, radiusWorld, eraseRate * 0.3);
+        }
+      }
+    }
+
     pointerRef.current.down = false;
     pointerRef.current.cursorX = -1;
     pointerRef.current.cursorY = -1;
@@ -3801,6 +4048,9 @@ const App: React.FC = () => {
             microConfig={{ ...microConfigRef.current }}
             fieldConfig={{ ...fieldConfigRef.current }}
             life={lifeRef.current}
+            reconfigConfig={{ ...reconfigConfigRef.current }}
+            maintainPopulation={maintainPopulation}
+            onMaintainPopulationChange={setMaintainPopulation}
             targetParticleCount={targetParticleCountUI}
             onMicroChange={(patch) => {
               Object.assign(microConfigRef.current, patch);
@@ -3810,6 +4060,9 @@ const App: React.FC = () => {
             }}
             onLifeChange={(patch) => {
               setLife(prev => applyLifeDial({ ...prev, ...patch }));
+            }}
+            onReconfigChange={(patch) => {
+              Object.assign(reconfigConfigRef.current, patch);
             }}
             onTargetParticleCountChange={(v) => {
               targetParticleCountRef.current = v;
@@ -3967,8 +4220,8 @@ const App: React.FC = () => {
               microConfigRef.current.metamorphosisEnabled = (L.mode === 'EVOLUTIVE' || L.mode === 'FULL');
               microConfigRef.current.mutationRate = L.mutationRate;
               microConfigRef.current.typeStability = L.typeStability;
-              reconfigConfigRef.current.mutationRate = L.reconfigRate;
-              reconfigConfigRef.current.mutationAmount = L.reconfigAmount;
+              reconfigStateRef.current.mutationAmount = L.reconfigAmount;
+              reconfigConfigRef.current.mutationStrength = L.reconfigEnabled ? L.reconfigRate : 0;
               
               if (recursiveFieldRef.current?.cfg?.enabled) {
                 updateParticleLifeWithField(
@@ -4209,6 +4462,7 @@ const App: React.FC = () => {
 
           {!collapseDock && activeLab === 'complexityLife' && (
             <RightDock
+              hideCoreControls={COMPLEXITY_LENS}
               microConfig={{...microConfigRef.current}}
               fieldConfig={{...fieldConfigRef.current}}
               reconfigConfig={{...reconfigConfigRef.current}}
@@ -4477,7 +4731,11 @@ const App: React.FC = () => {
               onLifeChange={onLifeChange}
               lifeStats={lifeStatsUI}
               sigilConfig={sigilConfig}
-              onSigilConfigChange={(cfg) => setSigilConfig((prev) => ({ ...prev, ...cfg }))}
+              onSigilConfigChange={(cfg) => setSigilConfig((prev) => {
+                const next = { ...prev, ...cfg };
+                setShowSigils(!!(next.enabled && next.showOverlay));
+                return next;
+              })}
               archetypesDetected={archetypesDetected}
               archetypeRegistry={archetypesRef.current}
               onClearSigils={() => {
@@ -4674,7 +4932,7 @@ const App: React.FC = () => {
             setShowGuideHint(false);
             
             // Load a random preset to have something to show
-            const randomPreset = CREATIVE_PRESETS[Math.floor(Math.random() * CREATIVE_PRESETS.length)];
+            const randomPreset = CREATIVE_PRESETS[Math.floor(rngRef.current.next() * CREATIVE_PRESETS.length)];
             loadCreativePreset(randomPreset, true);
             
             guide.startGuide();

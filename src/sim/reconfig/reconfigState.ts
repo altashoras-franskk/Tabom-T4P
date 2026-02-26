@@ -1,8 +1,13 @@
 // Reconfig state: detectors, operators, artifacts
+import type { FieldState } from '../field/fieldState';
 export interface ReconfigState {
   cooldown: number;
   lastOperatorTime: number;
   artifacts: SemanticArtifact[];
+  /** PATCH R1: optional reference to current field (non-destructive). */
+  field?: FieldState;
+  /** PATCH: macro-mutation amplitude from Life dial (optional). */
+  mutationAmount?: number;
 }
 
 export interface SemanticArtifact {
@@ -35,12 +40,17 @@ export interface ReconfigConfig {
   speciationRate: number;
   institutionRate: number;
   operatorCooldown: number;
+  /** PATCH R1: phaseShift scaling (1 = neutral). */
+  matrixAttractScale?: number;
+  /** PATCH R1: phaseShift scaling (1 = neutral). */
+  matrixRepelScale?: number;
 }
 
 export const createReconfigState = (): ReconfigState => ({
   cooldown: 0,
   lastOperatorTime: 0,
   artifacts: [],
+  field: undefined,
 });
 
 export const createReconfigConfig = (): ReconfigConfig => ({
@@ -49,6 +59,8 @@ export const createReconfigConfig = (): ReconfigConfig => ({
   speciationRate: 0.6, // Higher chance of speciation
   institutionRate: 0.25,
   operatorCooldown: 2.0, // Shorter cooldown
+  matrixAttractScale: 1,
+  matrixRepelScale: 1,
 });
 
 export const updateArtifacts = (state: ReconfigState, dt: number): void => {

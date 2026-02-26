@@ -15,7 +15,7 @@ export interface FeedbackConfig {
 }
 
 export const createFeedbackConfig = (): FeedbackConfig => ({
-  enabled: false,
+  enabled: true,
   strength: 0.25,
   intervalFrames: 10,
   smoothing: 0.85,
