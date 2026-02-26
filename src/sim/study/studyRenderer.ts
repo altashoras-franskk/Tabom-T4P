@@ -57,10 +57,12 @@ function buildFieldImage(arr: Float32Array, size: number, r: number, g: number, 
   const d   = img.data;
   for (let i = 0; i < size * size; i++) {
     const v = arr[i];
+    // Gamma-lift: sqrt makes low values more visible while keeping high values bright
+    const vv = Math.sqrt(v);
     d[i*4  ] = r;
     d[i*4+1] = g;
     d[i*4+2] = b;
-    d[i*4+3] = Math.min(255, v * 240);
+    d[i*4+3] = Math.min(255, vv * 255);
   }
   return img;
 }
@@ -124,21 +126,21 @@ export function renderStudy(
 
   // ── Lens: field heatmaps (behind agents) ──
   if (lens === 'field' && _fieldImgN && _fieldImgL && _fieldImgR) {
-    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.75;
     drawFieldLayer(ctx, _fieldImgN, cw, ch);
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.65;
     drawFieldLayer(ctx, _fieldImgL, cw, ch);
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.60;
     drawFieldLayer(ctx, _fieldImgR, cw, ch);
     ctx.globalAlpha = 1;
   } else if (lens === 'power' && _fieldImgN && _fieldImgL) {
-    ctx.globalAlpha = 0.45;
+    ctx.globalAlpha = 0.65;
     drawFieldLayer(ctx, _fieldImgN, cw, ch);
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.72;
     drawFieldLayer(ctx, _fieldImgL, cw, ch);
     ctx.globalAlpha = 1;
   } else if (lens === 'economy' && _fieldImgR) {
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.72;
     drawFieldLayer(ctx, _fieldImgR, cw, ch);
     ctx.globalAlpha = 1;
   }
@@ -155,19 +157,46 @@ export function renderStudy(
 
   // ── Agents (always rendered; lens changes style only) ──
   const r = agentR(cw, ch);
+
+  // ── Compute "top leaders" (always highlighted, independent of role label) ──
+  const leaders = new Set<number>();
+  let primeLeader = -1;
+  if (agents.length) {
+    let i1 = -1, i2 = -1, i3 = -1;
+    let s1 = -1, s2 = -1, s3 = -1;
+    for (let i = 0; i < agents.length; i++) {
+      const a = agents[i];
+      const role = roles[i] ?? 'normal';
+      const roleBoost =
+        role === 'leader'    ? 0.20 :
+        role === 'dictator'  ? 0.18 :
+        role === 'authority' ? 0.14 :
+        role === 'priest'    ? 0.10 :
+        0;
+      const score = a.centrality * 0.55 + a.status * 0.35 + a.charisma * 0.25 - a.fear * 0.08 + roleBoost;
+      if (score > s1) { i3 = i2; s3 = s2; i2 = i1; s2 = s1; i1 = i; s1 = score; }
+      else if (score > s2) { i3 = i2; s3 = s2; i2 = i; s2 = score; }
+      else if (score > s3) { i3 = i; s3 = score; }
+    }
+    if (i1 >= 0) leaders.add(i1);
+    if (i2 >= 0) leaders.add(i2);
+    if (i3 >= 0) leaders.add(i3);
+    primeLeader = i1;
+  }
+
   if (lens === 'off') {
-    renderAgentsPlain(ctx, cw, ch, agents, r);
+    renderAgentsPlain(ctx, cw, ch, agents, roles, r, leaders, primeLeader);
   } else if (lens === 'economy') {
-    renderAgentsEconomy(ctx, cw, ch, agents, roles, r);
+    renderAgentsEconomy(ctx, cw, ch, agents, roles, r, leaders, primeLeader);
   } else if (lens === 'power') {
-    renderAgentsPower(ctx, cw, ch, agents, roles, r);
+    renderAgentsPower(ctx, cw, ch, agents, roles, r, leaders, primeLeader);
   } else if (lens === 'events') {
-    renderAgentsFaded(ctx, cw, ch, agents, r);
+    renderAgentsFaded(ctx, cw, ch, agents, roles, r, leaders, primeLeader);
   } else if (lens === 'archetype') {
-    renderAgentsArchetype(ctx, cw, ch, agents, roles, r);
+    renderAgentsArchetype(ctx, cw, ch, agents, roles, r, leaders, primeLeader);
   } else {
     // groups / field
-    renderAgentsGroups(ctx, cw, ch, agents, roles, r);
+    renderAgentsGroups(ctx, cw, ch, agents, roles, r, leaders, primeLeader);
   }
 
   // ── Pings (always) ──
@@ -220,38 +249,34 @@ function renderTails(
   agents: StudyAgent[],
   roles: AgentRole[],
 ): void {
-  ctx.lineWidth = 1.5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
   const stride = agents.length > 260 ? 3 : agents.length > 180 ? 2 : 1;
+  const tLen = 15; // trail buffer length
+
   for (let ai = 0; ai < agents.length; ai += stride) {
     const a = agents[ai];
-    if (!a.trailX || a.trailX[0] === 0) continue;
+    if (!a.trailX) continue;
 
-    ctx.beginPath();
-    let first = true;
-    for (let i = 0; i < a.trailX.length; i++) {
-      const idx = (a.trailIdx + i) % a.trailX.length;
-      const tx = a.trailX[idx];
-      const ty = a.trailY[idx];
-      if (tx === 0 && ty === 0) continue;
+    const col = archetypeKeyToColor(stableKey(a));
+    // Draw trail as individual line segments so each can fade
+    for (let i = 1; i < tLen; i++) {
+      const idx0 = (a.trailIdx + i - 1) % tLen;
+      const idx1 = (a.trailIdx + i)     % tLen;
+      const x0 = a.trailX[idx0], y0 = a.trailY[idx0];
+      const x1 = a.trailX[idx1], y1 = a.trailY[idx1];
+      if ((x0 === 0 && y0 === 0) || (x1 === 0 && y1 === 0)) continue;
 
-      const px = cx(tx, cw);
-      const py = cy(ty, ch);
-
-      if (first) {
-        ctx.moveTo(px, py);
-        first = false;
-      } else {
-        ctx.lineTo(px, py);
-      }
+      const progress = i / tLen; // 0=oldest, 1=newest
+      ctx.beginPath();
+      ctx.moveTo(cx(x0, cw), cy(y0, ch));
+      ctx.lineTo(cx(x1, cw), cy(y1, ch));
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 0.8 + progress * 1.0;
+      ctx.globalAlpha = progress * progress * 0.38; // quadratic fade: near-zero at tail
+      ctx.stroke();
     }
-
-    // Always color trails by *stable* archetype (no flicker).
-    ctx.strokeStyle = archetypeKeyToColor(stableKey(a));
-    ctx.globalAlpha = 0.2;
-    ctx.stroke();
   }
   ctx.globalAlpha = 1;
 }
@@ -262,6 +287,7 @@ function _drawAgent(ctx: CanvasRenderingContext2D, ax: number, ay: number, vx: n
   const spd = Math.sqrt(vx * vx + vy * vy);
   const nx = spd > 0.0001 ? vx / spd : 1;
   const ny = spd > 0.0001 ? vy / spd : 0;
+  const sp01 = Math.min(1, spd * 80); // heuristic: makes direction feel responsive without flicker
 
   ctx.globalAlpha = alpha;
 
@@ -271,21 +297,81 @@ function _drawAgent(ctx: CanvasRenderingContext2D, ax: number, ay: number, vx: n
   ctx.fillStyle = color;
   ctx.fill();
 
-  // Nose line
+  // Nose (thin + reactive): small wedge + hairline stem
+  const noseLen = r * (0.8 + 1.9 * sp01);
+  const noseW   = Math.max(0.7, r * 0.16);
+  const px = ax + nx * (r + noseLen);
+  const py = ay + ny * (r + noseLen);
+  const tx = -ny, ty = nx;
+
+  // stem
   ctx.beginPath();
   ctx.moveTo(ax + nx * r, ay + ny * r);
-  ctx.lineTo(ax + nx * (r + r * 1.3), ay + ny * (r + r * 1.3));
+  ctx.lineTo(ax + nx * (r + noseLen * 0.72), ay + ny * (r + noseLen * 0.72));
   ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(1, r * 0.5);
+  ctx.lineWidth = noseW;
   ctx.lineCap = 'round';
+  ctx.globalAlpha = alpha * (0.55 + sp01 * 0.35);
   ctx.stroke();
 
+  // wedge tip
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px - nx * noseLen * 0.38 + tx * noseW * 1.4, py - ny * noseLen * 0.38 + ty * noseW * 1.4);
+  ctx.lineTo(px - nx * noseLen * 0.38 - tx * noseW * 1.4, py - ny * noseLen * 0.38 - ty * noseW * 1.4);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.globalAlpha = alpha * (0.35 + sp01 * 0.35);
+  ctx.fill();
+
   ctx.globalAlpha = 1;
+}
+
+function _drawLeaderHighlight(
+  ctx: CanvasRenderingContext2D,
+  ax: number,
+  ay: number,
+  r: number,
+  primary: boolean,
+): void {
+  const glowR = r * (primary ? 5.2 : 3.6);
+  const g = ctx.createRadialGradient(ax, ay, r * 0.2, ax, ay, glowR);
+  g.addColorStop(0.0, primary ? 'rgba(251,191,36,0.16)' : 'rgba(251,191,36,0.10)');
+  g.addColorStop(0.45, primary ? 'rgba(251,191,36,0.07)' : 'rgba(251,191,36,0.05)');
+  g.addColorStop(1.0, 'rgba(0,0,0,0)');
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = g;
+  ctx.fillRect(ax - glowR, ay - glowR, glowR * 2, glowR * 2);
+  ctx.restore();
+
+  // Crown glyph (screen-space)
+  const y = ay - r - (primary ? r * 1.05 : r * 0.85);
+  const w = r * (primary ? 1.9 : 1.5);
+  const h = r * (primary ? 1.05 : 0.85);
+  ctx.save();
+  ctx.globalAlpha = primary ? 0.95 : 0.85;
+  ctx.fillStyle = primary ? 'rgba(251,191,36,0.95)' : 'rgba(251,191,36,0.78)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(ax - w, y);
+  ctx.lineTo(ax - w * 0.55, y - h * 0.65);
+  ctx.lineTo(ax,           y - h);
+  ctx.lineTo(ax + w * 0.55, y - h * 0.65);
+  ctx.lineTo(ax + w, y);
+  ctx.lineTo(ax + w, y + h * 0.20);
+  ctx.lineTo(ax - w, y + h * 0.20);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 function renderAgentsGroups(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[], roles: AgentRole[], r: number,
+  leaders: Set<number>, primeLeader: number,
 ): void {
   for (let i = 0; i < agents.length; i++) {
     const a    = agents[i];
@@ -328,6 +414,7 @@ function renderAgentsGroups(
     ctx.globalAlpha = 1;
 
     _drawRoleIndicator(ctx, ax, ay, ar, baseCol, role);
+    if (leaders.has(i)) _drawLeaderHighlight(ctx, ax, ay, ar, i === primeLeader);
   }
 }
 
@@ -335,12 +422,14 @@ function renderAgentsGroups(
 function renderAgentsPower(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[], roles: AgentRole[], r: number,
+  leaders: Set<number>, primeLeader: number,
 ): void {
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const role  = roles[i] ?? 'normal';
     const baseCol = archetypeKeyToColor(stableKey(a));
+    const ar = r * (0.72 + a.status * 0.72);
 
     // Status aura (soft glow proportional to status)
     if (a.status > 0.15) {
@@ -358,9 +447,10 @@ function renderAgentsPower(
     const fearR = Math.round(255 * (0.5 + a.fear * 0.5));
     const fearG = Math.round(100 * (1 - a.fear * 0.6));
     const fillColor = a.fear > 0.4 ? `rgb(${fearR},${fearG},60)` : baseCol;
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, r, fillColor, 0.80);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, fillColor, 0.80);
 
-    _drawRoleIndicator(ctx, ax, ay, r, baseCol, role);
+    _drawRoleIndicator(ctx, ax, ay, ar, baseCol, role);
+    if (leaders.has(i)) _drawLeaderHighlight(ctx, ax, ay, ar, i === primeLeader);
   }
 }
 
@@ -368,6 +458,7 @@ function renderAgentsPower(
 function renderAgentsEconomy(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[], roles: AgentRole[], r: number,
+  leaders: Set<number>, primeLeader: number,
 ): void {
   // Find top 10 by wealth
   const sorted = agents.map((a, i) => ({ i, w: a.wealth })).sort((a, b) => b.w - a.w);
@@ -378,6 +469,7 @@ function renderAgentsEconomy(
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const role  = roles[i] ?? 'normal';
     const baseCol = archetypeKeyToColor(stableKey(a));
+    const ar = r * (0.72 + a.status * 0.72);
 
     // Wealth halo for top 10
     if (top10.has(i)) {
@@ -389,32 +481,42 @@ function renderAgentsEconomy(
     }
 
     // Agent fill: dim=poor, bright=rich
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, r, baseCol, 0.35 + a.wealth * 0.55);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.35 + a.wealth * 0.55);
 
-    _drawRoleIndicator(ctx, ax, ay, r, baseCol, role);
+    _drawRoleIndicator(ctx, ax, ay, ar, baseCol, role);
+    if (leaders.has(i)) _drawLeaderHighlight(ctx, ax, ay, ar, i === primeLeader);
   }
 }
 
 // ── Agents: Faded (Events lens) ───────────────────────────────────────────────
 function renderAgentsFaded(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
-  agents: StudyAgent[], r: number,
+  agents: StudyAgent[], roles: AgentRole[], r: number,
+  leaders: Set<number>, primeLeader: number,
 ): void {
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
+    const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const baseCol = archetypeKeyToColor(stableKey(a));
-    _drawAgent(ctx, cx(a.x, cw), cy(a.y, ch), a.vx, a.vy, r * 0.7, baseCol, 0.25);
+    const ar = r * (0.58 + a.status * 0.55);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.22);
+    if (leaders.has(i)) _drawLeaderHighlight(ctx, ax, ay, ar, i === primeLeader);
   }
 }
 
 // ── Agents: Plain (Off lens) ────────────────────────────────────────────────
 function renderAgentsPlain(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
-  agents: StudyAgent[], r: number,
+  agents: StudyAgent[], roles: AgentRole[], r: number,
+  leaders: Set<number>, primeLeader: number,
 ): void {
-  for (const a of agents) {
+  for (let i = 0; i < agents.length; i++) {
+    const a = agents[i];
+    const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const baseCol = archetypeKeyToColor(stableKey(a));
-    _drawAgent(ctx, cx(a.x, cw), cy(a.y, ch), a.vx, a.vy, r, baseCol, 0.82);
+    const ar = r * (0.72 + a.status * 0.72);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.82);
+    if (leaders.has(i)) _drawLeaderHighlight(ctx, ax, ay, ar, i === primeLeader);
   }
 }
 
@@ -422,6 +524,7 @@ function renderAgentsPlain(
 function renderAgentsArchetype(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[], roles: AgentRole[], r: number,
+  leaders: Set<number>, primeLeader: number,
 ): void {
   for (let i = 0; i < agents.length; i++) {
     const a    = agents[i];
@@ -492,6 +595,7 @@ function renderAgentsArchetype(
 
     _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, col, 0.85);
     _drawRoleIndicator(ctx, ax, ay, ar, col, role);
+    if (leaders.has(i)) _drawLeaderHighlight(ctx, ax, ay, ar, i === primeLeader);
   }
 }
 
@@ -532,23 +636,24 @@ function _drawRoleIndicator(
       break;
     }
     case 'dictator': {
-      // Coercive square ring + spikes (very readable)
-      const s = r + 4.0;
+      // Coercive double-ring with spikes radiating at 45°
+      const s = r + 4.5;
       ctx.globalAlpha = 0.85;
       ctx.strokeStyle = '#ef4444';
       ctx.lineWidth = 2.2;
-      ctx.strokeRect(ax - s, ay - s, s * 2, s * 2);
-      ctx.globalAlpha = 0.65;
       ctx.beginPath();
-      ctx.moveTo(ax - s, ay - s);
-      ctx.lineTo(ax - s - 5, ay - s - 3);
-      ctx.moveTo(ax + s, ay - s);
-      ctx.lineTo(ax + s + 5, ay - s - 3);
-      ctx.moveTo(ax - s, ay + s);
-      ctx.lineTo(ax - s - 5, ay + s + 3);
-      ctx.moveTo(ax + s, ay + s);
-      ctx.lineTo(ax + s + 5, ay + s + 3);
+      ctx.arc(ax, ay, s, 0, Math.PI * 2);
       ctx.stroke();
+      // 4 outward spikes
+      ctx.lineWidth = 1.8;
+      ctx.globalAlpha = 0.65;
+      for (let si = 0; si < 4; si++) {
+        const ang = si * Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(ax + Math.cos(ang) * (s + 1), ay + Math.sin(ang) * (s + 1));
+        ctx.lineTo(ax + Math.cos(ang) * (s + 8), ay + Math.sin(ang) * (s + 8));
+        ctx.stroke();
+      }
       ctx.globalAlpha = 1;
       break;
     }
@@ -733,13 +838,40 @@ function renderSymbols(
 function _labelSymbol(
   ctx: CanvasRenderingContext2D, lx: number, ly: number, label: string, color: string,
 ): void {
+  if (!label) return;
+  ctx.save();
   ctx.font = '9px system-ui, sans-serif';
-  ctx.fillStyle = color;
-  ctx.globalAlpha = 0.65;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, lx, ly);
-  ctx.globalAlpha = 1;
+  const padX = 6;
+  const padY = 3;
+  const w = Math.ceil(ctx.measureText(label).width + padX * 2);
+  const h = 14;
+  const x = Math.round(lx - w / 2);
+  const y = Math.round(ly - h / 2);
+  const rr = 6;
+
+  // Rounded pill background
+  ctx.globalAlpha = 0.80;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 0.35;
+  ctx.stroke();
+
+  // Text
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.72;
+  ctx.fillText(label, lx, ly + 0.5);
+  ctx.restore();
 }
 
 // ── Pings ────────────────────────��────────────────────────────────────────────

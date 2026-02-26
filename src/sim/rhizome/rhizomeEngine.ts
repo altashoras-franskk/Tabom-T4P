@@ -492,13 +492,13 @@ function applyForces(
   const captureProb     = p.linhasDeFuga * 0.05;
   // In search mode: disable random capture entirely — only LLM connections count
   if (!state.searchMode) {
-    for (let i = 0; i < Math.min(10, n); i++) {
-      const idx = Math.floor(r() * n);
+    for (let i = 0; i < Math.min(10, nn); i++) {
+      const idx = Math.floor(r() * nn);
       const nodeA = nodes[idx];
       if (nodeA.connections.size > 0) continue; // already connected
 
       // Find nearby node to connect to
-      const jdx = Math.floor(r() * n);
+      const jdx = Math.floor(r() * nn);
       const nodeB = nodes[jdx];
       if (jdx === idx || nodeB === nodeA) continue;
 

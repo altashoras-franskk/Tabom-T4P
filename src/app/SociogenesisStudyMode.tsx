@@ -27,7 +27,7 @@ import {
   type SocialFields, type SocialFieldConfig,
 } from '../sim/study/socialFields';
 import { STUDY_SCENARIOS, SCENARIO_CATEGORIES, type StudyScenario } from '../sim/study/studyScenarios';
-import { computeArchetypeKey } from '../sim/study/studyArchetypes';
+import { archetypeKeyToColor, archetypeKeyToLabel, computeArchetypeKey } from '../sim/study/studyArchetypes';
 
 function makeRng(seed: number) {
   let s = seed;
@@ -220,6 +220,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   const [metricsUI, setMetricsUI] = useState<StudyMetrics>(createStudyMetrics());
   const [wsUI, setWsUI]           = useState<StudyWorldState>(createStudyWorldState());
   const [eventsUI, setEventsUI]   = useState<StudyEvent[]>([]);
+  const [leadersUI, setLeadersUI] = useState<Array<{ idx: number; score: number; role: AgentRole; color: string; label: string }>>([]);
   const [dims, setDims]           = useState({ w: window.innerWidth, h: window.innerHeight });
   const [symbolsVer, setSymbolsVer] = useState(0); // force panel re-render when symbols change
 
@@ -418,7 +419,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         const t = clockRef.current.elapsed;
 
         const grid = buildMicroGrid(agentsRef.current);
-        microTick(agentsRef.current, grid, cfgRef.current, dt);
+        microTick(agentsRef.current, grid, cfgRef.current, wsRef.current, dt);
 
         for (const p of pingsRef.current) p.age += dt;
         pingsRef.current = pingsRef.current.filter(p => p.age < p.ttl);
@@ -458,6 +459,24 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         if (t - clockRef.current.lastRole >= 2.0) {
           rolesRef.current = computeAgentRoles(agentsRef.current);
           clockRef.current.lastRole = t;
+
+          // Top leaders panel (stable identity color + role label)
+          const ranked = agentsRef.current
+            .map((a, idx) => {
+              const role = rolesRef.current[idx] ?? 'normal';
+              const roleBoost =
+                role === 'leader'    ? 0.20 :
+                role === 'dictator'  ? 0.18 :
+                role === 'authority' ? 0.14 :
+                role === 'priest'    ? 0.10 :
+                0;
+              const score = a.centrality * 0.55 + a.status * 0.35 + a.charisma * 0.25 - a.fear * 0.08 + roleBoost;
+              const k = (a.archKeyStable >>> 0) || computeArchetypeKey(a);
+              return { idx, score, role, color: archetypeKeyToColor(k), label: archetypeKeyToLabel(k) };
+            })
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 6);
+          setLeadersUI(ranked);
         }
       } else {
         lastFrameRef.current = now;
@@ -675,6 +694,22 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             ))}
           </div>
         </Dropdown>
+
+        {/* Seed button */}
+        <button
+          title={`Seed atual: ${seed} — clique para novo seed aleatório`}
+          onClick={() => {
+            const newSeed = (Math.random() * 0xffffffff) >>> 0;
+            seedRef.current = newSeed;
+            setSeed(newSeed);
+            resetWorld(scenario, autoSymbols);
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-1 border transition-all text-[10px]"
+          style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)', fontFamily: MONO }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.9)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(167,139,250,0.45)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.45)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}>
+          🎲 <span style={{ color: 'rgba(167,139,250,0.65)', fontSize: 8 }}>{seed % 1000000}</span>
+        </button>
 
         <div className="flex-1" />
 
@@ -896,6 +931,17 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               onChange={v => patchCfg({ boidsAlignment: v })} />
             <SliderRow label="Boids.Co" v={cfgRef.current.boidsCohesion} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ boidsCohesion: v })} />
+            <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }} />
+            <SliderRow label="Wander" v={cfgRef.current.wander} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ wander: v })} />
+            <SliderRow label="ImpulseRt" v={cfgRef.current.impulseRate} min={0} max={2.0} step={0.05}
+              onChange={v => patchCfg({ impulseRate: v })} />
+            <SliderRow label="ImpulseSt" v={cfgRef.current.impulseStrength} min={0} max={1.0} step={0.05}
+              onChange={v => patchCfg({ impulseStrength: v })} />
+            <SliderRow label="Overshoot" v={cfgRef.current.goalOvershoot} min={0} max={0.8} step={0.05}
+              onChange={v => patchCfg({ goalOvershoot: v })} />
+            <SliderRow label="Zigzag" v={cfgRef.current.zigzag} min={0} max={1.0} step={0.05}
+              onChange={v => patchCfg({ zigzag: v })} />
           </Section>
 
           {/* INSPECTOR */}
@@ -1022,6 +1068,35 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 </div>
               </div>
             </div>
+
+            {/* Leaders */}
+            {leadersUI.length > 0 && (
+              <div className="pt-2 mb-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+                <div className="text-[8px] uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                  Leaders
+                </div>
+                <div className="space-y-1">
+                  {leadersUI.map((l, k) => (
+                    <div key={l.idx} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="shrink-0" style={{ width: 8, height: 8, borderRadius: 2, background: l.color, opacity: 0.9 }} />
+                        <div className="min-w-0">
+                          <div className="text-[9px] truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                            {k + 1}. {l.role}
+                          </div>
+                          <div className="text-[8px] truncate" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                            {l.label}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-[9px] shrink-0" style={{ color: k === 0 ? '#fbbf24' : 'rgba(255,255,255,0.35)' }}>
+                        {l.score.toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Chronicle */}
             {eventsUI.length > 0 && (

@@ -116,6 +116,39 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       py = (rng() - 0.5) * 1.8;
     }
 
+    // ── Archetype seeding: inject rich trait diversity so emergences vary ──────
+    // ~12% of population gets a "proto-archetype" boost making them clearly different
+    // from the start. This prevents the visual homogeneity trap.
+    const roll = rng();
+    const isProtoLeader    = roll < 0.10;                          // 10%
+    const isProtoRebel     = !isProtoLeader && roll < 0.20;        // 10%
+    const isProtoPriest    = !isProtoRebel  && roll < 0.30;        // 10%
+    const isProtoAggressor = !isProtoPriest && roll < 0.38;        // 8%
+
+    const baseBelief  = isProtoPriest    ? 0.65 + rng() * 0.28 :
+                        isProtoAggressor ? 0.15 + rng() * 0.20 :
+                        0.18 + rng() * 0.55;
+    const baseFear    = isProtoRebel     ? 0.05 + rng() * 0.12 :
+                        isProtoAggressor ? 0.08 + rng() * 0.20 :
+                        isProtoLeader    ? 0.05 + rng() * 0.14 :
+                        0.05 + rng() * 0.55;
+    const baseDesire  = isProtoRebel     ? 0.55 + rng() * 0.40 :
+                        isProtoLeader    ? 0.30 + rng() * 0.35 :
+                        0.10 + rng() * 0.65;
+    const baseStatus  = isProtoLeader    ? 0.25 + rng() * 0.35 :
+                        isProtoPriest    ? 0.18 + rng() * 0.22 :
+                        0.02 + rng() * 0.12;
+    const baseAgg     = isProtoAggressor ? 0.55 + rng() * 0.35 :
+                        isProtoRebel     ? 0.22 + rng() * 0.30 :
+                        isProtoLeader    ? 0.08 + rng() * 0.20 :
+                        0.05 + rng() * 0.40;
+    const baseCharisma = isProtoLeader   ? 0.45 + rng() * 0.45 :
+                         isProtoPriest   ? 0.35 + rng() * 0.35 :
+                         rng() * 0.30 + 0.04;
+    const baseResist   = isProtoRebel    ? 0.45 + rng() * 0.50 :
+                         isProtoAggressor ? 0.20 + rng() * 0.30 :
+                         0.05 + rng() * 0.30;
+
     const a: StudyAgent = {
       x: clampPos(px),
       y: clampPos(py),
@@ -123,25 +156,25 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       vy: (rng() - 0.5) * 0.07,
       groupId: g,
       opinion: ideology,
-      trust:      Math.max(0, Math.min(1, cfg.trustBase      + (rng() - 0.5) * 0.3)),
-      aggression: Math.max(0, Math.min(1, cfg.aggressionBase + (rng() - 0.5) * 0.2)),
-      need:       Math.max(0, Math.min(1, cfg.needBase        + (rng() - 0.5) * 0.25)),
+      trust:      Math.max(0, Math.min(1, cfg.trustBase      + (rng() - 0.5) * 0.35)),
+      aggression: Math.max(0, Math.min(1, baseAgg)),
+      need:       Math.max(0, Math.min(1, cfg.needBase        + (rng() - 0.5) * 0.30)),
       goalX: cx, goalY: cy,
       memory: [], centrality: 0, hostileCount: 0,
-      belief:   0.3 + rng() * 0.3,
-      fear:     0.1 + rng() * 0.15,
-      desire:   0.2 + rng() * 0.3,
-      status:   0.05 + rng() * 0.1,
-      wealth:   0.2  + rng() * 0.15,
+      belief:   Math.max(0, Math.min(1, baseBelief)),
+      fear:     Math.max(0, Math.min(1, baseFear)),
+      desire:   Math.max(0, Math.min(1, baseDesire)),
+      status:   Math.max(0, Math.min(1, baseStatus)),
+      wealth:   0.12 + rng() * 0.30,
       ideology,
-      fatigue:  0.05 + rng() * 0.05,
-      conformity:   Math.max(0, Math.min(1, cfg.conformity + (rng() - 0.5) * 0.3)),
-      empathy:      Math.max(0, Math.min(1, cfg.empathy + (rng() - 0.5) * 0.25)),
-      charisma:     rng() * 0.3 + 0.05,
-      groupLoyalty: 0.4 + rng() * 0.5,
+      fatigue:  0.03 + rng() * 0.07,
+      conformity:   Math.max(0, Math.min(1, (isProtoPriest ? 0.60 : isProtoRebel ? 0.08 : cfg.conformity) + (rng() - 0.5) * 0.30)),
+      empathy:      Math.max(0, Math.min(1, cfg.empathy + (rng() - 0.5) * 0.30)),
+      charisma:     Math.max(0, Math.min(1, baseCharisma)),
+      groupLoyalty: isProtoRebel ? 0.12 + rng() * 0.22 : 0.35 + rng() * 0.55,
       memeId:       g,
       visibility:   0,
-      resistance:   0.1 + rng() * 0.2,
+      resistance:   Math.max(0, Math.min(1, baseResist)),
       trailX:       new Float32Array(15).fill(clampPos(px)),
       trailY:       new Float32Array(15).fill(clampPos(py)),
       trailIdx:     0,
@@ -162,14 +195,16 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
 }
 
 // ── 2. microTick — kinematics only ────────────────────────────────────────────
-const SEP_RADIUS = 0.042;
-const SEP_FORCE  = 1.9;
+// SEP_RADIUS must exceed the visual agent diameter (world coords ≈ 0.056 for base agents,
+// up to 0.08 for high-status ones). Use 0.068 to prevent visual overlap in most cases.
+const SEP_RADIUS = 0.068;
+const SEP_FORCE  = 3.2;
 
 export function buildMicroGrid(agents: StudyAgent[]): Grid {
   return buildGrid(agents, SEP_RADIUS * 2.5);
 }
 
-export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, dt: number): void {
+export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws: StudyWorldState, dt: number): void {
   const { friction, speed, autonomy } = cfg;
   const sep2 = SEP_RADIUS * SEP_RADIUS;
   const cellSize = SEP_RADIUS * 2.5;
@@ -196,12 +231,13 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, dt
           const ny = a.y - b.y;
           const d2 = nx * nx + ny * ny;
           
-          if (d2 < sep2 && d2 > 1e-6) {
-            // Separation
+          if (d2 < sep2 && d2 > 1e-9) {
+            // Separation — quadratic push (much stronger when deeply overlapping)
             const d = Math.sqrt(d2);
             const push = (SEP_RADIUS - d) / SEP_RADIUS;
-            fx += (nx / d) * push * SEP_FORCE;
-            fy += (ny / d) * push * SEP_FORCE;
+            const f = push * push * SEP_FORCE;
+            fx += (nx / d) * f;
+            fy += (ny / d) * f;
           }
           
           // Boids (Alignment & Cohesion) — applied to nearby in-group members
@@ -227,15 +263,49 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, dt
       fy += (dy / d) * cfg.boidsCohesion * 1.2;
     }
 
-    // Goal steering
-    const gdx = a.goalX - a.x;
-    const gdy = a.goalY - a.y;
-    const gd  = Math.sqrt(gdx * gdx + gdy * gdy) + 0.001;
+    // Goal steering (with overshoot + zigzag for non-linearity)
+    const gdx0 = a.goalX - a.x;
+    const gdy0 = a.goalY - a.y;
+    const gd0  = Math.sqrt(gdx0 * gdx0 + gdy0 * gdy0) + 0.001;
+    const og   = Math.max(0, cfg.goalOvershoot || 0);
+    const gdx  = gdx0 * (1 + og);
+    const gdy  = gdy0 * (1 + og);
+    const gd   = Math.sqrt(gdx * gdx + gdy * gdy) + 0.001;
     const steer = Math.min(gd / 0.5, 1.0);
     // Fear modulates speed: fearful agents move faster toward safety
     const fearBoost = 1 + a.fear * 0.6;
     fx += (gdx / gd) * autonomy * speed * 2.2 * steer * fearBoost;
     fy += (gdy / gd) * autonomy * speed * 2.2 * steer * fearBoost;
+
+    // Zigzag (perpendicular drift while steering) → "vai e volta" feel
+    const zz = Math.max(0, cfg.zigzag || 0);
+    if (zz > 0.001) {
+      const px = -gdy / gd;
+      const py =  gdx / gd;
+      const z  = randSigned(ws) * zz * speed * 1.35 * (0.6 + steer * 0.8);
+      fx += px * z;
+      fy += py * z;
+    }
+
+    // Wander (small stochastic micro-forces) → less linear, more human
+    const w = Math.max(0, cfg.wander || 0);
+    if (w > 0.001) {
+      fx += randSigned(ws) * w * speed * 1.55;
+      fy += randSigned(ws) * w * speed * 1.55;
+    }
+
+    // Impulses (rare kicks) → sudden non-linear changes of direction
+    const ir = Math.max(0, cfg.impulseRate || 0);
+    const is = Math.max(0, cfg.impulseStrength || 0);
+    if (ir > 0.001 && is > 0.001 && rand01(ws) < ir * dt) {
+      const kick = (0.35 + 0.65 * rand01(ws)) * is * speed * 2.2;
+      // Prefer sideways / backtracking, not always forward
+      const px = -gdy0 / gd0;
+      const py =  gdx0 / gd0;
+      const sgn = rand01(ws) < 0.5 ? -1 : 1;
+      a.vx += px * kick * sgn - a.vx * (0.15 + 0.25 * is);
+      a.vy += py * kick * sgn - a.vy * (0.15 + 0.25 * is);
+    }
 
     a.vx = (a.vx + fx * dt) * friction;
     a.vy = (a.vy + fy * dt) * friction;
@@ -535,6 +605,19 @@ export function macroTick(
     const inAvgX = inGroupCount > 0 ? inGroupCx / (inGroupCount + 1) : gcxG;
     const inAvgY = inGroupCount > 0 ? inGroupCy / (inGroupCount + 1) : gcyG;
 
+    // ── Ideological repulsion: strongly polarised agents actively flee from
+    //    the opposing ideology cluster (creates spatial separation emergence)
+    let ideoFleeX = 0, ideoFleeY = 0;
+    if (Math.abs(a.ideology) > 0.50) {
+      for (const j of neighbors) {
+        const b = agents[j];
+        if (Math.sign(b.ideology) !== Math.sign(a.ideology) && Math.abs(b.ideology - a.ideology) > 0.70) {
+          ideoFleeX += a.x - b.x;
+          ideoFleeY += a.y - b.y;
+        }
+      }
+    }
+
     if (ws.exceptionActive) {
       // Exception: high-belief agents rush to in-group; low-belief flee
       if (a.belief > 0.5) {
@@ -648,6 +731,14 @@ export function macroTick(
         a.archKeyStable = kNow;
         a.archStableAt = t;
       }
+    }
+
+    // Apply ideological repulsion (spatially separates polar ideologies)
+    if (ideoFleeX !== 0 || ideoFleeY !== 0) {
+      const fd = Math.sqrt(ideoFleeX * ideoFleeX + ideoFleeY * ideoFleeY) + 0.001;
+      const strength = Math.min(1, Math.abs(a.ideology) * 0.50);
+      a.goalX = a.goalX * 0.65 + (a.x + (ideoFleeX / fd) * 0.45) * 0.35 * strength + a.goalX * (1 - strength) * 0.35;
+      a.goalY = a.goalY * 0.65 + (a.y + (ideoFleeY / fd) * 0.45) * 0.35 * strength + a.goalY * (1 - strength) * 0.35;
     }
 
     a.goalX = clamp(a.goalX, -0.95, 0.95);

@@ -799,17 +799,16 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
         if (el) el.style.display = 'none';
       }
 
-      if (!pausedRef.current) {
-        const spd = simSpeedRef.current;
-        const smul = sizeMulRef.current;
+      const pausedNow = pausedRef.current;
+      const spd = simSpeedRef.current;
+      const gp = geoParamsRef.current;
+      const gMode = gp.mode;
 
-        // TRUE slow-motion: always render, scale dt for sub-1 speeds
-        const steps = spd >= 1 ? Math.max(1, Math.round(spd)) : 1;
-        const dt    = spd < 1 ? spd : 1.0;
+      // TRUE slow-motion: scale dt for sub-1 speeds. When paused: no stepping.
+      const steps = !pausedNow && spd >= 1 ? Math.max(1, Math.round(spd)) : 1;
+      const dt    = !pausedNow ? (spd < 1 ? spd : 1.0) : 0;
 
-        const gp = geoParamsRef.current;
-        const gMode = gp.mode;
-
+      if (!pausedNow) {
         for (let s = 0; s < steps; s++) {
           const tick = tickRef.current + s;
           updateQuanta(
@@ -840,97 +839,105 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           }
         }
 
-        const tick = tickRef.current;
+        const tickM = tickRef.current;
+        if (tickM % 90 === 0) {
+          const m = computeMetrics(fieldsRef.current, quantaRef.current, prevDensRef.current);
+          prevDensRef.current = m.density;
+          setMetrics(m);
+          setQuantaCount(quantaRef.current.length);
+        }
+      }
 
-        // ── 3D mode: WebGL renderer handles visuals entirely ──────────────
-        if (gMode === '3d') {
-          // Lazy-init: create renderer on first 3D frame
-          if (!renderer3DRef.current && canvas3DRef.current) {
-            renderer3DRef.current = new MetaArt3DRenderer(canvas3DRef.current);
-            renderer3DRef.current.attachHandlers();
+      const tick = tickRef.current;
+
+      // ── Render (always, even when paused) ─────────────────────────────────
+      if (gMode === '3d') {
+        // Lazy-init: create renderer on first 3D frame
+        if (!renderer3DRef.current && canvas3DRef.current) {
+          renderer3DRef.current = new MetaArt3DRenderer(canvas3DRef.current);
+          renderer3DRef.current.attachHandlers();
+        }
+        if (renderer3DRef.current) {
+          renderer3DRef.current.resize(W, H);
+          renderer3DRef.current.render(
+            quantaRef.current, dnaRef.current, gp, W, H, tick,
+            overlaysRef.current,
+          );
+        }
+        // Clear all 2D layers so composite produces just a black bg
+        for (const layer of layersRef.current) {
+          if (layer.canvas) {
+            layer.canvas.getContext('2d')!.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
           }
-          if (renderer3DRef.current) {
-            renderer3DRef.current.resize(W, H);
-            renderer3DRef.current.render(
-              quantaRef.current, dnaRef.current, gp, W, H, tick,
-              overlaysRef.current,
-            );
-          }
-          // Clear all 2D layers so composite produces just a black bg
-          for (const layer of layersRef.current) {
-            if (layer.canvas) {
-              layer.canvas.getContext('2d')!.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-            }
-          }
-        } else {
-          // ── Normal 2D rendering path ──────────────────────────────────
-          const trailLayer = getLayer(layersRef.current, 'trail');
-          if (trailLayer?.canvas) {
-            if (gMode === 'geometric') {
-              trailLayer.canvas.getContext('2d')!.clearRect(0, 0, trailLayer.canvas.width, trailLayer.canvas.height);
-            } else {
-              fadeTrailLayer(trailLayer, dnaRef.current, dt);
-            }
-            const tCtx = trailLayer.canvas.getContext('2d')!;
+        }
+      } else {
+        // ── 2D rendering path ─────────────────────────────────────────────
+        const trailLayer = getLayer(layersRef.current, 'trail');
+        if (trailLayer?.canvas) {
+          const tCtx = trailLayer.canvas.getContext('2d')!;
+          if (gMode === 'geometric') {
+            tCtx.clearRect(0, 0, W, H);
+          } else if (!pausedNow) {
+            fadeTrailLayer(trailLayer, dnaRef.current, dt);
             if (gMode === 'fluid' || gMode === 'hybrid') {
               renderQuantaTrail(tCtx, quantaRef.current, dnaRef.current, W, H, tick, sizeMulRef.current, brushTextureRef.current);
             }
             if (gMode !== 'fluid' && gp.macroAtmosphere > 0.05) {
               renderAtmosphereGradients(tCtx, quantaRef.current, gp, dnaRef.current.palette, W, H);
             }
-          }
-          const particlesLayer = getLayer(layersRef.current, 'particles');
-          if (particlesLayer?.canvas) {
-            particlesLayer.opacity = gMode === 'geometric' ? 1.0
-                                   : gMode === 'hybrid'    ? 0.85
-                                   : 0.18;
-            const pCtx = particlesLayer.canvas.getContext('2d')!;
-            if (gMode === 'fluid') {
-              renderQuantaParticles(pCtx, quantaRef.current, dnaRef.current, W, H, sizeMulRef.current, brushTextureRef.current);
-            } else if (gMode === 'hybrid') {
-              renderQuantaParticles(pCtx, quantaRef.current, dnaRef.current, W, H, sizeMulRef.current * 0.35, brushTextureRef.current);
-              renderGeometricPrimitives(pCtx, quantaRef.current, dnaRef.current, gp, W, H, tick);
-            } else {
-              pCtx.clearRect(0, 0, W, H);
-              renderGeometricPrimitives(pCtx, quantaRef.current, dnaRef.current, gp, W, H, tick);
-            }
-          }
-          const connectionsLayer = getLayer(layersRef.current, 'connections');
-          if (connectionsLayer?.canvas) {
-            if (overlaysRef.current.connections) {
-              const cCtx = connectionsLayer.canvas.getContext('2d')!;
-              renderConnections(cCtx, quantaRef.current, dnaRef.current, W, H);
-            } else {
-              connectionsLayer.canvas.getContext('2d')!.clearRect(0, 0, W, H);
-            }
-          }
-          const glowLayer = getLayer(layersRef.current, 'glow');
-          if (glowLayer?.canvas) {
-            if (gMode === 'geometric') {
-              glowLayer.canvas.getContext('2d')!.clearRect(0, 0, W, H);
-            } else if (overlaysRef.current.glow && tick % 2 === 0) {
-              const gCtx = glowLayer.canvas.getContext('2d')!;
-              renderGlow(gCtx, quantaRef.current, dnaRef.current, W, H, sizeMulRef.current);
-            } else if (!overlaysRef.current.glow) {
-              glowLayer.canvas.getContext('2d')!.clearRect(0, 0, W, H);
-            }
-          }
-          const trailLayerPost = getLayer(layersRef.current, 'trail');
-          const postLayer = getLayer(layersRef.current, 'post');
-          if (postLayer?.canvas) {
-            if (gMode === 'geometric') {
-              postLayer.canvas.getContext('2d')!.clearRect(0, 0, W, H);
-            } else if (trailLayerPost && tick % 8 === 0) {
-              renderPostLayer(postLayer, trailLayerPost, dnaRef.current, W, H);
-            }
+          } else if (gMode !== 'fluid' && gp.macroAtmosphere > 0.05) {
+            // In paused mode, keep the persistent trail bitmap, but allow atmosphere overlays to update.
+            renderAtmosphereGradients(tCtx, quantaRef.current, gp, dnaRef.current.palette, W, H);
           }
         }
-        if (tick % 90 === 0) {
-          const m = computeMetrics(fieldsRef.current, quantaRef.current, prevDensRef.current);
-          prevDensRef.current = m.density;
-          setMetrics(m);
-          // curator removed
-          setQuantaCount(quantaRef.current.length);
+
+        const particlesLayer = getLayer(layersRef.current, 'particles');
+        if (particlesLayer?.canvas) {
+          particlesLayer.opacity = gMode === 'geometric' ? 1.0
+                                 : gMode === 'hybrid'    ? 0.85
+                                 : 0.18;
+          const pCtx = particlesLayer.canvas.getContext('2d')!;
+          if (gMode === 'fluid') {
+            renderQuantaParticles(pCtx, quantaRef.current, dnaRef.current, W, H, sizeMulRef.current, brushTextureRef.current);
+          } else if (gMode === 'hybrid') {
+            renderQuantaParticles(pCtx, quantaRef.current, dnaRef.current, W, H, sizeMulRef.current * 0.35, brushTextureRef.current);
+            renderGeometricPrimitives(pCtx, quantaRef.current, dnaRef.current, gp, W, H, tick);
+          } else {
+            pCtx.clearRect(0, 0, W, H);
+            renderGeometricPrimitives(pCtx, quantaRef.current, dnaRef.current, gp, W, H, tick);
+          }
+        }
+
+        const connectionsLayer = getLayer(layersRef.current, 'connections');
+        if (connectionsLayer?.canvas) {
+          if (overlaysRef.current.connections) {
+            const cCtx = connectionsLayer.canvas.getContext('2d')!;
+            renderConnections(cCtx, quantaRef.current, dnaRef.current, W, H);
+          } else {
+            connectionsLayer.canvas.getContext('2d')!.clearRect(0, 0, W, H);
+          }
+        }
+
+        const glowLayer = getLayer(layersRef.current, 'glow');
+        if (glowLayer?.canvas) {
+          if (gMode === 'geometric') {
+            glowLayer.canvas.getContext('2d')!.clearRect(0, 0, W, H);
+          } else if (overlaysRef.current.glow && (!pausedNow ? tick % 2 === 0 : true)) {
+            const gCtx = glowLayer.canvas.getContext('2d')!;
+            renderGlow(gCtx, quantaRef.current, dnaRef.current, W, H, sizeMulRef.current);
+          } else if (!overlaysRef.current.glow) {
+            glowLayer.canvas.getContext('2d')!.clearRect(0, 0, W, H);
+          }
+        }
+
+        const trailLayerPost = getLayer(layersRef.current, 'trail');
+        const postLayer = getLayer(layersRef.current, 'post');
+        if (postLayer?.canvas) {
+          if (gMode === 'geometric') {
+            postLayer.canvas.getContext('2d')!.clearRect(0, 0, W, H);
+          } else if (trailLayerPost && (!pausedNow ? tick % 8 === 0 : true)) {
+            renderPostLayer(postLayer, trailLayerPost, dnaRef.current, W, H);
+          }
         }
       }
       compositeLayersToMain(ctx, layersRef.current, dnaRef.current.background, W, H);
@@ -1349,7 +1356,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   }, []);
 
   const handleClearAll = useCallback(() => {
-    // Only clear persistent layers (trail + brush); particles/connections/glow are redrawn each frame
+    // Clear the "board": persistent layers + live agents + fields.
     for (const layer of layersRef.current) {
       if (!layer.canvas) continue;
       if (layer.id === 'trail' || layer.id === 'brush') {
@@ -1357,6 +1364,9 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
         ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
       }
     }
+    quantaRef.current = [];
+    setQuantaCount(0);
+    gesturesRef.current = [];
     const fields = createFieldGrid();
     generateFlowField(fields, dnaRef.current, seedRef.current);
     fields.interactionMatrix = buildInteractionMatrix(dnaRef.current, seedRef.current);

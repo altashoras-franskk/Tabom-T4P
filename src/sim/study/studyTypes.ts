@@ -172,6 +172,11 @@ export interface StudyConfig {
   // Boids / Crowd movement
   boidsAlignment:  number;  // 0..1 — tendency to align velocity with neighbors
   boidsCohesion:   number;  // 0..1 — tendency to move towards center of mass of neighbors
+  wander:          number;  // 0..1 — stochastic micro-wander (nonlinear motion)
+  impulseRate:     number;  // 0..2 — impulses per second (approx)
+  impulseStrength: number;  // 0..1 — impulse magnitude
+  goalOvershoot:   number;  // 0..1 — steer past the goal to create "vai e volta"
+  zigzag:          number;  // 0..1 — perpendicular drift while steering
 
   // Foucault / Control
   panopticism:     number;  // 0..1 — how much visibility increases fear/conformity vs resistance
@@ -254,23 +259,24 @@ export interface StudyPing {
 // ── Factories ─────────────────────────────────────────────────────────────────
 export function createStudyConfig(): StudyConfig {
   return {
-    agentCount: 160, groupCount: 4,
-    speed: 0.45, friction: 0.88, rMax: 0.30,
-    autonomy: 0.55, cohesion: 0.50, pressure: 0.35,
-    aggressionBase: 0.25, trustBase: 0.55, needBase: 0.60,
+    agentCount: 120, groupCount: 3,
+    speed: 0.52, friction: 0.87, rMax: 0.32,
+    autonomy: 0.60, cohesion: 0.45, pressure: 0.40,
+    aggressionBase: 0.28, trustBase: 0.52, needBase: 0.58,
     macroTickSec: 1.0,
-    kBelief: 0.40, kFear: 0.35, kDesire: 0.30,
-    harvestRate: 0.06, decayWealth: 0.012,
-    ideologyPressure: 0.25,
-    conformity: 0.40, empathy: 0.30, mobility: 0.10,
-    contagion: 0.35, hierarchyStrength: 0.40,
-    innovationRate: 0.05, cooperationBias: 0.30,
-    culturalInertia: 0.50, resourceScarcity: 0.50,
-    boidsAlignment: 0.40, boidsCohesion: 0.30,
+    kBelief: 0.45, kFear: 0.40, kDesire: 0.35,
+    harvestRate: 0.07, decayWealth: 0.014,
+    ideologyPressure: 0.20,
+    conformity: 0.38, empathy: 0.32, mobility: 0.12,
+    contagion: 0.40, hierarchyStrength: 0.45,
+    innovationRate: 0.08, cooperationBias: 0.28,
+    culturalInertia: 0.42, resourceScarcity: 0.55,
+    boidsAlignment: 0.35, boidsCohesion: 0.28,
+    wander: 0.28, impulseRate: 0.30, impulseStrength: 0.65, goalOvershoot: 0.18, zigzag: 0.20,
     panopticism: 0.50,
     violationThreshold: 3, exceptionDuration: 25,
     autoSymbols: true,
-    archetypeHoldSec: 2.2,
+    archetypeHoldSec: 1.8,
   };
 }
 

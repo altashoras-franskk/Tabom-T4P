@@ -655,6 +655,32 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
     forceRender(n => n + 1);
   }, [clamp, editRole]);
 
+  // ── Mini keyboard: fire a specific pitch class ───────────────────────────
+  const playKeyboardPc = useCallback((pc: number) => {
+    if (!audioEngine.ready) return;
+    const p = presetRef.current;
+    const base = p.roles[editRole] ?? ROLE_DEFAULTS[editRole];
+    const over = roleOverRef.current[editRole];
+    const cfg  = over ? ({ ...base, ...over } as RoleConfig) : base;
+    const [minP, maxP] = cfg.pitchRange ?? [48, 84];
+
+    // Start near middle C (C4=60) then fold into the role range.
+    let midi = 60 + pc;
+    while (midi < minP) midi += 12;
+    while (midi > maxP) midi -= 12;
+    midi = clamp(midi, minP, maxP);
+
+    audioEngine.fire({
+      pitch: midi,
+      velocity: 0.65,
+      role: editRole,
+      x: 0,
+      y: 0,
+      duration: Math.max(0.08, cfg.envelope.attack + cfg.envelope.decay + cfg.envelope.sustain * 1.6),
+      timbre: 0.75,
+    }, cfg);
+  }, [clamp, editRole]);
+
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const variation = Math.random();
@@ -3868,6 +3894,50 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 </button>
               );
             })}
+          </div>
+
+          {/* Mini keyboard — chromatic (highlights current scale tones) */}
+          <div className="px-1.5 pb-1.5">
+            <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.28)',marginBottom:5}}>
+              KEYBOARD
+            </div>
+            <div className="grid gap-0.5" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
+              {NOTE_NAMES.map((n, pc) => {
+                const rel = ((pc - (liveRoot % 12)) + 12) % 12;
+                const inScale = SCALE_INTERVALS[liveScale].includes(rel);
+                const isRoot = rel === 0;
+                const isBlack = n.includes('#') || n.includes('b');
+                return (
+                  <button
+                    key={n}
+                    onClick={() => playKeyboardPc(pc)}
+                    title={`Play ${n}${inScale ? ` (${SCALE_LABELS[liveScale]})` : ''} — role:${editRole}`}
+                    className="transition-all active:scale-95"
+                    style={{
+                      height: 18,
+                      fontSize: 6.5,
+                      textAlign: 'center',
+                      color: isRoot ? '#88ffcc' : inScale ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.25)',
+                      background: isRoot
+                        ? 'rgba(136,255,204,0.10)'
+                        : inScale
+                          ? (isBlack ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.04)')
+                          : 'rgba(255,255,255,0.02)',
+                      border: isRoot
+                        ? '1px solid rgba(136,255,204,0.35)'
+                        : inScale
+                          ? '1px dashed rgba(255,255,255,0.08)'
+                          : '1px dashed rgba(255,255,255,0.04)',
+                    }}
+                  >
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 5, fontFamily: MONO, fontSize: 6, color: 'rgba(255,255,255,0.18)', lineHeight: 1.45 }}>
+              Dica: o timbre vem do <span style={{ color: 'rgba(136,255,204,0.55)' }}>{editRole}</span> (mude no painel da direita).
+            </div>
           </div>
         </DraggablePanel>
       )}

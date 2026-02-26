@@ -88,6 +88,15 @@ export function buildInteractionMatrix(dna: DNA, seed: number, isolate = false):
     [ 0.05,  0.35, -0.10, -0.30,  0.05,  0.40],  // 5: glitch
   ];
 
+  // Seeded permutation: increases macro-variety without destabilizing the system.
+  const perm = [0, 1, 2, 3, 4, 5];
+  for (let i = perm.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = perm[i]; perm[i] = perm[j]; perm[j] = tmp;
+  }
+  const baseFlip = rng() < 0.5 ? 1 : -1;
+  const baseSkew = (rng() - 0.5) * 0.18; // subtle asymmetry bias
+
   for (let i = 0; i < 6; i++) {
     for (let j = 0; j < 6; j++) {
       const self = (i === j);
@@ -114,7 +123,7 @@ export function buildInteractionMatrix(dna: DNA, seed: number, isolate = false):
       } else if (entropy > 0.82) {
         val = (rng() - 0.5) * 2.2;
       } else {
-        const base = ARCHETYPE[i][j];
+        const base = (ARCHETYPE[perm[i]][perm[j]] * baseFlip) + baseSkew * ((i - j) / 5);
         const noise = (rng() - 0.5) * entropy * 0.9;
         const scale = 0.35 + coherence * 0.55 + contrast * 0.35;
         const fragBias = self ? 0 : -fragmentation * 0.28;

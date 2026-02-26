@@ -442,11 +442,15 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
 
       if (frame % 20 === 0) setSerpentSnap({ ...serpentRef.current });
 
-      render(canvasRef.current, stateRef.current, paramsRef.current,
-             camRef.current, fxRef.current, orbitsRef.current, streamsRef.current,
-             serpentStreamsRef.current, serpentRef.current,
-             selectedSeph, selectedPath, nodeActivatedRef.current, pathActivatedRef.current,
-             overlaysRef.current);
+      try {
+        render(canvasRef.current, stateRef.current, paramsRef.current,
+               camRef.current, fxRef.current, orbitsRef.current, streamsRef.current,
+               serpentStreamsRef.current, serpentRef.current,
+               selectedSeph, selectedPath, nodeActivatedRef.current, pathActivatedRef.current,
+               overlaysRef.current);
+      } catch (e) {
+        console.error('[TreeOfLife] render error:', e);
+      }
       frame++;
     };
 
@@ -843,7 +847,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
 
   if (!active) return null;
 
-  const lens = DECK_LENS_MAP.get(params.deckLens)!;
+  const lens = DECK_LENS_MAP.get(params.deckLens) ?? DECK_LENS_MAP.get('rws')!;
   const selSephDef   = selectedSeph ? SEPHIRAH_MAP.get(selectedSeph) : null;
   const selSephState = selectedSeph ? stateRef.current.sephirot.get(selectedSeph) : null;
   const selPathDef   = selectedPath !== null ? PATH_MAP.get(selectedPath) : null;
@@ -1218,11 +1222,11 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
             {/* Zoom controls */}
             <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {[
-                { ico: <ZoomIn size={12} />, action: () => { camRef.current = { ...camRef.current, zoom: Math.min(4, camRef.current.zoom * 1.25) }; } },
-                { ico: <ZoomOut size={12} />, action: () => { camRef.current = { ...camRef.current, zoom: Math.max(0.2, camRef.current.zoom * 0.8) }; } },
-                { ico: <RefreshCw size={11} />, action: () => { camRef.current = { zoom: 1, px: 0, py: 0 }; } },
-                { ico: <Maximize2 size={11} />, action: () => setFullscreen(f => !f) },
-              ].map(({ ico, action }, i) => (
+                { label: 'Zoom in',    ico: <ZoomIn size={12} />,    action: () => { camRef.current = { ...camRef.current, zoom: Math.min(4, camRef.current.zoom * 1.25) }; } },
+                { label: 'Zoom out',   ico: <ZoomOut size={12} />,   action: () => { camRef.current = { ...camRef.current, zoom: Math.max(0.2, camRef.current.zoom * 0.8) }; } },
+                { label: 'Reset view', ico: <RefreshCw size={11} />, action: () => { camRef.current = { zoom: 1, px: 0, py: 0 }; } },
+                { label: fullscreen ? 'Exit fullscreen' : 'Fullscreen', ico: <Maximize2 size={11} />, action: () => setFullscreen(f => !f) },
+              ].map(({ label, ico, action }, i) => (
                 <button title={label} key={i} onClick={action} style={{
                   width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   borderRadius: 6, cursor: 'pointer',
@@ -2302,9 +2306,9 @@ function SBBar({ label, v, c }: { label: string; v: number; c: string }) {
   );
 }
 
-function SBBtn({ onClick, c, children }: { onClick: () => void; c: string; children: React.ReactNode }) {
+function SBBtn({ onClick, c, children, title }: { onClick: () => void; c: string; children: React.ReactNode; title?: string }) {
   return (
-    <button title={label} onClick={onClick} style={{
+    <button title={title} onClick={onClick} style={{
       flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
       padding: '4px 5px', borderRadius: 4, cursor: 'pointer', fontSize: 8,
       textTransform: 'uppercase', letterSpacing: '0.07em',

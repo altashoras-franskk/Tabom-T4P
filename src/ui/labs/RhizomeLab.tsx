@@ -855,7 +855,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
   const [llmTopic,   setLlmTopic]   = useState('');
   const [selectedNode, setSelectedNode] = useState<RhizomeNode | null>(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
-  const [use3D,        setUse3D]        = useState(true); // default 3D
+  const [use3D,        setUse3D]        = useState(false); // default 2D (safe baseline)
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
@@ -891,7 +891,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
   const [folders,         setFolders]         = useState<RhizomeFolder[]>([]);
   const [savedRhizomes,   setSavedRhizomes]   = useState<import('../../sim/rhizome/rhizomeFolders').SavedRhizome[]>([]);
   const [showArenaModal,  setShowArenaModal]  = useState(false);
-  const [showFolders,     setShowFolders]     = useState(true);
+  const [showFolders,     setShowFolders]     = useState(false);
   const [saveToFolderNode, setSaveToFolderNode] = useState<{ node: RhizomeNode; card: SavedCard } | null>(null);
   const [nodeScores,      setNodeScores]      = useState<Map<number, NodeScore>>(new Map());
 
@@ -904,7 +904,8 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
   const paramsRef     = useRef(params);
   const aestheticsRef = useRef(aesthetics);
   const searchModeRef = useRef(false);
-  const use3DRef      = useRef(true);  // matches useState(true) above
+  const use3DRef      = useRef(false);  // matches useState(false) above
+  const render3DErrorRef = useRef(false);
   const llmStatusRef  = useRef<LLMStatus>('idle');
   const llmProviderRef = useRef<LLMProvider>('openai');
   const llmApiKeyRef   = useRef('');
@@ -934,6 +935,15 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
     window.addEventListener('resize', fn);
     return () => window.removeEventListener('resize', fn);
   }, []);
+
+  // Ensure canvas dimensions are set correctly
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas && (canvas.width !== canvasW || canvas.height !== canvasH)) {
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+    }
+  }, [canvasW, canvasH]);
 
   // ── Recorder lifecycle ───────────────────────────────────────────────────
   useEffect(() => {
@@ -1102,15 +1112,35 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         const cam3d = cam3DRef.current;
         if (cam3d.autoRotate) cam3d.rotY += rawDt * cam3d.autoSpeed;
-        renderRhizome3D(ctx, state, W, H, cam3d);
+        try {
+          renderRhizome3D(ctx, state, W, H, cam3d);
+          render3DErrorRef.current = false;
+        } catch (err) {
+          // Failsafe: if 3D render breaks, auto-fallback to 2D so the lab stays usable.
+          if (!render3DErrorRef.current) {
+            // avoid spamming console each frame
+            console.error('[RhizomeLab] 3D render failed, falling back to 2D:', err);
+            render3DErrorRef.current = true;
+          }
+          use3DRef.current = false;
+          setUse3D(false);
+          ctx.setTransform(cam.zoom, 0, 0, cam.zoom, cam.panX, cam.panY);
+          renderRhizome(ctx, state, W, H);
+        }
       } else {
         // 2D mode: apply pan/zoom camera
         ctx.setTransform(cam.zoom, 0, 0, cam.zoom, cam.panX, cam.panY);
-        renderRhizome(ctx, state, W, H);
+        try {
+          renderRhizome(ctx, state, W, H);
+        } catch (e) {
+          console.error('[RhizomeLab] 2D render error:', e);
+        }
       }
 
       ctx.setTransform(1, 0, 0, 1, 0, 0); // reset for screen-space HUD
-      renderHUD(ctx, state, W, cam.zoom);
+      try {
+        renderHUD(ctx, state, W, cam.zoom);
+      } catch {};
 
       metricsCounter++;
       if (metricsCounter >= 30) {

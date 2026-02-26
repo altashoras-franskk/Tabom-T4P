@@ -514,7 +514,7 @@ const App: React.FC = () => {
   // G) Render aesthetics
   const [pointSize, setPointSize] = useState(3.5); // OTIMIZAÇÃO: Reduzido de 4.0 para performance
   const [fadeFactor, setFadeFactor] = useState(0.96); // OTIMIZAÇÃO: Trails mais leves (4% fade, era 8%)
-  const [glowIntensity, setGlowIntensity] = useState(0.5);
+  const [glowIntensity, setGlowIntensity] = useState(0.0); // performance: start with glow off
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [renderMode, setRenderMode] = useState<'dots' | 'streaks'>('dots');
   const [streakLength, setStreakLength] = useState(8.0);
