@@ -266,6 +266,27 @@ export function phaseFromLabel(label: PhaseLabel): SystemPhase {
 // ComplexityLensState — estado completo do painel
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Morin Deep Indices — derived complexity indicators beyond Meadows
+// ─────────────────────────────────────────────────────────────────────────────
+export interface MorinIndices {
+  /** Dialógica: co-presence of antagonistic forces (order+disorder, R+B loops).
+   *  High = complementary opposites coexist productively. */
+  dialogica: number;
+  /** Loop recursivo: feedback strength × delay sensitivity.
+   *  High = system effect becomes its own cause (product-is-producer). */
+  recursivo: number;
+  /** Hologramático: correlation between local agent dynamics and global field pattern.
+   *  High = each part embeds the logic of the whole. */
+  hologramatico: number;
+  /** Sapiens-Demens: ratio of constructive emergence vs destructive oscillation.
+   *  Close to 0.5 = balanced duality; high = hyper-rational stagnation; low = chaotic collapse. */
+  sapiensDemens: number;
+  /** Tetralogy index: order ↔ disorder ↔ interactions ↔ organization cycle health.
+   *  High = all four poles are active and cycling, not locked in one state. */
+  tetralogia: number;
+}
+
 export interface ComplexityLensState {
   // Passes-through do feedbackEngine (lógica imutada)
   feedback: FeedbackState;
@@ -283,6 +304,9 @@ export interface ComplexityLensState {
   // Indicadores de saúde do sistema
   systemHealth: number;   // 0..1 (1 = saudável, 0 = em colapso)
   emergenceIndex: number; // 0..1 (mede quão "complexo" o estado atual é)
+
+  // Morin deep indices
+  morin: MorinIndices;
 }
 
 export function createComplexityLensState(): ComplexityLensState {
@@ -297,6 +321,7 @@ export function createComplexityLensState(): ComplexityLensState {
     vitalRates: createVitalAccumulator().lastRates,
     systemHealth: 1,
     emergenceIndex: 0,
+    morin: { dialogica: 0, recursivo: 0, hologramatico: 0, sapiensDemens: 0.5, tetralogia: 0 },
   };
 }
 
@@ -317,6 +342,50 @@ function computeSystemHealth(m: ComplexityMetrics): number {
 function computeEmergenceIndex(m: ComplexityMetrics): number {
   const raw = m.variedade * 0.35 + m.coesao * 0.35 + (1 - m.persistencia) * 0.30;
   return Math.max(0, Math.min(1, raw));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Morin Deep Indices — derived from forces and metrics
+// ─────────────────────────────────────────────────────────────────────────────
+
+function computeMorinIndices(f: ComplexityForces, m: ComplexityMetrics): MorinIndices {
+  // Dialógica: co-presence of antagonistic forces.
+  // Amplificação (R-loop) and Regulação (B-loop) are antagonistic;
+  // Perturbação and Auto-Organização are antagonistic.
+  // High dialogica = both poles active simultaneously (min of the pair × 2, capped at 1).
+  const dialRB = Math.min(f.amplificacao, f.regulacao) * 2;
+  const dialPA = Math.min(f.perturbacao, f.autoOrganizacao) * 2;
+  const dialogica = Math.min(1, (dialRB * 0.5 + dialPA * 0.5));
+
+  // Loop recursivo: product is producer. Measured by feedback strength ×
+  // how different the output (forces) is from input stability.
+  // If metrics change rapidly while forces respond, the loop is active.
+  const forceSum = (f.perturbacao + f.autoOrganizacao + f.amplificacao + f.regulacao + f.coerencia) / 5;
+  const metricsChange = 1 - m.persistencia;
+  const recursivo = Math.min(1, forceSum * metricsChange * 3);
+
+  // Hologramático: local = global. High coesão (local clusters) + high variedade (global diversity)
+  // + balanced metabolismo means each locality mirrors the whole.
+  const hologramatico = Math.min(1, m.coesao * 0.35 + m.variedade * 0.35 + m.metabolismo * 0.30);
+
+  // Sapiens-Demens: ratio of constructive vs destructive forces.
+  // 0.5 = perfectly balanced; >0.5 = hyper-rational; <0.5 = chaotic.
+  const constructive = f.autoOrganizacao + f.coerencia + f.regulacao;
+  const destructive = f.perturbacao + f.amplificacao + m.atrito;
+  const total = constructive + destructive || 1;
+  const sapiensDemens = constructive / total;
+
+  // Tetralogia: order ↔ disorder ↔ interactions ↔ organization.
+  // All four poles need to be active (none near zero) for a healthy cycle.
+  const order = f.regulacao;
+  const disorder = f.perturbacao;
+  const interactions = m.metabolismo;
+  const organization = f.autoOrganizacao;
+  const minPole = Math.min(order, disorder, interactions, organization);
+  const maxPole = Math.max(order, disorder, interactions, organization) || 1;
+  const tetralogia = Math.min(1, (minPole / maxPole) * 2 + minPole * 0.5);
+
+  return { dialogica, recursivo, hologramatico, sapiensDemens, tetralogia };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -347,6 +416,9 @@ export function stepComplexityLens(
   // 3. Indicadores derivados
   lensState.systemHealth   = computeSystemHealth(lensState.metrics);
   lensState.emergenceIndex = computeEmergenceIndex(lensState.metrics);
+
+  // 4. Morin deep indices
+  lensState.morin = computeMorinIndices(lensState.forces, lensState.metrics);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

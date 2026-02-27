@@ -88,6 +88,28 @@ export interface StudyAgent {
   archKeyCandidate: number;
   archCandidateAt: number; // seconds
   archStableAt: number;    // seconds
+
+  // ── Morin: Complexity dimensions ──────────────────────────────────────
+  // Percepção falível (blindness of knowledge): agents never see the world perfectly.
+  // High perception = accurate field reading; low = distorted by ideology/fear/desire.
+  perception: number;       // 0..1 — fidelity of world-model
+
+  // Homo sapiens-demens: rational-irrational duality. Hybris grows with unchecked power;
+  // fervor from collective belief+fear feedback. Both distort judgment.
+  hybris: number;           // 0..1 — overconfidence from high status (blindness of power)
+  fervor: number;           // 0..1 — collective irrational passion (sapiens → demens)
+
+  // Ética emergente (anthropo-ethics): arises from diverse, non-hostile encounters.
+  // High ethics = self-limitation, cross-group cooperation, reduced aggression.
+  ethics: number;           // 0..1 — emergent moral compass
+
+  // Compreensão (understanding): grows with repeated peaceful cross-group contact.
+  // Reduces out-group hostility and increases empathy locally.
+  understanding: number;    // 0..1 — depth of inter-subjective comprehension
+
+  // Auto-eco-organização: dependence on environmental R field. Overextraction
+  // degrades the field permanently — product is also producer of its milieu.
+  ecoFootprint: number;     // 0..1 — cumulative environmental damage caused
 }
 
 // ── Symbols — laws inscribed in field + behaviour ─────────────────────────────
@@ -188,6 +210,15 @@ export interface StudyConfig {
 
   // Archetype identity
   archetypeHoldSec: number;     // seconds candidate must persist before committing stable archetype
+
+  // ── Morin dimensions ──────────────────────────────────────────────────
+  perceptionBias: number;       // 0..1 — how much traits distort field sampling
+  hybrisThreshold: number;      // 0..1 — status level above which hybris grows
+  fervorThreshold: number;      // 0..1 — belief+fear sum that triggers demens behavior
+  ethicsGrowth: number;         // 0..1 — rate ethics develops from diverse peaceful encounters
+  understandingGrowth: number;  // 0..1 — rate understanding grows from cross-group contact
+  ecoDegradation: number;       // 0..1 — permanent R field damage from overextraction
+  consensusDecay: number;       // 0..1 — rate at which total consensus erodes (order without disorder = death)
 }
 
 // ── World state (mutable, passed by ref to macroTick) ────────────────────────
@@ -209,7 +240,10 @@ export type StudyPhase =
   | 'POLARIZED'
   | 'CONFLICT'
   | 'CONSENSUS'
-  | 'EXCEPTION';
+  | 'EXCEPTION'
+  | 'FERVOR'
+  | 'ECO_CRISIS'
+  | 'TRANSCENDENCE';
 
 export interface StudyMetrics {
   cohesion:     number;  // 0..1
@@ -223,10 +257,17 @@ export interface StudyMetrics {
   meanFear:     number;
   meanBelief:   number;
   entropy:      number;  // 0..1 — opinion diversity
+  // Morin indices
+  meanPerception: number;   // 0..1 — collective accuracy of world-model
+  meanEthics:     number;   // 0..1 — emergent collective ethics
+  meanHybris:     number;   // 0..1 — collective overconfidence
+  meanFervor:     number;   // 0..1 — collective irrationality
+  meanUnderstanding: number; // 0..1 — cross-group comprehension
+  ecoHealth:      number;   // 0..1 — environmental integrity
 }
 
 // ── Lens / Tool ───────────────────────────────────────────────────────────────
-export type StudyLens = 'off' | 'groups' | 'power' | 'economy' | 'events' | 'field' | 'archetype';
+export type StudyLens = 'off' | 'groups' | 'power' | 'economy' | 'events' | 'field' | 'archetype' | 'morin';
 export type StudyTool =
   | 'select'
   | 'spawn_agent'
@@ -277,6 +318,14 @@ export function createStudyConfig(): StudyConfig {
     violationThreshold: 3, exceptionDuration: 25,
     autoSymbols: true,
     archetypeHoldSec: 1.8,
+    // Morin
+    perceptionBias: 0.12,
+    hybrisThreshold: 0.70,
+    fervorThreshold: 1.50,
+    ethicsGrowth: 0.10,
+    understandingGrowth: 0.08,
+    ecoDegradation: 0.04,
+    consensusDecay: 0.02,
   };
 }
 
@@ -294,5 +343,10 @@ export function createStudyWorldState(): StudyWorldState {
 }
 
 export function createStudyMetrics(): StudyMetrics {
-  return { cohesion: 0.2, polarization: 0.1, conflict: 0.05, consensus: 0.5, phase: 'SWARM', leaderCount: 0, rebelCount: 0, meanFear: 0.1, meanBelief: 0.2, entropy: 0.5 };
+  return {
+    cohesion: 0.2, polarization: 0.1, conflict: 0.05, consensus: 0.5, phase: 'SWARM',
+    leaderCount: 0, rebelCount: 0, meanFear: 0.1, meanBelief: 0.2, entropy: 0.5,
+    meanPerception: 0.5, meanEthics: 0.05, meanHybris: 0.05, meanFervor: 0.05,
+    meanUnderstanding: 0.05, ecoHealth: 1.0,
+  };
 }

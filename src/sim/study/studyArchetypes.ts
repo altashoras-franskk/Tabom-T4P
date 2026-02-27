@@ -62,9 +62,16 @@ function scramble32(x: number): number {
 export function archetypeKeyToColor(key: number): string {
   const h = scramble32(key);
   const hue = h % 360;
-  const sat = 72 + ((h >>> 9) % 10);   // 72..81
-  const lit = 52 + ((h >>> 17) % 10);  // 52..61
-  return `hsl(${hue} ${sat}% ${lit}%)`;
+  const sat = (72 + ((h >>> 9) % 10)) / 100;
+  const lit = (52 + ((h >>> 17) % 10)) / 100;
+  // Convert HSL → hex so downstream _hexToRgb / gradient code works
+  const a2 = sat * Math.min(lit, 1 - lit);
+  const f = (n: number) => {
+    const k = (n + hue / 30) % 12;
+    const c = lit - a2 * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(c * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
 }
 
 export function archetypeKeyToLabel(key: number): string {

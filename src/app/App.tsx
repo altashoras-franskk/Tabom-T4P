@@ -1551,6 +1551,7 @@ const App: React.FC = () => {
           vitalRates:     { ...vitalAccRef.current.lastRates },
           systemHealth:   cl.systemHealth,
           emergenceIndex: cl.emergenceIndex,
+          morin:          { ...cl.morin },
         });
         // Also keep legacy feedbackSnap alive in case OrChozer panel is still used
         setFeedbackSnap({

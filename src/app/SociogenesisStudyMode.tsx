@@ -21,7 +21,7 @@ import {
   computeStudyMetrics, computeAgentRoles, buildMicroGrid,
   type AgentRole,
 } from '../sim/study/studyEngine';
-import { renderStudy } from '../sim/study/studyRenderer';
+import { renderStudy, type StudyVisualConfig, defaultVisualConfig } from '../sim/study/studyRenderer';
 import {
   createSocialFields, createSocialFieldConfig, resetFields,
   type SocialFields, type SocialFieldConfig,
@@ -40,9 +40,11 @@ const uid = () => `u-${_uid++}`;
 const PHASE_COLORS: Record<string, string> = {
   SWARM: '#94a3b8', CLUSTERS: '#34d399', POLARIZED: '#fbd38d',
   CONFLICT: '#ef4444', CONSENSUS: '#a78bfa', EXCEPTION: '#ff6b6b',
+  FERVOR: '#ff4500', ECO_CRISIS: '#8b4513', TRANSCENDENCE: '#00d4aa',
 };
 const PHASE_ICONS: Record<string, string> = {
   SWARM: '◉', CLUSTERS: '⊕', POLARIZED: '⊖', CONFLICT: '!', CONSENSUS: '◎', EXCEPTION: '!',
+  FERVOR: '🔥', ECO_CRISIS: '🌍', TRANSCENDENCE: '✦',
 };
 
 const TOOLS: { id: StudyTool; icon: string; label: string; desc: string; color: string }[] = [
@@ -69,6 +71,7 @@ const LENSES: { id: StudyLens; label: string; desc: string }[] = [
   { id: 'economy', label: 'Economy', desc: 'R field + wealth halos (top 10)' },
   { id: 'events',  label: 'Events',  desc: 'Event pings only' },
   { id: 'field',   label: 'Fields',  desc: 'All 3 fields: N=green L=violet R=gold' },
+  { id: 'morin',   label: 'Morin',   desc: 'Complexity: perception/hybris/fervor/ethics/eco' },
 ];
 
 interface Props { onLeave?: () => void; }
@@ -240,6 +243,15 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
   // Auto-symbols toggle
   const [autoSymbols, setAutoSymbols] = useState(true);
+
+  // Visual config
+  const visualCfgRef = useRef<StudyVisualConfig>({ ...defaultVisualConfig });
+  const [, setVisualVer] = useState(0);
+  const [showVisual, setShowVisual] = useState(false);
+  const patchVisual = (p: Partial<StudyVisualConfig>) => {
+    Object.assign(visualCfgRef.current, p);
+    setVisualVer(v => v + 1);
+  };
 
   useEffect(() => {
     const fn = () => setDims({ w: window.innerWidth, h: window.innerHeight });
@@ -504,6 +516,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         wsRef.current,
         pingsRef.current,
         clockRef.current.elapsed,
+        visualCfgRef.current,
       );
       ctx.restore();
     };
@@ -870,7 +883,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 <select
                   value={spawnLayout}
                   onChange={(e) => setSpawnLayout(e.target.value as StudySpawnLayout)}
-                  className="flex-1 px-2 py-1 text-[10px] rounded border border-white/[0.08] bg-white/[0.03] text-white/70"
+                  className="flex-1 px-2 py-1 text-[10px] rounded border border-white/[0.08]"
                 >
                   <option value="unified_center">Unified</option>
                   <option value="separated_clusters">Clusters</option>
@@ -903,6 +916,34 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               onChange={v => patchCfg({ aggressionBase: v })} />
           </Section>
 
+          {/* VISUAL */}
+          <Section title="Visual" open={showVisual} onToggle={() => setShowVisual(v => !v)}>
+            <SliderRow label="Agent Size" v={visualCfgRef.current.agentScale} min={0.3} max={2.5} step={0.1}
+              onChange={v => patchVisual({ agentScale: v })} />
+            <SliderRow label="Trail Opacity" v={visualCfgRef.current.trailOpacity} min={0} max={1} step={0.05}
+              onChange={v => patchVisual({ trailOpacity: v })} />
+            <div className="flex items-center justify-between py-1">
+              <span className="text-[9px] uppercase tracking-wider" style={{ fontFamily: MONO, color: 'rgba(255,255,255,0.35)' }}>Trails</span>
+              <button onClick={() => patchVisual({ showTrails: !visualCfgRef.current.showTrails })}
+                className="text-[9px] px-2 py-0.5" style={{
+                  fontFamily: MONO, letterSpacing: '0.08em',
+                  color: visualCfgRef.current.showTrails ? '#00d4aa' : 'rgba(255,255,255,0.25)',
+                  border: `1px dashed ${visualCfgRef.current.showTrails ? '#00d4aa33' : 'rgba(255,255,255,0.08)'}`,
+                  background: visualCfgRef.current.showTrails ? '#00d4aa08' : 'transparent',
+                }}>{visualCfgRef.current.showTrails ? 'ON' : 'OFF'}</button>
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <span className="text-[9px] uppercase tracking-wider" style={{ fontFamily: MONO, color: 'rgba(255,255,255,0.35)' }}>Direction</span>
+              <button onClick={() => patchVisual({ showDirection: !visualCfgRef.current.showDirection })}
+                className="text-[9px] px-2 py-0.5" style={{
+                  fontFamily: MONO, letterSpacing: '0.08em',
+                  color: visualCfgRef.current.showDirection ? '#00d4aa' : 'rgba(255,255,255,0.25)',
+                  border: `1px dashed ${visualCfgRef.current.showDirection ? '#00d4aa33' : 'rgba(255,255,255,0.08)'}`,
+                  background: visualCfgRef.current.showDirection ? '#00d4aa08' : 'transparent',
+                }}>{visualCfgRef.current.showDirection ? 'ON' : 'OFF'}</button>
+            </div>
+          </Section>
+
           {/* DYNAMICS */}
           <Section title="Dynamics" open={showDynamics} onToggle={() => setShowDyn(v => !v)}>
             <SliderRow label="Conform." v={cfgRef.current.conformity} min={0} max={1} step={0.05}
@@ -927,6 +968,23 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               onChange={v => patchCfg({ resourceScarcity: v })} />
             <SliderRow label="Panoptic." v={cfgRef.current.panopticism} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ panopticism: v })} />
+            <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="text-[8px] uppercase tracking-[0.14em] mb-2" style={{ color: '#00d4aa55', fontFamily: MONO }}>Morin · Complexidade</div>
+            </div>
+            <SliderRow label="Perc.Bias" v={cfgRef.current.perceptionBias} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ perceptionBias: v })} />
+            <SliderRow label="Hybris.Th" v={cfgRef.current.hybrisThreshold} min={0.3} max={0.95} step={0.05}
+              onChange={v => patchCfg({ hybrisThreshold: v })} />
+            <SliderRow label="Fervor.Th" v={cfgRef.current.fervorThreshold} min={0.6} max={1.8} step={0.05}
+              onChange={v => patchCfg({ fervorThreshold: v })} />
+            <SliderRow label="Ethics" v={cfgRef.current.ethicsGrowth} min={0} max={0.5} step={0.02}
+              onChange={v => patchCfg({ ethicsGrowth: v })} />
+            <SliderRow label="Underst." v={cfgRef.current.understandingGrowth} min={0} max={0.5} step={0.02}
+              onChange={v => patchCfg({ understandingGrowth: v })} />
+            <SliderRow label="Eco.Degr" v={cfgRef.current.ecoDegradation} min={0} max={0.3} step={0.01}
+              onChange={v => patchCfg({ ecoDegradation: v })} />
+            <SliderRow label="Cons.Dec" v={cfgRef.current.consensusDecay} min={0} max={0.2} step={0.01}
+              onChange={v => patchCfg({ consensusDecay: v })} />
             <SliderRow label="Boids.Al" v={cfgRef.current.boidsAlignment} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ boidsAlignment: v })} />
             <SliderRow label="Boids.Co" v={cfgRef.current.boidsCohesion} min={0} max={1} step={0.05}
@@ -970,6 +1028,15 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 <PsychBar label="Empathy"   v={inspectorSnap.empathy}  c="#ff6b9d" />
                 <PsychBar label="Charisma"  v={inspectorSnap.charisma} c="#ffd060" />
                 <PsychBar label="Loyalty"   v={inspectorSnap.groupLoyalty} c="#6bcb77" />
+              </div>
+              <div className="space-y-1.5 mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="text-[8px] uppercase tracking-[0.10em] mb-1" style={{ color: '#00d4aa55', fontFamily: MONO }}>Morin</div>
+                <PsychBar label="Percepção"   v={inspectorSnap.perception}    c="#60d0ff" />
+                <PsychBar label="Ética"       v={inspectorSnap.ethics}        c="#00d4aa" />
+                <PsychBar label="Compreensão" v={inspectorSnap.understanding} c="#34d399" />
+                <PsychBar label="Hybris"      v={inspectorSnap.hybris}        c="#ffa000" />
+                <PsychBar label="Fervor"      v={inspectorSnap.fervor}        c="#ff4500" />
+                <PsychBar label="Eco.Peg."    v={inspectorSnap.ecoFootprint}  c="#8b4513" />
               </div>
               <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
                 <div className="text-[9px] mb-1" style={{ color: 'rgba(255,255,255,0.30)' }}>Ideology (order ↔ freedom)</div>
@@ -1044,6 +1111,19 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               <PsychBar label="Polariz."     v={metricsUI.polarization} c="#fbd38d" />
               <PsychBar label="Conflict"     v={metricsUI.conflict}     c="#ef4444" />
               <PsychBar label="Consensus"    v={metricsUI.consensus}    c="#a78bfa" />
+            </div>
+
+            {/* Morin indices */}
+            <div className="pt-2 mb-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+              <div className="text-[8px] uppercase tracking-[0.14em] mb-1.5" style={{ color: '#00d4aa66' }}>Morin · Complexidade</div>
+              <div className="space-y-1.5">
+                <PsychBar label="Percepção"     v={metricsUI.meanPerception}    c="#60d0ff" />
+                <PsychBar label="Ética"         v={metricsUI.meanEthics}        c="#00d4aa" />
+                <PsychBar label="Compreensão"   v={metricsUI.meanUnderstanding} c="#34d399" />
+                <PsychBar label="Hybris"        v={metricsUI.meanHybris}        c="#ffa000" />
+                <PsychBar label="Fervor"        v={metricsUI.meanFervor}        c="#ff4500" />
+                <PsychBar label="Eco Saúde"     v={metricsUI.ecoHealth}         c="#8b6914" />
+              </div>
             </div>
 
             {/* Economy */}

@@ -23,6 +23,7 @@ import {
   VitalRates,
   ModuleTelemetryMap,
   topModules,
+  type MorinIndices,
 } from '../sim/complexity/complexityLens';
 import type { FeedbackConfig } from '../sim/micro/feedbackEngine';
 import type { MicroConfig } from '../sim/micro/microState';
@@ -225,9 +226,10 @@ export function ComplexityPanel({
   const [secMeta,      setSecMeta]  = useState(true);
   const [secFeedback,  setSecFb]    = useState(true);
   const [secField,     setSecFld]   = useState(false);
+  const [secMorin,     setSecMorin] = useState(true);
 
   const { feedback, metrics, forces, systemPhase, modulation,
-          systemHealth, emergenceIndex } = lensState;
+          systemHealth, emergenceIndex, morin } = lensState;
   const cfg = feedback.config;
 
   const phaseColor = SYSTEM_PHASE_COLORS[systemPhase];
@@ -445,6 +447,56 @@ export function ComplexityPanel({
                     })}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* ──────────────────────────────────────────────────────────────
+              SECÇÃO: MORIN — ÍNDICES PROFUNDOS
+              Dialogica, Recursivo, Hologramático, Sapiens/Demens, Tetralogia
+          ────────────────────────────────────────────────────────────── */}
+          <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
+            <SectionHeader label="Morin · Complexidade" open={secMorin} onToggle={() => setSecMorin(v => !v)} accent="#00d4aa88" />
+            {secMorin && (
+              <div>
+                <ForceBar label="Dialógica" value={morin.dialogica} color="#c080ff"
+                  hint="Co-presença de forças antagônicas (R+B loops). Alto = opostos coexistem produtivamente." />
+                <ForceBar label="Recursivo" value={morin.recursivo} color="#60d0ff"
+                  hint="Loop recursivo: efeito se torna causa. Produto é também produtor. O sistema modifica a si mesmo." />
+                <ForceBar label="Hologramático" value={morin.hologramatico} color="#50e080"
+                  hint="Cada parte contém a lógica do todo. Correlação entre dinâmica local e padrão global." />
+                <ForceBar label="Tetralogia" value={morin.tetralogia} color="#e0c860"
+                  hint="Ordem ↔ Desordem ↔ Interações ↔ Organização. Alto = todos os 4 polos ativos e ciclando." />
+
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '6px 0' }} />
+
+                {/* Sapiens-Demens gauge */}
+                <div style={{ marginBottom: 4 }} title="Razão construtivo/destrutivo. 0.5 = equilíbrio sapiens-demens.">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ fontFamily: MONO, fontSize: 9, color: DIM2, letterSpacing: '0.03em' }}>Sapiens ↔ Demens</span>
+                    <span style={{ fontFamily: MONO, fontSize: 9, color: Math.abs(morin.sapiensDemens - 0.5) < 0.15 ? '#00d4aa' : '#ffc840' }}>
+                      {(morin.sapiensDemens * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div style={{ position: 'relative', height: 6, background: 'rgba(255,255,255,0.04)', borderRadius: 3 }}>
+                    {/* Center marker at 50% */}
+                    <div style={{ position: 'absolute', left: '50%', top: 0, width: 1, height: 6, background: 'rgba(255,255,255,0.15)' }} />
+                    {/* Indicator */}
+                    <div style={{
+                      position: 'absolute',
+                      left: `${morin.sapiensDemens * 100}%`,
+                      top: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: Math.abs(morin.sapiensDemens - 0.5) < 0.15 ? '#00d4aa' : morin.sapiensDemens > 0.65 ? '#60d0ff' : '#ff6050',
+                      border: '1px solid rgba(255,255,255,0.20)',
+                      transition: 'left 0.3s',
+                    }} />
+                    {/* Labels */}
+                    <div style={{ position: 'absolute', left: 4, top: 8, fontFamily: MONO, fontSize: 7, color: '#ff605080' }}>Demens</div>
+                    <div style={{ position: 'absolute', right: 4, top: 8, fontFamily: MONO, fontSize: 7, color: '#60d0ff80' }}>Sapiens</div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

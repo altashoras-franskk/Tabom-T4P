@@ -184,6 +184,13 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       archKeyCandidate: 0,
       archCandidateAt: 0,
       archStableAt: 0,
+      // Morin dimensions
+      perception: 0.40 + rng() * 0.45,
+      hybris: isProtoLeader ? 0.15 + rng() * 0.20 : 0.02 + rng() * 0.08,
+      fervor: isProtoPriest ? 0.12 + rng() * 0.15 : 0.01 + rng() * 0.05,
+      ethics: 0.02 + rng() * 0.10,
+      understanding: 0.02 + rng() * 0.08,
+      ecoFootprint: 0,
     };
     const k = computeArchetypeKey(a);
     a.archKeyMoment = k;
@@ -195,22 +202,30 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
 }
 
 // ── 2. microTick — kinematics only ────────────────────────────────────────────
-// SEP_RADIUS must exceed the visual agent diameter (world coords ≈ 0.056 for base agents,
-// up to 0.08 for high-status ones). Use 0.068 to prevent visual overlap in most cases.
-const SEP_RADIUS = 0.068;
-const SEP_FORCE  = 3.2;
+// Visual agent radius (world) ≈ 0.030 * (0.72 + status*0.72) → 0.022..0.043
+// Separation envelope matches visual radius tightly so agents touch but don't
+// form a rigid lattice.
+const SEP_BASE   = 0.014;
+const SEP_STATUS = 0.012;  // extra radius per unit of status
+const SEP_FORCE  = 1.2;    // soft push — allows brief overlap during fast moves
+const SEP_HARD   = 0.20;   // very gentle projection — only resolves deep overlap
+const SEP_CELL   = 0.08;   // spatial grid cell size
+
+function agentSepR(a: StudyAgent): number {
+  return SEP_BASE + a.status * SEP_STATUS;
+}
 
 export function buildMicroGrid(agents: StudyAgent[]): Grid {
-  return buildGrid(agents, SEP_RADIUS * 2.5);
+  return buildGrid(agents, SEP_CELL);
 }
 
 export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws: StudyWorldState, dt: number): void {
   const { friction, speed, autonomy } = cfg;
-  const sep2 = SEP_RADIUS * SEP_RADIUS;
-  const cellSize = SEP_RADIUS * 2.5;
+  const cellSize = SEP_CELL;
 
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
+    const aR = agentSepR(a);
     let fx = 0, fy = 0;
     
     // Boids accumulators
@@ -227,21 +242,24 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws
         for (const j of cell) {
           if (j === i) continue;
           const b = agents[j];
+          const bR = agentSepR(b);
+          const combinedR = aR + bR;
           const nx = a.x - b.x;
           const ny = a.y - b.y;
           const d2 = nx * nx + ny * ny;
           
-          if (d2 < sep2 && d2 > 1e-9) {
-            // Separation — quadratic push (much stronger when deeply overlapping)
+          if (d2 < combinedR * combinedR && d2 > 1e-9) {
             const d = Math.sqrt(d2);
-            const push = (SEP_RADIUS - d) / SEP_RADIUS;
+            const overlap = combinedR - d;
+            const push = (overlap / combinedR);
             const f = push * push * SEP_FORCE;
             fx += (nx / d) * f;
             fy += (ny / d) * f;
           }
           
           // Boids (Alignment & Cohesion) — applied to nearby in-group members
-          if (b.groupId === a.groupId && d2 < sep2 * 4) {
+          const boidsR2 = combinedR * combinedR * 4;
+          if (b.groupId === a.groupId && d2 < boidsR2) {
             alignX += b.vx; alignY += b.vy; alignN++;
             cohX += b.x; cohY += b.y; cohN++;
           }
@@ -323,6 +341,39 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws
     a.trailX[a.trailIdx] = a.x;
     a.trailY[a.trailIdx] = a.y;
     a.trailIdx = (a.trailIdx + 1) % 15;
+  }
+
+  // Hard projection pass: directly push apart any still-overlapping agents
+  for (let i = 0; i < agents.length; i++) {
+    const a = agents[i];
+    const aR = agentSepR(a);
+    const gx = ((a.x + 1.0) / cellSize) | 0;
+    const gy = ((a.y + 1.0) / cellSize) | 0;
+    for (let dx2 = -1; dx2 <= 1; dx2++) {
+      for (let dy2 = -1; dy2 <= 1; dy2++) {
+        const cell = grid.get((gx + dx2) * 1024 + (gy + dy2));
+        if (!cell) continue;
+        for (const j of cell) {
+          if (j <= i) continue;
+          const b = agents[j];
+          const bR = agentSepR(b);
+          const combinedR = aR + bR;
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < combinedR * combinedR && d2 > 1e-12) {
+            const d = Math.sqrt(d2);
+            const overlap = (combinedR - d) * SEP_HARD;
+            const invD = 1 / d;
+            const halfPush = overlap * 0.5;
+            a.x += dx * invD * halfPush;
+            a.y += dy * invD * halfPush;
+            b.x -= dx * invD * halfPush;
+            b.y -= dy * invD * halfPush;
+          }
+        }
+      }
+    }
   }
 }
 
@@ -412,31 +463,80 @@ export function macroTick(
       // Rebels try to pull away from the panopticon
     }
 
-    // ── Psychology update ──────────────────────────────────────────────────
-    // belief: rises with N (discipline zone), falls with high desire
-    const beliefDelta = (cfg.kBelief * n * (1 - a.desire * 0.7) - 0.05 * a.desire) * dt;
+    // ── Morin: Percepção falível (blindness of knowledge) ─────────────────
+    // Perception drifts slowly; distortion only nudges it, never dominates.
+    const percBias = cfg.perceptionBias;
+    const distortionPressure = Math.abs(a.ideology) * 0.3 + a.fear * 0.2 + a.hybris * 0.4;
+    a.perception = clamp(
+      a.perception + (0.025 - distortionPressure * percBias * 0.015) * dt,
+      0.40, 1,
+    );
+    // Perceived fields: light blend (20% max distortion) to preserve diversity
+    const distort = (1 - a.perception) * 0.5;
+    const pN = n * (1 - distort) + distort * (a.belief * 0.4 + 0.3);
+    const pL = l * (1 - distort) + distort * (a.status * 0.3 + 0.2);
+    const pR = r * (1 - distort) + distort * (a.wealth * 0.3 + 0.3);
+
+    // ── Psychology update (uses perceived fields — mostly faithful to reality) ─
+    const beliefDelta = (cfg.kBelief * pN * (1 - a.desire * 0.7) - 0.05 * a.desire) * dt;
     a.belief = clamp(a.belief + beliefDelta, 0, 1);
 
-    // fear: rises with N when belief is low (coercion), rises with conflict,
-    //        falls when L is high (legitimate authority = safety for believers)
-    const fearFromN      = cfg.kFear * n * (1 - a.belief * 0.8);
+    const fearFromN      = cfg.kFear * pN * (1 - a.belief * 0.8);
     const fearFromConflict = 0.12 * (a.hostileCount / 3);
-    const fearFromL      = -0.15 * l * a.belief;  // legitimacy calms believers
+    const fearFromL      = -0.15 * pL * a.belief;
     a.fear = clamp(a.fear + (fearFromN + fearFromConflict + fearFromL) * dt - 0.08 * dt, 0, 1);
 
-    // desire: rises in low-N zones (anomic freedom) and with scarcity
-    const desireDelta = (cfg.kDesire * (1 - n) * 0.7 + 0.1 * (1 - a.wealth)) * dt - 0.06 * dt;
+    const desireDelta = (cfg.kDesire * (1 - pN) * 0.7 + 0.1 * (1 - a.wealth)) * dt - 0.06 * dt;
     a.desire = clamp(a.desire + desireDelta, 0, 1);
 
     // wealth: harvest R, minus maintenance
     const gain = cfg.harvestRate * r * dt;
     a.wealth = clamp(a.wealth + gain - cfg.decayWealth * dt, 0, 1);
-    if (gain > 0.001) depositR(fields, a.x, a.y, -gain * 0.6, 0.08); // deplete
+    if (gain > 0.001) {
+      depositR(fields, a.x, a.y, -gain * 0.6, 0.08);
+      // Morin: auto-eco-organização — overextraction causes permanent damage
+      a.ecoFootprint = clamp(a.ecoFootprint + gain * cfg.ecoDegradation * 0.3, 0, 1);
+      if (a.ecoFootprint > 0.5) {
+        depositR(fields, a.x, a.y, -a.ecoFootprint * 0.003 * dt, 0.12);
+      }
+    }
 
     // status: cumulative advantage (wealth + L proximity + influence)
     const nearTotemL = l;
     const statusGain = (0.08 * a.centrality + 0.05 * a.wealth * nearTotemL + 0.03 * l) * dt;
     a.status = clamp(a.status * (1 - 0.015 * dt) + statusGain, 0, 1);
+
+    // ── Morin: Hybris (blindness of power) ─────────────────────────────
+    // Unchecked high-status agents grow overconfident, which degrades perception
+    // and increases aggression — the tyrant's trap.
+    if (a.status > cfg.hybrisThreshold) {
+      const hybrisGrowth = (a.status - cfg.hybrisThreshold) * 0.08 * (1 - a.ethics * 0.6) * dt;
+      a.hybris = clamp(a.hybris + hybrisGrowth, 0, 1);
+    } else {
+      a.hybris = clamp(a.hybris - 0.03 * dt, 0, 1);
+    }
+    if (a.hybris > 0.4) {
+      a.aggression = clamp(a.aggression + a.hybris * 0.04 * dt, 0, 1);
+      a.trust = clamp(a.trust - a.hybris * 0.03 * dt, 0, 1);
+    }
+
+    // ── Morin: Fervor — Homo sapiens-demens ─────────────────────────────
+    // When belief + fear exceed threshold, the agent enters demens state:
+    // rational judgment collapses, conformity spikes, aggression can surge.
+    const sapiensDemensSum = a.belief + a.fear;
+    if (sapiensDemensSum > cfg.fervorThreshold) {
+      const fervorGrowth = (sapiensDemensSum - cfg.fervorThreshold) * 0.12 * dt;
+      a.fervor = clamp(a.fervor + fervorGrowth, 0, 1);
+    } else {
+      a.fervor = clamp(a.fervor - 0.06 * dt, 0, 1);
+    }
+    if (a.fervor > 0.5) {
+      a.conformity = clamp(a.conformity + a.fervor * 0.03 * dt, 0, 1);
+      a.perception = clamp(a.perception - a.fervor * 0.02 * dt, 0.40, 1);
+      if (rand01(ws) < a.fervor * 0.02) {
+        a.aggression = clamp(a.aggression + 0.08, 0, 1);
+      }
+    }
 
     // ideology contágio: weighted by neighbor status
     let ideologySum = 0, ideologyW = 0;
@@ -551,12 +651,40 @@ export function macroTick(
       a.fear = clamp(a.fear - legitLevel * a.belief * 0.05 * dt, 0, 1);
     }
 
-    // ── Empathy contagion ──────────────────────────────────────────────────
+    // ── Empathy contagion (gentle — preserves individual variation) ──────
     if (empN2 > 0) {
-      const empScale = 0.06 * dt;
+      const empScale = 0.025 * dt;
       a.fear   = clamp(a.fear   + (empFear / empN2 - a.fear)   * empScale, 0, 1);
       a.desire = clamp(a.desire + (empDesire / empN2 - a.desire) * empScale, 0, 1);
-      a.belief = clamp(a.belief + (empBelief / empN2 - a.belief) * empScale * 0.5, 0, 1);
+      a.belief = clamp(a.belief + (empBelief / empN2 - a.belief) * empScale * 0.4, 0, 1);
+    }
+
+    // ── Morin: Understanding (compreensão) ──────────────────────────────
+    // Grows from repeated peaceful cross-group encounters. Reduces hostility.
+    const crossFriendlyMem = a.memory.filter(m =>
+      m.agentIdx < agents.length && agents[m.agentIdx].groupId !== a.groupId && m.friendly
+    ).length;
+    if (crossFriendlyMem >= 2) {
+      a.understanding = clamp(a.understanding + cfg.understandingGrowth * 0.05 * dt, 0, 1);
+    } else {
+      a.understanding = clamp(a.understanding - 0.01 * dt, 0, 1);
+    }
+    if (a.understanding > 0.3) {
+      a.aggression = clamp(a.aggression - a.understanding * 0.04 * dt, 0, 1);
+      a.empathy = clamp(a.empathy + a.understanding * 0.02 * dt, 0, 1);
+    }
+
+    // ── Morin: Ética emergente (anthropo-ethics) ────────────────────────
+    // Ethics emerge from the combination of understanding + diverse encounters
+    // + self-limitation. High ethics reduce hybris and increase cooperation.
+    if (a.understanding > 0.25 && crossFriendlyMem >= 1) {
+      const ethicsRise = cfg.ethicsGrowth * a.understanding * 0.04 * dt;
+      a.ethics = clamp(a.ethics + ethicsRise, 0, 1);
+    }
+    a.ethics = clamp(a.ethics - 0.008 * dt, 0, 1); // slow decay without reinforcement
+    if (a.ethics > 0.4) {
+      a.hybris = clamp(a.hybris - a.ethics * 0.05 * dt, 0, 1);
+      a.aggression = clamp(a.aggression - a.ethics * 0.03 * dt, 0, 1);
     }
 
     // ── Meme contagion ─────────────────────────────────────────────────────
@@ -785,6 +913,21 @@ export function macroTick(
     fields.dirty = true;
   }
 
+  // 9d. Morin: Consensus decay — total consensus without disorder = stagnation → death
+  // When consensus is too high for too long, innovation stalls and dissent erupts
+  {
+    const m2 = computeStudyMetrics(agents, cfg);
+    if (m2.consensus > 0.90 && cfg.consensusDecay > 0) {
+      for (let i = 0; i < agents.length; i++) {
+        const aa = agents[i];
+        if (rand01(ws) < cfg.consensusDecay * 0.03) {
+          aa.desire = clamp(aa.desire + 0.05, 0, 1);
+          aa.ideology = clamp(aa.ideology + randSigned(ws) * 0.15, -1, 1);
+        }
+      }
+    }
+  }
+
   // 10. Economy metrics
   _computeEconomyMetrics(agents, ws);
 
@@ -994,6 +1137,7 @@ function _generateEvents(
     const pc: Record<string, string> = {
       SWARM: '#94a3b8', CLUSTERS: '#34d399', POLARIZED: '#fbd38d',
       CONFLICT: '#ef4444', CONSENSUS: '#a78bfa', EXCEPTION: '#ff6b6b',
+      FERVOR: '#ff4500', ECO_CRISIS: '#8b4513', TRANSCENDENCE: '#00d4aa',
     };
     events.push({ time: t, icon: '🔄', message: `Phase: ${prevMetrics.phase} → ${newMetrics.phase}`, color: pc[newMetrics.phase] || '#fff' });
   }
@@ -1038,7 +1182,12 @@ function clamp(v: number, lo: number, hi: number): number {
 
 // ── 4. Metrics ────────────────────────────────────────────────────────────────
 export function computeStudyMetrics(agents: StudyAgent[], cfg: StudyConfig): StudyMetrics {
-  if (!agents.length) return { cohesion: 0, polarization: 0, conflict: 0, consensus: 0.5, phase: 'SWARM', leaderCount: 0, rebelCount: 0, meanFear: 0, meanBelief: 0, entropy: 0.5 };
+  if (!agents.length) return {
+    cohesion: 0, polarization: 0, conflict: 0, consensus: 0.5, phase: 'SWARM',
+    leaderCount: 0, rebelCount: 0, meanFear: 0, meanBelief: 0, entropy: 0.5,
+    meanPerception: 0.5, meanEthics: 0, meanHybris: 0, meanFervor: 0,
+    meanUnderstanding: 0, ecoHealth: 1,
+  };
 
   const groupAgents: StudyAgent[][] = Array.from({ length: cfg.groupCount }, () => []);
   for (const a of agents) groupAgents[a.groupId]?.push(a);
@@ -1086,14 +1235,31 @@ export function computeStudyMetrics(agents: StudyAgent[], cfg: StudyConfig): Stu
   }
   entropy = Math.min(1, entropy / Math.log2(5));
 
-  let phase: StudyMetrics['phase'];
-  if      (consensus  > 0.78 && conflict  < 0.2)    phase = 'CONSENSUS';
-  else if (conflict   > 0.50)                         phase = 'CONFLICT';
-  else if (polarization > 0.58)                       phase = 'POLARIZED';
-  else if (cohesion   > 0.55 && polarization < 0.35) phase = 'CLUSTERS';
-  else                                                phase = 'SWARM';
+  // Morin metrics
+  const meanPerception = agents.reduce((s, a) => s + a.perception, 0) / agents.length;
+  const meanEthics = agents.reduce((s, a) => s + a.ethics, 0) / agents.length;
+  const meanHybris = agents.reduce((s, a) => s + a.hybris, 0) / agents.length;
+  const meanFervor2 = agents.reduce((s, a) => s + a.fervor, 0) / agents.length;
+  const meanUnderstanding = agents.reduce((s, a) => s + a.understanding, 0) / agents.length;
+  const ecoHealth = 1 - (agents.reduce((s, a) => s + a.ecoFootprint, 0) / agents.length);
 
-  return { cohesion, polarization, conflict, consensus, phase, leaderCount, rebelCount, meanFear, meanBelief, entropy };
+  let phase: StudyMetrics['phase'];
+  // Morin phases take precedence when conditions are strong enough
+  if      (meanFervor2 > 0.40)                                         phase = 'FERVOR';
+  else if (ecoHealth < 0.35)                                           phase = 'ECO_CRISIS';
+  else if (meanEthics > 0.45 && meanUnderstanding > 0.35 && conflict < 0.15) phase = 'TRANSCENDENCE';
+  else if (consensus  > 0.78 && conflict  < 0.2)                      phase = 'CONSENSUS';
+  else if (conflict   > 0.50)                                          phase = 'CONFLICT';
+  else if (polarization > 0.58)                                        phase = 'POLARIZED';
+  else if (cohesion   > 0.55 && polarization < 0.35)                   phase = 'CLUSTERS';
+  else                                                                  phase = 'SWARM';
+
+  return {
+    cohesion, polarization, conflict, consensus, phase,
+    leaderCount, rebelCount, meanFear, meanBelief, entropy,
+    meanPerception, meanEthics, meanHybris, meanFervor: meanFervor2,
+    meanUnderstanding, ecoHealth,
+  };
 }
 
 // ── 5. Agent Roles ────────────────────────────────────────────────────────────

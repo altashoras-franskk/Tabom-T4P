@@ -273,44 +273,32 @@ function BoidsBackground({ active }: { active: boolean }) {
     const init = () => {
       resize();
       const ww = canvas.clientWidth, hh = canvas.clientHeight;
-      const bandTop = hh * 0.52; // only show activity in lower band
-      // Random interaction matrix (stable per mount) for quick emergence.
       const types = 4;
       const a: number[][] = Array.from({ length: types }, () => Array(types).fill(0));
       const r: number[][] = Array.from({ length: types }, () => Array(types).fill(0));
       for (let i = 0; i < types; i++) {
         for (let j = 0; j < types; j++) {
-          // Bias toward structure: mixed attract/repel, not too extreme.
           const v = (Math.random() * 2 - 1) * (0.55 + Math.random() * 0.35);
           a[i][j] = Math.max(-1, Math.min(1, v));
-          r[i][j] = 80 + Math.random() * 120; // px
+          r[i][j] = 80 + Math.random() * 120;
         }
       }
       matRef.current = { a, r };
 
-      // Build a fixed grid for neighbor queries (cellSize ~= typical radius)
       const cellSize = 120;
       const cols = Math.max(6, Math.floor(ww / cellSize));
       const rows = Math.max(6, Math.floor(hh / cellSize));
       gridRef.current = Array.from({ length: cols * rows }, () => []);
 
-      const N = Math.max(220, Math.min(520, Math.floor((ww * hh) / 3800)));
+      const N = Math.max(180, Math.min(420, Math.floor((ww * hh) / 4800)));
       const boids: Boid[] = [];
       for (let i = 0; i < N; i++) {
         const t = i % 4;
         const x = Math.random() * ww;
-        const y = bandTop + Math.random() * Math.max(1, (hh - bandTop));
+        const y = Math.random() * hh;
         const ang = Math.random() * Math.PI * 2;
-        const sp = 0.4 + Math.random() * 1.2;
-        boids.push({
-          x,
-          y,
-          vx: Math.cos(ang) * sp,
-          vy: Math.sin(ang) * sp,
-          z: 0.4 + Math.random() * 1.2,
-          ph: Math.random() * Math.PI * 2,
-          t,
-        });
+        const sp = 0.3 + Math.random() * 0.9;
+        boids.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, z: 0.4 + Math.random() * 1.2, ph: Math.random() * Math.PI * 2, t });
       }
       boidsRef.current = boids;
       startRef.current = null;
@@ -330,13 +318,10 @@ function BoidsBackground({ active }: { active: boolean }) {
     const step = (time: number) => {
       if (!startRef.current) startRef.current = time;
       const ww = canvas.clientWidth, hh = canvas.clientHeight;
-      const bandTop = hh * 0.52;
       const boids = boidsRef.current;
       const mat = matRef.current;
 
-      // Trail fade (keep some persistence)
-      ctx.fillStyle = 'rgba(0,0,0,0.10)';
-      ctx.fillRect(0, 0, ww, hh);
+      ctx.clearRect(0, 0, ww, hh);
 
       const cellSize = 120;
       const cols = Math.max(6, Math.floor(ww / cellSize));
@@ -348,7 +333,6 @@ function BoidsBackground({ active }: { active: boolean }) {
         for (let i = 0; i < grid.length; i++) grid[i].length = 0;
       }
 
-      // Rebuild grid
       for (let i = 0; i < boids.length; i++) {
         const b = boids[i];
         const gi = gridIndex(b.x, b.y, cols, rows, cellSize);
@@ -360,7 +344,6 @@ function BoidsBackground({ active }: { active: boolean }) {
       const coreRepel = 1.0;
       const dt = 1;
 
-      // Forces
       for (let i = 0; i < boids.length; i++) {
         const b = boids[i];
         const gi = gridIndex(b.x, b.y, cols, rows, cellSize);
@@ -403,7 +386,6 @@ function BoidsBackground({ active }: { active: boolean }) {
           }
         }
 
-        // Mouse/touch: "curiosity" — approach, orbit, keep distance.
         if (mouse.has) {
           const mx = mouse.x - b.x;
           const my = mouse.y - b.y;
@@ -411,30 +393,23 @@ function BoidsBackground({ active }: { active: boolean }) {
           const mr = 520;
           const tn = Math.max(0, 1 - md / mr);
           const desired = mouse.down ? 60 : 95;
-
-          // radial: pull if far, push if too close
           const radialK = (mouse.down ? 0.008 : 0.004) * tn;
           const radial = (md - desired) * radialK;
           fx += (mx / md) * radial;
           fy += (my / md) * radial;
-
-          // orbit: makes them "look" around the pointer
           const orbit = (mouse.down ? 0.30 : 0.18) * tn * tn;
           fx += (-my / md) * orbit;
           fy += (mx / md) * orbit;
         }
 
-        // Gentle noise + depth breathing
         const t = (time * 0.001);
         b.z = 0.45 + 1.1 * (0.5 + 0.5 * Math.sin(t * 0.7 + b.ph));
         fx += Math.sin(t * 1.7 + b.ph * 1.3) * 0.04;
         fy += Math.cos(t * 1.4 + b.ph * 1.1) * 0.04;
 
-        // Integrate
         const zSp = 0.55 + b.z * 0.55;
         b.vx = (b.vx + fx * 0.75 * zSp) * 0.984;
         b.vy = (b.vy + fy * 0.75 * zSp) * 0.984;
-        // extra damping near pointer (gives "attention")
         if (mouse.has) {
           const mx = mouse.x - b.x;
           const my = mouse.y - b.y;
@@ -448,35 +423,27 @@ function BoidsBackground({ active }: { active: boolean }) {
         b.x += b.vx * dt;
         b.y += b.vy * dt;
 
-        // Wrap screen
         if (b.x < -40) b.x += ww + 80; if (b.x > ww + 40) b.x -= ww + 80;
-        const bandH = Math.max(1, (hh - bandTop));
-        if (b.y < bandTop - 40) b.y += bandH + 80;
-        if (b.y > hh + 40) b.y -= bandH + 80;
+        if (b.y < -40) b.y += hh + 80; if (b.y > hh + 40) b.y -= hh + 80;
       }
 
-      // Render (front-to-back via z sort)
       const order = boids.map((_, i) => i).sort((ia, ib) => boids[ia].z - boids[ib].z);
 
       for (let ii = 0; ii < order.length; ii++) {
         const b = boids[order[ii]];
         const zs = b.z;
-        const r0 = 1.6 + zs * 2.8;
-        const yT = clamp01((b.y - bandTop) / Math.max(1, (hh - bandTop)));
-        const bandA = yT * yT; // fade-in from band top downward
-        const a0 = clamp01((0.10 + zs * 0.28) * bandA);
+        const r0 = 1.2 + zs * 1.6;
+        const a0 = clamp01(0.06 + zs * 0.14);
         if (a0 <= 0.001) continue;
 
-        // Glow
-        const gr = r0 * 7.5;
+        const gr = r0 * 5;
         const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, gr);
-        g.addColorStop(0, `rgba(255,255,255,${0.08 * a0})`);
-        g.addColorStop(0.35, `rgba(255,255,255,${0.03 * a0})`);
+        g.addColorStop(0, `rgba(255,255,255,${0.04 * a0})`);
+        g.addColorStop(0.4, `rgba(255,255,255,${0.012 * a0})`);
         g.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = g;
         ctx.beginPath(); ctx.arc(b.x, b.y, gr, 0, Math.PI * 2); ctx.fill();
 
-        // Core dot
         ctx.fillStyle = `rgba(255,255,255,${a0})`;
         ctx.beginPath(); ctx.arc(b.x, b.y, r0, 0, Math.PI * 2); ctx.fill();
       }
@@ -512,12 +479,8 @@ function BoidsBackground({ active }: { active: boolean }) {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full opacity-85"
-      style={{
-        // keep it mostly in the lower area even if some particles wrap up
-        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.9) 62%, rgba(0,0,0,1) 100%)',
-        maskImage: 'linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.9) 62%, rgba(0,0,0,1) 100%)',
-      }}
+      className="absolute inset-0 w-full h-full"
+      style={{ opacity: 0.65 }}
     />
   );
 }
