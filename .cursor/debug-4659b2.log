@@ -1,0 +1,14 @@
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772227787216}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772227787220}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772227940638}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772227940638}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772227948486}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":true},"timestamp":1772228101401}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772228114094}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772228114231}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772228114595}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772228114626}
+{"sessionId":"4659b2","runId":"repro-1","hypothesisId":"H3","location":"MetaArtLab.tsx:1900","message":"handler_enter_chaos","data":{"k":2.4,"quanta":0},"timestamp":1772228132905}
+{"sessionId":"4659b2","runId":"repro-1","hypothesisId":"H3","location":"MetaArtLab.tsx:1900","message":"handler_enter_chaos","data":{"k":2.4,"quanta":4000},"timestamp":1772228138863}
+{"sessionId":"4659b2","runId":"repro-1","hypothesisId":"H3","location":"MetaArtLab.tsx:1900","message":"handler_enter_black_hole","data":{"k":2.8,"s":2.8,"cx":0.4805648769574944,"cy":0.49120370370370375,"quanta":0},"timestamp":1772228164904}
+{"sessionId":"4659b2","runId":"repro-2","hypothesisId":"H0","location":"MetaArtLab.tsx:1525","message":"metaart_mount_ping","data":{"active":false},"timestamp":1772228174511}

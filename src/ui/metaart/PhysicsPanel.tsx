@@ -1,13 +1,17 @@
-// ─── Physics Panel — direct physics override sliders ─────────────────────────
-import React from 'react';
-import type { PhysicsConfig } from '../../sim/metaart/metaArtTypes';
-import type { DNA } from '../../sim/metaart/metaArtTypes';
+// ─── Physics Panel — physics + DNA controls (single source) ─────────────────
+import React, { useState } from 'react';
+import type { PhysicsConfig, DNA, DNAGenes, Intention } from '../../sim/metaart/metaArtTypes';
+import { applyIntention, generateRandomPalette } from '../../sim/metaart/metaArtDNA';
+import { mutateDNA, crossbreedDNA } from '../../sim/metaart/metaArtMutations';
 
 interface Props {
   physics: PhysicsConfig;
   dna: DNA;
   onPhysics: (patch: Partial<PhysicsConfig>) => void;
   onDNAGene: (key: string, val: number) => void;
+  onDNAChange: (dna: DNA) => void;
+  onMutate: (variants: DNA[]) => void;
+  pinnedDNA: DNA | null;
 }
 
 const MONO = "'IBM Plex Mono', monospace";
@@ -25,6 +29,28 @@ const sty: React.CSSProperties = {
   fontFamily: MONO, color: 'rgba(255,255,255,0.75)',
   overflowY: 'auto', background: '#000',
 };
+
+const GENE_LABELS: { key: keyof DNAGenes; label: string; desc: string }[] = [
+  { key: 'structure',     label: 'Structure',     desc: 'organic ↔ geometric' },
+  { key: 'flow',          label: 'Flow',          desc: 'static ↔ dynamic' },
+  { key: 'entropy',       label: 'Entropy',       desc: 'order ↔ chaos' },
+  { key: 'memory',        label: 'Memory',        desc: 'ephemeral ↔ persistent' },
+  { key: 'contrast',      label: 'Contrast',      desc: 'soft ↔ hard' },
+  { key: 'symmetry',      label: 'Symmetry',      desc: 'none ↔ radial' },
+  { key: 'glyphness',     label: 'Glyphness',     desc: 'none ↔ saturated' },
+  { key: 'erosion',       label: 'Erosion',       desc: 'accumulate ↔ erode' },
+  { key: 'layering',      label: 'Layering',      desc: 'flat ↔ deep' },
+  { key: 'rhythm',        label: 'Rhythm',        desc: 'continuous ↔ staccato' },
+  { key: 'fragmentation', label: 'Fragmentation', desc: 'unified ↔ fragmented' },
+  { key: 'coherence',     label: 'Coherence',     desc: 'noise ↔ coherent' },
+  { key: 'linear',        label: 'Linear',        desc: 'curves ↔ retas (rizoma)' },
+  { key: 'isolation',     label: 'Isolation',     desc: 'interação total ↔ espécies isoladas' },
+];
+
+const INTENTIONS: Intention[] = [
+  'none', 'ascension', 'gravity', 'conflict', 'harmony', 'ecstasy', 'silence',
+  'mondrian', 'suprematist', 'action', 'minimal', 'glitch', 'botanical', 'constellation',
+];
 
 function SliderRow({
   name, val, min, max, step, color = '#60b0ff',
@@ -70,9 +96,51 @@ function ToggleRow({
   );
 }
 
-export const PhysicsPanel: React.FC<Props> = ({ physics, dna, onPhysics, onDNAGene }) => {
+export const PhysicsPanel: React.FC<Props> = ({
+  physics, dna, onPhysics, onDNAGene, onDNAChange, onMutate, pinnedDNA,
+}) => {
   const p = physics;
-  const g = dna.genes;
+  const [open, setOpen] = useState<Record<string, boolean>>({
+    interaction: true,
+    genes: true,
+    spatial: false,
+    quadrants: false,
+    dna: true,
+    presets: false,
+  });
+  const [lockedGenes, setLockedGenes] = useState<Set<keyof DNAGenes>>(new Set());
+
+  const toggle = (key: string) => setOpen(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleLock = (key: keyof DNAGenes) => {
+    setLockedGenes(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const handleRandomizeGenes = () => {
+    const genes = { ...dna.genes };
+    for (const { key } of GENE_LABELS) {
+      if (!lockedGenes.has(key) && key !== 'linear') genes[key] = Math.random();
+    }
+    onDNAChange({ ...dna, genes });
+  };
+
+  const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
+    <div style={{ border: `1px solid ${BORDER_C}`, borderRadius: 3, overflow: 'hidden' }}>
+      <button onClick={() => toggle(id)} style={{
+        width: '100%', textAlign: 'left', cursor: 'pointer',
+        background: 'rgba(255,255,255,0.02)', border: 'none',
+        color: 'rgba(255,255,255,0.65)', fontSize: 8,
+        letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: MONO,
+        padding: '7px 8px',
+      }}>
+        {open[id] ? '▾ ' : '▸ '}{title}
+      </button>
+      {open[id] && <div style={{ padding: '8px' }}>{children}</div>}
+    </div>
+  );
 
   return (
     <div style={sty}>
@@ -81,8 +149,7 @@ export const PhysicsPanel: React.FC<Props> = ({ physics, dna, onPhysics, onDNAGe
         PHYSICS & BEHAVIOR
       </div>
 
-      {/* ── Interação ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <Section id="interaction" title="Interação">
         <div style={{ ...label, color: 'rgba(100,180,255,0.6)', marginBottom: 3 }}>Interação PL</div>
         <SliderRow name="Raio Max" val={p.rMaxMul} min={0.3} max={3.0} step={0.05}
           color="#60b0ff" fmt={v => v.toFixed(2) + 'x'} onChange={v => onPhysics({ rMaxMul: v })} />
@@ -96,40 +163,43 @@ export const PhysicsPanel: React.FC<Props> = ({ physics, dna, onPhysics, onDNAGe
           color="#60ffa0" fmt={v => v.toFixed(2) + 'x'} onChange={v => onPhysics({ maxSpeedMul: v })} />
         <SliderRow name="Ruído" val={p.noiseMul} min={0.0} max={5.0} step={0.05}
           color="#ffaa60" fmt={v => v.toFixed(2) + 'x'} onChange={v => onPhysics({ noiseMul: v })} />
-      </div>
+      </Section>
 
-      {/* ── DNA Genes (physics-affecting) ─────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ ...label, color: 'rgba(180,140,255,0.6)', marginBottom: 3 }}>Genes de Movimento</div>
-        <SliderRow name="Fluxo" val={g.flow} min={0} max={1} step={0.01}
-          color="#80d0ff" fmt={v => v.toFixed(2)} onChange={v => onDNAGene('flow', v)} />
-        <SliderRow name="Entropia" val={g.entropy} min={0} max={1} step={0.01}
-          color="#ffa080" fmt={v => v.toFixed(2)} onChange={v => onDNAGene('entropy', v)} />
-        <SliderRow name="Coerência" val={g.coherence} min={0} max={1} step={0.01}
-          color="#80ffb0" fmt={v => v.toFixed(2)} onChange={v => onDNAGene('coherence', v)} />
-        <SliderRow name="Fragmentação" val={g.fragmentation} min={0} max={1} step={0.01}
-          color="#ffcc60" fmt={v => v.toFixed(2)} onChange={v => onDNAGene('fragmentation', v)} />
-        <SliderRow name="Ritmo" val={g.rhythm} min={0} max={1} step={0.01}
-          color="#ff80c0" fmt={v => v.toFixed(2)} onChange={v => onDNAGene('rhythm', v)} />
-        <SliderRow name="Estrutura" val={g.structure} min={0} max={1} step={0.01}
-          color="#c0a0ff" fmt={v => v.toFixed(2)} onChange={v => onDNAGene('structure', v)} />
-        <SliderRow name="Erosão" val={g.erosion} min={0} max={1} step={0.01}
-          color="#ff9060" fmt={v => v.toFixed(2)} onChange={v => onDNAGene('erosion', v)} />
-        <SliderRow name="Isolamento" val={g.isolation ?? 0} min={0} max={1} step={0.01}
-          color="#ff6080" fmt={v => v.toFixed(2)} onChange={v => onDNAGene('isolation', v)} />
-      </div>
+      <Section id="genes" title="Genes">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {GENE_LABELS.map(({ key, label: nm, desc }) => {
+            const locked = lockedGenes.has(key);
+            return (
+              <div key={key}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <button onClick={() => toggleLock(key)} style={{
+                    border: 'none', background: 'none', cursor: 'pointer',
+                    color: locked ? ACCENT : DIM_C, fontSize: 8, fontFamily: MONO, padding: 0,
+                  }}>{locked ? '■' : '□'}</button>
+                  <span style={{ ...label, marginBottom: 0, flex: 1 }}>{nm}</span>
+                  <span style={{ fontSize: 7, color: DIM_C }}>{(dna.genes[key] ?? 0).toFixed(2)}</span>
+                </div>
+                <input type="range" min={0} max={1} step={0.01}
+                  disabled={locked}
+                  value={dna.genes[key] ?? 0}
+                  onChange={e => onDNAGene(key, parseFloat(e.target.value))}
+                  style={{ width: '100%', cursor: locked ? 'not-allowed' : 'pointer', accentColor: '#c0a0ff', opacity: locked ? 0.4 : 1 }} />
+                <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.18)', marginTop: 1 }}>{desc}</div>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
 
-      {/* ── Spatial ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <Section id="spatial" title="Espacial">
         <div style={{ ...label, color: 'rgba(120,220,160,0.6)', marginBottom: 3 }}>Espacial</div>
         <SliderRow name="Atração Centro" val={p.centerPull} min={0} max={1} step={0.02}
           color="#60ffa0" fmt={v => v.toFixed(2)} onChange={v => onPhysics({ centerPull: v })} />
         <SliderRow name="Rep. Borda" val={p.borderRepulsion} min={0} max={1} step={0.02}
           color="#ff8060" fmt={v => v.toFixed(2)} onChange={v => onPhysics({ borderRepulsion: v })} />
-      </div>
+      </Section>
 
-      {/* ── Quadrant Mode ───────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <Section id="quadrants" title="Quadrantes">
         <div style={{ ...label, color: 'rgba(255,180,80,0.6)', marginBottom: 3 }}>Quadrantes</div>
         <ToggleRow name="Modo Quad." val={p.quadrantMode} color="#ffaa40"
           onChange={v => onPhysics({ quadrantMode: v })} />
@@ -147,10 +217,63 @@ export const PhysicsPanel: React.FC<Props> = ({ physics, dna, onPhysics, onDNAGe
             Combine com Isolamento &gt; 0.5 para segregação total.
           </div>
         )}
-      </div>
+      </Section>
 
-      {/* ── Quick Presets ─────────────────────────────────────────────── */}
-      <div>
+      <Section id="dna" title="DNA / Recipe">
+        <div style={{ ...label, marginBottom: 5 }}>Intention</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 8 }}>
+          {INTENTIONS.map(int => (
+            <button key={int} onClick={() => onDNAChange(applyIntention(dna, int))}
+              style={{
+                padding: '2px 6px', borderRadius: 2, cursor: 'pointer', fontSize: 7, textTransform: 'capitalize',
+                border: `1px solid ${dna.intention === int ? 'rgba(255,0,132,0.45)' : BORDER_C}`,
+                background: dna.intention === int ? 'rgba(255,0,132,0.08)' : 'transparent',
+                color: dna.intention === int ? 'rgba(255,255,255,0.85)' : DIM_C,
+              }}>
+              {int}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ ...label, marginBottom: 3 }}>Quanta</div>
+        <input type="range" min={0} max={3000} step={1}
+          value={dna.quantaCount}
+          onChange={e => onDNAChange({ ...dna, quantaCount: parseInt(e.target.value, 10) })}
+          style={{ width: '100%', cursor: 'pointer', accentColor: ACCENT, marginBottom: 6 }} />
+
+        <div style={{ ...label, marginBottom: 3 }}>Palette</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+          {dna.palette.map((color, i) => (
+            <input key={i} type="color" value={color}
+              onChange={e => {
+                const next = [...dna.palette];
+                next[i] = e.target.value;
+                onDNAChange({ ...dna, palette: next });
+              }}
+              style={{ width: 20, height: 20, padding: 0, border: 'none', cursor: 'pointer', background: 'none' }} />
+          ))}
+          <input type="color" value={dna.background}
+            onChange={e => onDNAChange({ ...dna, background: e.target.value })}
+            style={{ width: 20, height: 20, padding: 0, border: 'none', cursor: 'pointer', background: 'none' }} />
+          <button onClick={() => onDNAChange({ ...dna, palette: generateRandomPalette(dna.palette.length) })}
+            style={{ padding: '2px 6px', borderRadius: 2, cursor: 'pointer', fontSize: 7, border: `1px solid ${BORDER_C}`, background: 'rgba(255,255,255,0.03)', color: DIM_C }}>
+            RAND
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={handleRandomizeGenes} style={{ padding: '5px 7px', textAlign: 'left', borderRadius: 2, cursor: 'pointer', border: `1px solid ${BORDER_C}`, background: 'rgba(255,255,255,0.03)', color: DIM_C, fontSize: 8 }}>Randomize Genes</button>
+          <button onClick={() => onMutate(mutateDNA(dna, 0.28, 8))} style={{ padding: '5px 7px', textAlign: 'left', borderRadius: 2, cursor: 'pointer', border: `1px solid ${BORDER_C}`, background: 'rgba(255,255,255,0.03)', color: DIM_C, fontSize: 8 }}>Mutate (8 variants)</button>
+          <button
+            disabled={!pinnedDNA}
+            onClick={() => pinnedDNA && onDNAChange(crossbreedDNA(dna, pinnedDNA))}
+            style={{ padding: '5px 7px', textAlign: 'left', borderRadius: 2, cursor: pinnedDNA ? 'pointer' : 'not-allowed', border: `1px solid ${BORDER_C}`, background: 'rgba(255,255,255,0.03)', color: pinnedDNA ? DIM_C : 'rgba(255,255,255,0.15)', fontSize: 8 }}>
+            Crossbreed {pinnedDNA ? `+ ${(pinnedDNA.name ?? 'pinned').slice(0, 12)}` : '(pin first)'}
+          </button>
+        </div>
+      </Section>
+
+      <Section id="presets" title="Presets Rápidos">
         <div style={{ ...label, marginBottom: 6, color: 'rgba(255,255,255,0.35)' }}>Presets Rápidos</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {[
@@ -187,7 +310,7 @@ export const PhysicsPanel: React.FC<Props> = ({ physics, dna, onPhysics, onDNAGe
             </button>
           ))}
         </div>
-      </div>
+      </Section>
     </div>
   );
 };

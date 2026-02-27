@@ -33,7 +33,6 @@ import { computeMetrics } from '../../sim/metaart/metaArtCurator';
 import { loadMusicSnapshotFromStorage, musicSnapshotToMetaArtConfig } from '../../bridge/musicMetaArtBridge';
 import { LeftSidebar } from '../metaart/LeftSidebar';
 import { LayerPanel } from '../metaart/LayerPanel';
-import { DNAPanel } from '../metaart/DNAPanel';
 import { ArchivePanel } from '../metaart/ArchivePanel';
 import { getControllerManager } from '../../input/controller/ControllerInputManager';
 import { useController, shouldUseController } from '../../input/controller/useController';
@@ -562,7 +561,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   const [dna,         setDNA]         = useState<DNA>(PRESETS[0]);
   const [layers,      setLayers]      = useState<LayerState[]>([]);
   const [toolState,   setToolState]   = useState<ToolState>(createDefaultToolState());
-  const [rightPanel,  setRightPanel]  = useState<RightPanel>('dna');
+  const [rightPanel,  setRightPanel]  = useState<RightPanel>('physics');
   const [paused,      setPaused]      = useState(false);
   const [cinematic,   setCinematic]   = useState(false);
   const [archive,     setArchive]     = useState<ArchiveEntry[]>([]);
@@ -1499,8 +1498,8 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     if (m !== 'fluid') {
       setRightPanel('geo');
     } else {
-      // UX: returning to fluid should bring DNA/genes back by default.
-      setRightPanel('dna');
+      // UX: returning to fluid should bring core controls back by default.
+      setRightPanel('physics');
     }
   }, [handleGeoParamChange]);
 
@@ -1520,6 +1519,12 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7859/ingest/0abf9fcf-b217-4f00-9c34-3f0a1bb469c8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4659b2'},body:JSON.stringify({sessionId:'4659b2',runId:'repro-2',hypothesisId:'H0',location:'MetaArtLab.tsx:1525',message:'metaart_mount_ping',data:{active},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [active]);
 
   const applyGeoPresetByKey = useCallback((key: string, dnaPreset?: DNA) => {
     const gp = GEO_PRESET_PARAMS[key];
@@ -1548,7 +1553,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     const snap = loadMusicSnapshotFromStorage();
     if (!snap) {
       setGrimoire(prev => addGrimoireEntry(prev, 'Nenhum snapshot do MusicLab encontrado', 'observation'));
-      setRightPanel('dna');
+      setRightPanel('physics');
       return;
     }
     const cfg = musicSnapshotToMetaArtConfig(snap);
@@ -1571,7 +1576,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     // Apply DNA and reinit
     setDNA(cfg.dna);
     initSim(cfg.dna, cfg.seed);
-    setRightPanel('dna');
+    setRightPanel('physics');
     setGrimoire(prev => addGrimoireEntry(
       prev,
       `Importado do MusicLab: ${snap.preset.name} · ${snap.preset.bpm}bpm · ${snap.preset.root} ${snap.preset.scale}`,
@@ -1894,71 +1899,117 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     setDNA(newDNA); dnaRef.current = newDNA;
   }, []);
 
-  const handleChaosInject = useCallback(() => {
+  const getPowerCenter = useCallback(() => {
+    const W = Math.max(1, canvasSize.w);
+    const H = Math.max(1, canvasSize.h);
+    const lx = toolRef.current.lastX / W;
+    const ly = toolRef.current.lastY / H;
+    if (Number.isFinite(lx) && Number.isFinite(ly) && lx >= 0 && lx <= 1 && ly >= 0 && ly <= 1) {
+      return { cx: lx, cy: ly };
+    }
+    return { cx: 0.5, cy: 0.5 };
+  }, [canvasSize.w, canvasSize.h]);
+  const dbgPower = useCallback((runId: string, hypothesisId: string, message: string, data: Record<string, unknown>) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7859/ingest/0abf9fcf-b217-4f00-9c34-3f0a1bb469c8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4659b2'},body:JSON.stringify({sessionId:'4659b2',runId,hypothesisId,location:'MetaArtLab.tsx:1900',message,data,timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, []);
+
+  const handleChaosInject = useCallback((k = 2.4) => {
+    // #region agent log
+    dbgPower('repro-1', 'H3', 'handler_enter_chaos', { k, quanta: quantaRef.current.length });
+    // #endregion
     const prev = dnaRef.current.genes.entropy;
-    const newDNA = { ...dnaRef.current, genes: { ...dnaRef.current.genes, entropy: 0.98 } };
+    const newDNA = { ...dnaRef.current, genes: { ...dnaRef.current.genes, entropy: 1 } };
     setDNA(newDNA); dnaRef.current = newDNA;
+    const s = Math.max(1, k);
+    for (const q of quantaRef.current) {
+      q.vx += (Math.random() - 0.5) * 0.09 * s;
+      q.vy += (Math.random() - 0.5) * 0.09 * s;
+    }
     setTimeout(() => {
       const restored = { ...dnaRef.current, genes: { ...dnaRef.current.genes, entropy: prev } };
       setDNA(restored); dnaRef.current = restored;
     }, 2000);
-  }, []);
+  }, [dbgPower]);
 
-  const handleFreezeAll = useCallback(() => {
-    for (const q of quantaRef.current) { q.vx = 0; q.vy = 0; }
-  }, []);
+  const handleFreezeAll = useCallback((k = 2.4) => {
+    // #region agent log
+    dbgPower('repro-1', 'H3', 'handler_enter_freeze', { k, quanta: quantaRef.current.length });
+    // #endregion
+    const f = Math.max(0, 1 - Math.max(1, k) * 0.35);
+    for (const q of quantaRef.current) { q.vx *= f; q.vy *= f; }
+  }, [dbgPower]);
 
-  const handlePulseAll = useCallback(() => {
+  const handlePulseAll = useCallback((k = 2.4) => {
+    const s = Math.max(1, k);
     for (const q of quantaRef.current) {
       const a = Math.random() * Math.PI * 2;
-      const spd = 0.012 + Math.random() * 0.018;
+      const spd = (0.03 + Math.random() * 0.05) * s;
       q.vx += Math.cos(a) * spd; q.vy += Math.sin(a) * spd;
     }
   }, []);
 
-  const handleScatterAll = useCallback(() => {
+  const handleScatterAll = useCallback((k = 2.4) => {
+    const s = Math.max(1, k);
+    const { cx, cy } = getPowerCenter();
     for (const q of quantaRef.current) {
-      q.vx -= (0.5 - q.x) * 0.04; q.vy -= (0.5 - q.y) * 0.04;
+      q.vx -= (cx - q.x) * 0.12 * s;
+      q.vy -= (cy - q.y) * 0.12 * s;
     }
-  }, []);
+  }, [getPowerCenter]);
 
-  const handleExplodeAll = useCallback(() => {
+  const handleExplodeAll = useCallback((k = 2.8) => {
+    const s = Math.max(1, k);
+    const { cx, cy } = getPowerCenter();
+    // #region agent log
+    dbgPower('repro-1', 'H3', 'handler_enter_explode', { k, s, cx, cy, quanta: quantaRef.current.length });
+    // #endregion
     for (const q of quantaRef.current) {
-      const dx = q.x - 0.5;
-      const dy = q.y - 0.5;
+      const dx = q.x - cx;
+      const dy = q.y - cy;
       const d = Math.sqrt(dx * dx + dy * dy) + 0.0001;
-      const f = 0.010 + Math.random() * 0.020;
+      const f = (0.06 + Math.random() * 0.08) * s / (d * 5 + 1);
       q.vx += (dx / d) * f;
       q.vy += (dy / d) * f;
     }
-  }, []);
+  }, [getPowerCenter, dbgPower]);
 
-  const handleBlackHoleAll = useCallback(() => {
+  const handleBlackHoleAll = useCallback((k = 2.8) => {
+    const s = Math.max(1, k);
+    const { cx, cy } = getPowerCenter();
+    // #region agent log
+    dbgPower('repro-1', 'H3', 'handler_enter_black_hole', { k, s, cx, cy, quanta: quantaRef.current.length });
+    // #endregion
     for (const q of quantaRef.current) {
-      const dx = 0.5 - q.x;
-      const dy = 0.5 - q.y;
+      const dx = cx - q.x;
+      const dy = cy - q.y;
       const d = Math.sqrt(dx * dx + dy * dy) + 0.0001;
-      const pull = 0.012 / (d + 0.03);
+      const pull = (0.09 * s) / (d * 4 + 0.015);
       q.vx += (dx / d) * pull;
       q.vy += (dy / d) * pull;
       // Orbital component
-      q.vx += (-dy / d) * 0.004;
-      q.vy += (dx / d) * 0.004;
-      if (d < 0.035) {
+      q.vx += (-dy / d) * 0.02 * s;
+      q.vy += (dx / d) * 0.02 * s;
+      if (d < 0.04) {
         q.x = ((1 - q.x) + (Math.random() - 0.5) * 0.08 + 1) % 1;
         q.y = ((1 - q.y) + (Math.random() - 0.5) * 0.08 + 1) % 1;
       }
     }
-  }, []);
+  }, [getPowerCenter, dbgPower]);
 
-  const handleHarmonizeAll = useCallback(() => {
+  const handleHarmonizeAll = useCallback((k = 2.8) => {
+    const s = Math.max(1, k);
+    // #region agent log
+    dbgPower('repro-1', 'H3', 'handler_enter_harmonize', { k, s, quanta: quantaRef.current.length });
+    // #endregion
     const nextDNA = {
       ...dnaRef.current,
       genes: {
         ...dnaRef.current.genes,
-        coherence: Math.min(1, (dnaRef.current.genes.coherence ?? 0.5) + 0.22),
-        entropy: Math.max(0, (dnaRef.current.genes.entropy ?? 0.5) - 0.20),
-        flow: Math.min(1, (dnaRef.current.genes.flow ?? 0.5) + 0.12),
+        coherence: Math.min(1, (dnaRef.current.genes.coherence ?? 0.5) + 0.28 * s),
+        entropy: Math.max(0, (dnaRef.current.genes.entropy ?? 0.5) - 0.24 * s),
+        flow: Math.min(1, (dnaRef.current.genes.flow ?? 0.5) + 0.15 * s),
       },
     };
     setDNA(nextDNA);
@@ -1972,9 +2023,92 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     fieldsRef.current.interactionMatrix = mat;
     setMatrixValues(Array.from(mat));
     for (const q of quantaRef.current) {
-      q.vx *= 0.86;
-      q.vy *= 0.86;
+      q.vx *= 0.72;
+      q.vy *= 0.72;
     }
+  }, [dbgPower]);
+
+  const handleShockAll = useCallback((k = 2.4) => {
+    const s = Math.max(1, k);
+    const { cx, cy } = getPowerCenter();
+    for (const q of quantaRef.current) {
+      const dx = q.x - cx; const dy = q.y - cy;
+      const d = Math.sqrt(dx * dx + dy * dy) + 0.0001;
+      const ring = Math.sin(Math.min(1, d * 18) * Math.PI);
+      const f = (0.10 * s * ring) / (d * 4 + 1);
+      q.vx += (dx / d) * f;
+      q.vy += (dy / d) * f;
+    }
+  }, [getPowerCenter]);
+
+  const handleMagnetizeAll = useCallback((k = 2.4) => {
+    const s = Math.max(1, k);
+    for (const q of quantaRef.current) {
+      const a = Math.atan2(q.vy, q.vx);
+      q.vx += Math.cos(a) * 0.02 * s;
+      q.vy += Math.sin(a) * 0.02 * s;
+    }
+  }, []);
+
+  const handleImplodeAll = useCallback((k = 2.4) => {
+    const s = Math.max(1, k);
+    const { cx, cy } = getPowerCenter();
+    for (const q of quantaRef.current) {
+      const dx = cx - q.x; const dy = cy - q.y;
+      q.vx += dx * 0.11 * s;
+      q.vy += dy * 0.11 * s;
+    }
+  }, [getPowerCenter]);
+
+  const handleTurboAll = useCallback((k = 2.4) => {
+    const s = Math.max(1, k);
+    for (const q of quantaRef.current) {
+      q.vx *= (1.25 + 0.35 * s);
+      q.vy *= (1.25 + 0.35 * s);
+    }
+  }, []);
+
+  const handleVortexAll = useCallback((k = 2.8) => {
+    const s = Math.max(1, k);
+    const { cx, cy } = getPowerCenter();
+    for (const q of quantaRef.current) {
+      const dx = q.x - cx; const dy = q.y - cy;
+      const d = Math.sqrt(dx * dx + dy * dy) + 0.0001;
+      const t = 0.10 * s / (d * 5 + 1);
+      q.vx += (-dy / d) * t;
+      q.vy += (dx / d) * t;
+    }
+  }, [getPowerCenter]);
+
+  const handleRepelAll = useCallback((k = 2.8) => handleExplodeAll(k * 1.1), [handleExplodeAll]);
+  const handleAttractAll = useCallback((k = 2.8) => handleImplodeAll(k * 1.1), [handleImplodeAll]);
+  const handleCalmAll = useCallback((k = 2.8) => {
+    const s = Math.max(1, k);
+    const f = Math.max(0.4, 1 - 0.22 * s);
+    for (const q of quantaRef.current) { q.vx *= f; q.vy *= f; }
+  }, []);
+  const handleFluxAll = useCallback((k = 2.8) => {
+    const s = Math.max(1, k);
+    const { cx, cy } = getPowerCenter();
+    for (const q of quantaRef.current) {
+      const dx = cx - q.x; const dy = cy - q.y;
+      const d = Math.sqrt(dx * dx + dy * dy) + 0.0001;
+      q.vx += (dx / d) * 0.03 * s + (-dy / d) * 0.02 * s;
+      q.vy += (dy / d) * 0.03 * s + (dx / d) * 0.02 * s;
+    }
+  }, [getPowerCenter]);
+
+  const handleActivatePowerBrush = useCallback((toolId: ToolState['activeToolId'], pressure: number, size: number) => {
+    setToolState(prev => {
+      const next = {
+        ...prev,
+        activeToolId: toolId,
+        pressure: Math.max(0.2, Math.min(6, pressure)),
+        size: Math.max(20, Math.min(360, size)),
+      };
+      toolRef.current = next;
+      return next;
+    });
   }, []);
 
   const handleHueRotate = useCallback((deg: number) => {
@@ -2394,36 +2528,27 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             <Maximize2 size={12} strokeWidth={1.5} />
           </button>
 
-          {/* Panel toggles */}
-          {([
-            ['layers',  <Layers  key="l" size={11} strokeWidth={1.2} />, 'LYR', 'Camadas · Render / blend'],
-            ['dna',     <Dna     key="d" size={11} strokeWidth={1.2} />, 'DNA', 'DNA · Paleta · Estilo'],
-            ['archive', <Archive key="a" size={11} strokeWidth={1.2} />, 'ARC', 'Arquivo · Capturas / presets'],
-            ['vitrine', null, 'VIT', 'Vitrine · Curadoria / cenas'],
-            ['matrix',  <Grid3X3 key="m" size={11} strokeWidth={1.2} />, 'MTX', 'Matriz · Interações / espécies'],
-            ['physics', null, 'FIS', 'Física · Integração / estabilidade'],
-            ['powers',  null, 'PWR', 'Poderes · Biblioteca / ações'],
-            ['geo',     null, 'GEO', 'Geometria · Compositor / parâmetros'],
-            ['hub',     null, 'HUB', 'Hub · Visão geral'],
-          ] as [RightPanel, React.ReactNode | null, string, string][]).map(([panel, icon, label, hint]) => (
-            <button title={hint} key={panel}
-              onClick={() => setRightPanel(prev => prev === panel ? null : panel)}
-              style={{
-                ...topBtnSty,
-                color: rightPanel === panel ? BRIGHT : DIM,
-                background: rightPanel === panel ? 'rgba(255,0,132,0.08)' : 'transparent',
-                borderBottom: rightPanel === panel ? `1px solid ${ACCENT}` : '1px solid transparent',
-                borderRadius: 1,
-                fontFamily: MONO,
-                fontSize: 7,
-                letterSpacing: '0.12em',
-                padding: '4px 5px',
-                gap: 3,
-              }}>
-              {icon}
-              <span>{label}</span>
-            </button>
-          ))}
+          {/* Panel dropdown */}
+          <select
+            value={rightPanel ?? ''}
+            onChange={e => setRightPanel((e.target.value || null) as RightPanel)}
+            title="Painel lateral"
+            style={{
+              background: SURFACE, border: `1px solid ${BORDER}`,
+              color: DIM, fontSize: 8, padding: '3px 6px', borderRadius: 2,
+              cursor: 'pointer', fontFamily: MONO, letterSpacing: '0.08em',
+              minWidth: 118,
+            }}>
+            <option value="">PAINEL: OFF</option>
+            <option value="layers">LAYERS</option>
+            <option value="archive">ARCHIVE</option>
+            <option value="vitrine">VITRINE</option>
+            <option value="matrix">MATRIX</option>
+            <option value="physics">PHYSICS & BEHAVIOR</option>
+            <option value="powers">POWERS</option>
+            <option value="geo">GEOMETRY</option>
+            <option value="hub">HUB</option>
+          </select>
         </div>
       )}
 
@@ -2490,63 +2615,6 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             onGeoMode={handleGeoModeSelect}
             geoPanelOpen={rightPanel === 'geo'}
             onToggleGeoPanel={() => setRightPanel(prev => prev === 'geo' ? null : 'geo')}
-            guideStroke={guideStroke}
-            onGuideStroke={v => {
-              setGuideStroke(v);
-              guideStrokeRef.current = v;
-              retuneGuidesLive({ thickness: v });
-            }}
-            guideCurvature={guideCurvature}
-            onGuideCurvature={v => {
-              setGuideCurvature(v);
-              guideCurvatureRef.current = v;
-              retuneGuidesLive({ smoothness: v });
-            }}
-            guideColor={guideColor}
-            onGuideColor={hex => {
-              setGuideColor(hex);
-              guideColorRef.current = hex;
-              retuneGuidesLive({ color: hex });
-            }}
-            guideLineMode={guideLineMode}
-            onGuideLineMode={m => {
-              setGuideLineMode(m);
-              guideLineModeRef.current = m;
-              retuneGuidesLive({ lineMode: m });
-            }}
-            guidePathMode={guidePathMode}
-            onGuidePathMode={m => {
-              setGuidePathMode(m);
-              guidePathModeRef.current = m;
-              retuneGuidesLive({ pathMode: m });
-            }}
-            autoGuidesPreset={autoGuidesPreset}
-            autoGuidesRandom={autoGuidesRandom}
-            onToggleAutoGuidesPreset={() => setAutoGuidesPreset(v => !v)}
-            onToggleAutoGuidesRandom={() => setAutoGuidesRandom(v => !v)}
-            onGuideGenerate={() => spawnAutoGuides('random')}
-            onGuideClear={clearGuides}
-            onGuideStyleRandom={() => {
-              const col = dnaRef.current.palette[Math.floor(Math.random() * Math.max(1, dnaRef.current.palette.length))] ?? '#40b0ff';
-              const stroke = 0.8 + Math.random() * 2.3;
-              const smooth = Math.random();
-              const lineMode: GuideLineType = (['flow', 'pinch', 'shear', 'barrier', 'spiral', 'funnel', 'repulsor', 'attractor', 'wave', 'orbit_line'] as const)[Math.floor(Math.random() * 10)];
-              const pathMode = (['stream', 'orbit', 'shock'] as const)[Math.floor(Math.random() * 3)];
-              setGuideColor(col);
-              setGuideStroke(stroke);
-              setGuideCurvature(smooth);
-              setGuideLineMode(lineMode);
-              setGuidePathMode(pathMode);
-              guideColorRef.current = col;
-              guideStrokeRef.current = stroke;
-              guideCurvatureRef.current = smooth;
-              guideLineModeRef.current = lineMode;
-              guidePathModeRef.current = pathMode;
-              retuneGuidesLive({ color: col, thickness: stroke, smoothness: smooth, lineMode, pathMode });
-            }}
-            onExplodeAll={handleExplodeAll}
-            onBlackHoleAll={handleBlackHoleAll}
-            onHarmonizeAll={handleHarmonizeAll}
           />
           </div>
         )}
@@ -2833,13 +2901,6 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
                 onChange={handleLayerChange}
                 onClearLayer={handleClearLayer} />
             )}
-            {rightPanel === 'dna' && (
-              <DNAPanel
-                dna={dna}
-                onDNAChange={handleDNAChange}
-                onMutate={handleMutate}
-                pinnedDNA={pinnedDNA} />
-            )}
             {rightPanel === 'archive' && (
               <ArchivePanel
                 archive={archive}
@@ -2887,7 +2948,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
                 onNewMutate={() => handleMutate([])}
                 currentDNA={dna} />
             )}
-            {rightPanel === 'physics' && (
+            {(rightPanel === 'physics' || rightPanel === 'dna') && (
               <PhysicsPanel
                 physics={physicsConfig}
                 dna={dna}
@@ -2899,6 +2960,9 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
                   });
                 }}
                 onDNAGene={handleDNAGeneChange}
+                onDNAChange={handleDNAChange}
+                onMutate={handleMutate}
+                pinnedDNA={pinnedDNA}
               />
             )}
             {rightPanel === 'powers' && (
@@ -2920,6 +2984,10 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
                 onFreezeAll={handleFreezeAll}
                 onPulseAll={handlePulseAll}
                 onScatterAll={handleScatterAll}
+                onShockAll={handleShockAll}
+                onMagnetizeAll={handleMagnetizeAll}
+                onImplodeAll={handleImplodeAll}
+                onTurboAll={handleTurboAll}
                 onHueRotate={handleHueRotate}
                 onSatShift={handleSatShift}
                 onLitShift={handleLitShift}
@@ -2928,21 +2996,66 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
                 guideStroke={guideStroke}
                 guideCurvature={guideCurvature}
                 guideColor={guideColor}
+                guideLineMode={guideLineMode}
+                guidePathMode={guidePathMode}
                 autoGuidesPreset={autoGuidesPreset}
                 autoGuidesRandom={autoGuidesRandom}
-                onGuideStroke={setGuideStroke}
-                onGuideCurvature={setGuideCurvature}
-                onGuideColor={setGuideColor}
+                onGuideStroke={v => {
+                  setGuideStroke(v);
+                  guideStrokeRef.current = v;
+                  retuneGuidesLive({ thickness: v });
+                }}
+                onGuideCurvature={v => {
+                  setGuideCurvature(v);
+                  guideCurvatureRef.current = v;
+                  retuneGuidesLive({ smoothness: v });
+                }}
+                onGuideColor={hex => {
+                  setGuideColor(hex);
+                  guideColorRef.current = hex;
+                  retuneGuidesLive({ color: hex });
+                }}
+                onGuideLineMode={m => {
+                  setGuideLineMode(m);
+                  guideLineModeRef.current = m;
+                  retuneGuidesLive({ lineMode: m });
+                }}
+                onGuidePathMode={m => {
+                  setGuidePathMode(m);
+                  guidePathModeRef.current = m;
+                  retuneGuidesLive({ pathMode: m });
+                }}
                 onGuideClear={clearGuides}
                 onGuideGenerate={() => spawnAutoGuides('random')}
                 onGuideStyleRandom={() => {
                   const col = dnaRef.current.palette[Math.floor(Math.random() * Math.max(1, dnaRef.current.palette.length))] ?? '#40b0ff';
+                  const stroke = 0.8 + Math.random() * 2.3;
+                  const smooth = Math.random();
+                  const lineMode: GuideLineType = (['flow', 'pinch', 'shear', 'barrier', 'spiral', 'funnel', 'repulsor', 'attractor', 'wave', 'orbit_line'] as const)[Math.floor(Math.random() * 10)];
+                  const pathMode = (['stream', 'orbit', 'shock'] as const)[Math.floor(Math.random() * 3)];
                   setGuideColor(col);
-                  setGuideStroke(0.8 + Math.random() * 2.3);
-                  setGuideCurvature(Math.random());
+                  setGuideStroke(stroke);
+                  setGuideCurvature(smooth);
+                  setGuideLineMode(lineMode);
+                  setGuidePathMode(pathMode);
+                  guideColorRef.current = col;
+                  guideStrokeRef.current = stroke;
+                  guideCurvatureRef.current = smooth;
+                  guideLineModeRef.current = lineMode;
+                  guidePathModeRef.current = pathMode;
+                  retuneGuidesLive({ color: col, thickness: stroke, smoothness: smooth, lineMode, pathMode });
                 }}
                 onToggleAutoGuidesPreset={() => setAutoGuidesPreset(v => !v)}
                 onToggleAutoGuidesRandom={() => setAutoGuidesRandom(v => !v)}
+                onExplodeAll={handleExplodeAll}
+                onBlackHoleAll={handleBlackHoleAll}
+                onHarmonizeAll={handleHarmonizeAll}
+                onVortexAll={handleVortexAll}
+                onRepelAll={handleRepelAll}
+                onAttractAll={handleAttractAll}
+                onCalmAll={handleCalmAll}
+                onFluxAll={handleFluxAll}
+                onActivateBrush={handleActivatePowerBrush}
               />
             )}
             {rightPanel === 'hub' && (

@@ -1,6 +1,6 @@
 // ─── Powers Panel — aesthetic interventions & species control ─────────────────
 import React, { useState } from 'react';
-import type { DNA, AgentShape } from '../../sim/metaart/metaArtTypes';
+import type { DNA, AgentShape, GuideLineType, ToolId } from '../../sim/metaart/metaArtTypes';
 import { BRUSH_TEXTURE_PRESETS } from '../../sim/metaart/metaArtTypes';
 
 export interface PowersPanelProps {
@@ -17,11 +17,15 @@ export interface PowersPanelProps {
   onBrushTexture: (id: string) => void;
   // DNA gene injections
   onDNAGene: (key: string, val: number) => void;
-  // Chaos/pulse/freeze injections
-  onChaosInject: () => void;
-  onFreezeAll: () => void;
-  onPulseAll: () => void;
-  onScatterAll: () => void;
+  // Intervenções rápidas (accept intensity)
+  onChaosInject: (k: number) => void;
+  onFreezeAll: (k: number) => void;
+  onPulseAll: (k: number) => void;
+  onScatterAll: (k: number) => void;
+  onShockAll: (k: number) => void;
+  onMagnetizeAll: (k: number) => void;
+  onImplodeAll: (k: number) => void;
+  onTurboAll: (k: number) => void;
   // Collective color shift
   onHueRotate: (deg: number) => void;
   // Saturation/Luminance shift all agents
@@ -35,16 +39,29 @@ export interface PowersPanelProps {
   guideStroke: number;
   guideCurvature: number;
   guideColor: string;
+  guideLineMode: GuideLineType;
+  guidePathMode: 'stream' | 'orbit' | 'shock';
   autoGuidesPreset: boolean;
   autoGuidesRandom: boolean;
   onGuideStroke: (v: number) => void;
   onGuideCurvature: (v: number) => void;
   onGuideColor: (hex: string) => void;
+  onGuideLineMode: (m: GuideLineType) => void;
+  onGuidePathMode: (m: 'stream' | 'orbit' | 'shock') => void;
   onGuideClear: () => void;
   onGuideGenerate: () => void;
   onGuideStyleRandom: () => void;
   onToggleAutoGuidesPreset: () => void;
   onToggleAutoGuidesRandom: () => void;
+  onExplodeAll: (k: number) => void;
+  onBlackHoleAll: (k: number) => void;
+  onHarmonizeAll: (k: number) => void;
+  onVortexAll: (k: number) => void;
+  onRepelAll: (k: number) => void;
+  onAttractAll: (k: number) => void;
+  onCalmAll: (k: number) => void;
+  onFluxAll: (k: number) => void;
+  onActivateBrush: (toolId: ToolId, pressure: number, size: number) => void;
 }
 
 const SPECIES_NAMES = ['Luminoso', 'Sombra', 'Fluxo', 'Expansão', 'Magnético', 'Glitch'];
@@ -91,13 +108,17 @@ function ActionBtn({
 export const PowersPanel: React.FC<PowersPanelProps> = ({
   dna, palette, onRecolorSpecies, onRandomPalette,
   onSetAllShape, brushTextureId, onBrushTexture,
-  onDNAGene, onChaosInject, onFreezeAll, onPulseAll, onScatterAll,
+  onDNAGene, onChaosInject, onFreezeAll, onPulseAll, onScatterAll, onShockAll, onMagnetizeAll, onImplodeAll, onTurboAll,
   onHueRotate, onSatShift, onLitShift, onSizeAll, onRespawn,
-  guideStroke, guideCurvature, guideColor, autoGuidesPreset, autoGuidesRandom,
-  onGuideStroke, onGuideCurvature, onGuideColor, onGuideClear, onGuideGenerate, onGuideStyleRandom,
-  onToggleAutoGuidesPreset, onToggleAutoGuidesRandom,
+  guideStroke, guideCurvature, guideColor, guideLineMode, guidePathMode, autoGuidesPreset, autoGuidesRandom,
+  onGuideStroke, onGuideCurvature, onGuideColor, onGuideLineMode, onGuidePathMode, onGuideClear, onGuideGenerate, onGuideStyleRandom,
+  onToggleAutoGuidesPreset, onToggleAutoGuidesRandom, onExplodeAll, onBlackHoleAll, onHarmonizeAll, onVortexAll, onRepelAll, onAttractAll, onCalmAll, onFluxAll, onActivateBrush,
 }) => {
   const [hueRotDeg, setHueRotDeg] = useState(30);
+  const [quickForce, setQuickForce] = useState(2.4);
+  const [liveForce, setLiveForce] = useState(2.8);
+  const quickBrush = (toolId: ToolId) => onActivateBrush(toolId, quickForce, 190);
+  const liveBrush = (toolId: ToolId) => onActivateBrush(toolId, liveForce, 220);
 
   return (
     <div style={panelSty}>
@@ -109,12 +130,45 @@ export const PowersPanel: React.FC<PowersPanelProps> = ({
       {/* ── Intervenções Rápidas ──────────────────────────────────────── */}
       <div>
         <div style={sectionLabel}>Intervenções Rápidas</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <span style={{ ...sectionLabel, marginBottom: 0, minWidth: 70 }}>Força</span>
+          <input type="range" min={1.4} max={5} step={0.1} value={quickForce}
+            onChange={e => setQuickForce(parseFloat(e.target.value))}
+            style={{ flex: 1, cursor: 'pointer', accentColor: '#ff7a60' }} />
+          <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', minWidth: 28 }}>{quickForce.toFixed(1)}x</span>
+        </div>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          <ActionBtn icon="💥" label="Caos" color="#ff6040" desc="Injeta entropia máxima por 2s" onClick={onChaosInject} />
-          <ActionBtn icon="❄" label="Freeze" color="#60c0ff" desc="Congela todos os agentes" onClick={onFreezeAll} />
-          <ActionBtn icon="⚡" label="Pulso" color="#ffd060" desc="Explosão de velocidade em todos" onClick={onPulseAll} />
-          <ActionBtn icon="💫" label="Scatter" color="#c060ff" desc="Dispersão centrífuga" onClick={onScatterAll} />
+          <ActionBtn icon="💥" label="Caos" color="#ff6040" desc="Injeta entropia máxima por 2s" onClick={() => { onChaosInject(quickForce); quickBrush('burst'); }} />
+          <ActionBtn icon="❄" label="Freeze" color="#60c0ff" desc="Congela todos os agentes" onClick={() => { onFreezeAll(quickForce); quickBrush('freeze'); }} />
+          <ActionBtn icon="⚡" label="Pulso" color="#ffd060" desc="Explosão de velocidade em todos" onClick={() => { onPulseAll(quickForce); quickBrush('burst'); }} />
+          <ActionBtn icon="💫" label="Scatter" color="#c060ff" desc="Dispersão centrífuga" onClick={() => { onScatterAll(quickForce); quickBrush('scatter_burst'); }} />
+          <ActionBtn icon="🌊" label="Shock" color="#60d0ff" desc="Onda de choque em anel" onClick={() => { onShockAll(quickForce); quickBrush('channel'); }} />
+          <ActionBtn icon="🧲" label="Magnet" color="#80ffb0" desc="Magnetiza trajetórias" onClick={() => { onMagnetizeAll(quickForce); quickBrush('attract'); }} />
+          <ActionBtn icon="🕳" label="Implode" color="#b080ff" desc="Colapso para o centro" onClick={() => { onImplodeAll(quickForce); quickBrush('black_hole'); }} />
+          <ActionBtn icon="🚀" label="Turbo" color="#ffb060" desc="Impulso de velocidade global" onClick={() => { onTurboAll(quickForce); quickBrush('burst'); }} />
           <ActionBtn icon="🔄" label="Respawn" color="#60ff90" desc="Respawna com novo padrão" onClick={onRespawn} />
+        </div>
+      </div>
+
+      {/* ── Força Live (consolidado da sidebar) ─────────────────────── */}
+      <div>
+        <div style={sectionLabel}>Força Live</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <span style={{ ...sectionLabel, marginBottom: 0, minWidth: 70 }}>Força</span>
+          <input type="range" min={1.6} max={6} step={0.1} value={liveForce}
+            onChange={e => setLiveForce(parseFloat(e.target.value))}
+            style={{ flex: 1, cursor: 'pointer', accentColor: '#ff55b0' }} />
+          <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', minWidth: 28 }}>{liveForce.toFixed(1)}x</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+          <button onClick={() => { onExplodeAll(liveForce); liveBrush('burst'); }} style={{ padding: '6px 4px', borderRadius: 3, cursor: 'pointer', border: '1px solid rgba(255,140,120,0.35)', background: 'rgba(255,110,80,0.12)', color: '#ffb09a', fontSize: 8, textTransform: 'uppercase' }}>Explodir</button>
+          <button onClick={() => { onBlackHoleAll(liveForce); liveBrush('black_hole'); }} style={{ padding: '6px 4px', borderRadius: 3, cursor: 'pointer', border: '1px solid rgba(180,120,255,0.35)', background: 'rgba(160,80,255,0.14)', color: '#d3b2ff', fontSize: 8, textTransform: 'uppercase' }}>Buraco</button>
+          <button onClick={() => { onHarmonizeAll(liveForce); liveBrush('freeze'); }} style={{ padding: '6px 4px', borderRadius: 3, cursor: 'pointer', border: '1px solid rgba(120,220,170,0.35)', background: 'rgba(80,190,140,0.12)', color: '#a8e7c9', fontSize: 8, textTransform: 'uppercase' }}>Harmonia</button>
+          <button onClick={() => { onVortexAll(liveForce); liveBrush('vortex'); }} style={{ padding: '6px 4px', borderRadius: 3, cursor: 'pointer', border: '1px solid rgba(120,190,255,0.35)', background: 'rgba(80,140,255,0.12)', color: '#b9d4ff', fontSize: 8, textTransform: 'uppercase' }}>Vórtice</button>
+          <button onClick={() => { onRepelAll(liveForce); liveBrush('repel'); }} style={{ padding: '6px 4px', borderRadius: 3, cursor: 'pointer', border: '1px solid rgba(255,160,120,0.35)', background: 'rgba(255,120,80,0.12)', color: '#ffc2a8', fontSize: 8, textTransform: 'uppercase' }}>Repelir</button>
+          <button onClick={() => { onAttractAll(liveForce); liveBrush('attract'); }} style={{ padding: '6px 4px', borderRadius: 3, cursor: 'pointer', border: '1px solid rgba(120,220,255,0.35)', background: 'rgba(80,180,255,0.12)', color: '#b6e3ff', fontSize: 8, textTransform: 'uppercase' }}>Atrair</button>
+          <button onClick={() => { onCalmAll(liveForce); liveBrush('freeze'); }} style={{ padding: '6px 4px', borderRadius: 3, cursor: 'pointer', border: '1px solid rgba(160,220,180,0.35)', background: 'rgba(120,200,150,0.12)', color: '#c0f0d2', fontSize: 8, textTransform: 'uppercase' }}>Calma</button>
+          <button onClick={() => { onFluxAll(liveForce); liveBrush('channel'); }} style={{ padding: '6px 4px', borderRadius: 3, cursor: 'pointer', border: '1px solid rgba(220,160,255,0.35)', background: 'rgba(200,120,255,0.12)', color: '#e0c5ff', fontSize: 8, textTransform: 'uppercase' }}>Fluxo</button>
         </div>
       </div>
 
@@ -341,6 +395,40 @@ export const PowersPanel: React.FC<PowersPanelProps> = ({
             }}>
             Random Auto {autoGuidesRandom ? 'ON' : 'OFF'}
           </button>
+        </div>
+
+        <div style={{ marginTop: 7 }}>
+          <div style={{ ...sectionLabel, marginBottom: 4 }}>Modo Linha</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 3 }}>
+            {([
+              ['flow', 'Flow'], ['pinch', 'Pinch'], ['shear', 'Shear'], ['barrier', 'Barra'], ['spiral', 'Spiral'],
+              ['funnel', 'Funil'], ['repulsor', 'Repel'], ['attractor', 'Atrai'], ['wave', 'Onda'], ['orbit_line', 'Órbita'],
+            ] as [GuideLineType, string][]).map(([id, tx]) => (
+              <button key={id} onClick={() => onGuideLineMode(id)} style={{
+                padding: '3px 1px', borderRadius: 3, cursor: 'pointer', fontSize: 7,
+                border: `1px solid ${guideLineMode === id ? 'rgba(255,0,132,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                background: guideLineMode === id ? 'rgba(255,0,132,0.12)' : 'rgba(255,255,255,0.03)',
+                color: guideLineMode === id ? 'rgba(255,180,220,0.95)' : 'rgba(255,255,255,0.45)',
+              }}>{tx}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginTop: 7 }}>
+          <div style={{ ...sectionLabel, marginBottom: 4 }}>Modo Canal</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
+            {([
+              ['stream', 'Fluxo'],
+              ['orbit', 'Órbita'],
+              ['shock', 'Pulso'],
+            ] as const).map(([id, tx]) => (
+              <button key={id} onClick={() => onGuidePathMode(id)} style={{
+                padding: '4px 2px', borderRadius: 3, cursor: 'pointer', fontSize: 7,
+                border: `1px solid ${guidePathMode === id ? 'rgba(255,0,132,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                background: guidePathMode === id ? 'rgba(255,0,132,0.12)' : 'rgba(255,255,255,0.03)',
+                color: guidePathMode === id ? 'rgba(255,180,220,0.95)' : 'rgba(255,255,255,0.45)',
+              }}>{tx}</button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 // ─── Left Sidebar — Tool palette + simulation quick-controls ──────────────────
 // Swiss-brutalist identity · IBM Plex Mono · Doto · #ff0084 accent
 import React from 'react';
-import type { ToolState, AgentShape, GuideLineType } from '../../sim/metaart/metaArtTypes';
+import type { ToolState, AgentShape } from '../../sim/metaart/metaArtTypes';
 import { BRUSH_TEXTURE_PRESETS } from '../../sim/metaart/metaArtTypes';
 import { TOOL_DEFS } from '../../sim/metaart/metaArtTools';
 
@@ -38,26 +38,6 @@ export interface LeftSidebarProps {
   onGeoMode: (m: 'fluid' | 'geometric' | 'hybrid' | '3d') => void;
   geoPanelOpen: boolean;
   onToggleGeoPanel: () => void;
-  guideStroke: number;
-  onGuideStroke: (v: number) => void;
-  guideCurvature: number;
-  onGuideCurvature: (v: number) => void;
-  guideColor: string;
-  onGuideColor: (hex: string) => void;
-  guideLineMode: GuideLineType;
-  onGuideLineMode: (m: GuideLineType) => void;
-  guidePathMode: 'stream' | 'orbit' | 'shock';
-  onGuidePathMode: (m: 'stream' | 'orbit' | 'shock') => void;
-  autoGuidesPreset: boolean;
-  autoGuidesRandom: boolean;
-  onToggleAutoGuidesPreset: () => void;
-  onToggleAutoGuidesRandom: () => void;
-  onGuideGenerate: () => void;
-  onGuideClear: () => void;
-  onGuideStyleRandom: () => void;
-  onExplodeAll: () => void;
-  onBlackHoleAll: () => void;
-  onHarmonizeAll: () => void;
 }
 
 const CATEGORY_CONFIG = {
@@ -148,15 +128,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   linear, onLinear,
   geoMode, onGeoMode,
   geoPanelOpen, onToggleGeoPanel,
-  guideStroke, onGuideStroke,
-  guideCurvature, onGuideCurvature,
-  guideColor, onGuideColor,
-  guideLineMode, onGuideLineMode,
-  guidePathMode, onGuidePathMode,
-  autoGuidesPreset, autoGuidesRandom,
-  onToggleAutoGuidesPreset, onToggleAutoGuidesRandom,
-  onGuideGenerate, onGuideClear, onGuideStyleRandom,
-  onExplodeAll, onBlackHoleAll, onHarmonizeAll,
 }) => {
   const activeTool = TOOL_DEFS.find(t => t.id === toolState.activeToolId);
   const activeCat = activeTool?.category as (typeof CATEGORY_ORDER)[number] | undefined;
@@ -309,70 +280,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           </div>
         </div>
 
-        <SectionLabel>Guias</SectionLabel>
-        <div style={{ padding: '4px 5px 6px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <div style={{ display: 'flex', gap: 2 }}>
-            <button onClick={onGuideGenerate} style={{ flex: 1, padding: '4px 0', borderRadius: 1, border: `1px solid ${BORDER}`, background: 'rgba(96,176,255,0.08)', color: '#98d8ff', fontSize: 7, fontFamily: MONO, cursor: 'pointer' }}>Gerar</button>
-            <button onClick={onGuideClear} style={{ flex: 1, padding: '4px 0', borderRadius: 1, border: `1px solid ${BORDER}`, background: 'rgba(255,90,110,0.08)', color: '#ff9aa8', fontSize: 7, fontFamily: MONO, cursor: 'pointer' }}>Limpar</button>
-            <button onClick={onGuideStyleRandom} style={{ flex: 1, padding: '4px 0', borderRadius: 1, border: `1px solid ${BORDER}`, background: 'rgba(176,128,255,0.08)', color: '#d5b8ff', fontSize: 7, fontFamily: MONO, cursor: 'pointer' }}>Style</button>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 6.5, color: DIM, fontFamily: MONO, letterSpacing: '0.08em' }}>COR</span>
-            <input type="color" value={guideColor} onChange={e => onGuideColor(e.target.value)}
-              style={{ width: 20, height: 16, padding: 0, border: `1px solid ${BORDER}`, background: 'none', cursor: 'pointer' }} />
-          </div>
-
-          <MiniSlider label="Linha" val={guideStroke} min={0.6} max={3.2} step={0.05} fmt={v => v.toFixed(2)} onChange={onGuideStroke} />
-          <MiniSlider label="Suave" val={guideCurvature} min={0} max={1} step={0.01} fmt={v => v.toFixed(2)} onChange={onGuideCurvature} />
-
-          <div style={{ fontSize: 6.5, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>Modo Linha</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 2 }}>
-            {([
-              ['flow', 'Flow'],
-              ['pinch', 'Pinch'],
-              ['shear', 'Shear'],
-              ['barrier', 'Barra'],
-              ['spiral', 'Spiral'],
-              ['funnel', 'Funil'],
-              ['repulsor', 'Repel'],
-              ['attractor', 'Atrai'],
-              ['wave', 'Onda'],
-              ['orbit_line', 'Orbita'],
-            ] as [GuideLineType, string][]).map(([id, label]) => (
-              <button key={id} onClick={() => onGuideLineMode(id)}
-                style={{
-                  padding: '3px 1px', borderRadius: 1, cursor: 'pointer',
-                  border: `1px solid ${guideLineMode === id ? 'rgba(255,0,132,0.32)' : BORDER}`,
-                  background: guideLineMode === id ? 'rgba(255,0,132,0.09)' : 'rgba(255,255,255,0.02)',
-                  color: guideLineMode === id ? ACCENT : DIM, fontSize: 5.8, fontFamily: MONO, textTransform: 'uppercase',
-                }}>{label}</button>
-            ))}
-          </div>
-
-          <div style={{ fontSize: 6.5, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>Modo Canal</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
-            {([
-              ['stream', 'Fluxo'],
-              ['orbit', 'Orbita'],
-              ['shock', 'Pulso'],
-            ] as const).map(([id, label]) => (
-              <button key={id} onClick={() => onGuidePathMode(id)}
-                style={{
-                  padding: '4px 2px', borderRadius: 1, cursor: 'pointer',
-                  border: `1px solid ${guidePathMode === id ? 'rgba(255,0,132,0.32)' : BORDER}`,
-                  background: guidePathMode === id ? 'rgba(255,0,132,0.09)' : 'rgba(255,255,255,0.02)',
-                  color: guidePathMode === id ? ACCENT : DIM, fontSize: 6.5, fontFamily: MONO, textTransform: 'uppercase',
-                }}>{label}</button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: 2 }}>
-            <SmallToggle label="Auto Pre" active={autoGuidesPreset} onClick={onToggleAutoGuidesPreset} />
-            <SmallToggle label="Auto Rand" active={autoGuidesRandom} onClick={onToggleAutoGuidesRandom} />
-          </div>
-        </div>
-
         {/* ── FORMA + BRUSH ───────────────────────────────────────────────── */}
         <SectionLabel>Forma</SectionLabel>
         <div style={{ padding: '4px 5px 0' }}>
@@ -482,19 +389,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             fmt={v => `${v.toFixed(1)}x`} onChange={onSizeMul} />
           <MiniSlider label="Tempo" val={simSpeed} min={0.01} max={10} step={0.01}
             fmt={v => v < 0.1 ? v.toFixed(2) + 'x' : v.toFixed(1) + 'x'} onChange={onSimSpeed} />
-        </div>
-
-        <SectionLabel>Força Live</SectionLabel>
-        <div style={{ padding: '4px 5px 5px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <button onClick={onExplodeAll} style={{ padding: '4px 6px', borderRadius: 1, cursor: 'pointer', border: `1px solid ${BORDER}`, background: 'rgba(255,110,80,0.12)', color: '#ffb09a', fontSize: 7, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
-            Explodir
-          </button>
-          <button onClick={onBlackHoleAll} style={{ padding: '4px 6px', borderRadius: 1, cursor: 'pointer', border: `1px solid ${BORDER}`, background: 'rgba(160,80,255,0.14)', color: '#d3b2ff', fontSize: 7, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
-            Buraco Negro
-          </button>
-          <button onClick={onHarmonizeAll} style={{ padding: '4px 6px', borderRadius: 1, cursor: 'pointer', border: `1px solid ${BORDER}`, background: 'rgba(80,190,140,0.12)', color: '#a8e7c9', fontSize: 7, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
-            Harmonizar
-          </button>
         </div>
 
         {/* ── Mode toggles ──────────────────────────────────────────────── */}
