@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { LabId } from '../../ui/TopHUD';
 import logoDevicesForIntuition from '../../assets/devices-for-intuition-logo-transparent.png';
+import { AuthModal, type AuthUser } from './AuthModal';
 
 const MONO = "'IBM Plex Mono', monospace";
 const DOTO = "'Doto', monospace";
@@ -502,15 +503,20 @@ function ToolsNav({ onClick }: { onClick: () => void }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function HomePage({
+  user,
+  onAuthChange,
   onEnterLab,
   onOpenAdmin,
   adminMode = false,
 }: {
+  user: AuthUser | null;
+  onAuthChange: (user: AuthUser | null) => void;
   onEnterLab: (id: LabId) => void;
   onOpenAdmin?: () => void;
   adminMode?: boolean;
 }) {
   const [introFinished, setIntroFinished] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTarget = useRef(0);
   const diagRef = useRef<HTMLElement>(null);
@@ -527,16 +533,35 @@ export function HomePage({
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
       {/* Immersive background life (particle-life-ish). */}
       <BoidsBackground active={true} />
-      {onOpenAdmin && (
-        <button
-          onClick={onOpenAdmin}
-          className="fixed top-3 right-3 z-20 px-3 py-2 rounded-xl border border-dashed border-white/15 bg-black/60 hover:bg-white/5 transition-colors"
-          style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: adminMode ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}
-          title={adminMode ? 'Admin Mode (ativado)' : 'Admin Mode (senha)'}
-        >
-          {adminMode ? 'ADMIN ON' : 'ADMIN'}
-        </button>
-      )}
+      {(() => {
+        const hasAdmin = !!onOpenAdmin;
+        const showEntrar = !user;
+        if (!hasAdmin && !showEntrar) return null;
+        return (
+          <div className="fixed top-3 right-3 z-20 flex items-center gap-2">
+            {showEntrar && (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="px-3 py-2 rounded-xl border border-dashed border-white/15 bg-black/60 hover:bg-white/5 transition-colors"
+                style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}
+                title="Entrar ou cadastrar"
+              >
+                Entrar
+              </button>
+            )}
+            {hasAdmin && (
+              <button
+                onClick={onOpenAdmin}
+                className="px-3 py-2 rounded-xl border border-dashed border-white/15 bg-black/60 hover:bg-white/5 transition-colors"
+                style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: adminMode ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}
+                title={adminMode ? 'Admin Mode (ativado)' : 'Admin Mode (senha)'}
+              >
+                {adminMode ? 'ADMIN ON' : 'ADMIN'}
+              </button>
+            )}
+          </div>
+        );
+      })()}
       <AnimatePresence>
         {!introFinished && <T4PAnimation onComplete={() => setIntroFinished(true)} />}
       </AnimatePresence>
@@ -576,10 +601,24 @@ export function HomePage({
             ALPHA TEST
           </motion.p>
 
-          <motion.div className="mt-8"
-            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.55, duration: 0.6 }}>
-            <ToolsNav onClick={scrollToLabs} />
-          </motion.div>
+          {/* Logged in: greeting + nav; not logged in: just nav so they scroll down */}
+          {user ? (
+            <>
+              <motion.p style={{ marginTop: 16, fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: MONO }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+                Olá, {user.name || user.email.split('@')[0]}
+              </motion.p>
+              <motion.div className="mt-8"
+                initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.55, duration: 0.6 }}>
+                <ToolsNav onClick={scrollToLabs} />
+              </motion.div>
+            </>
+          ) : (
+            <motion.div className="mt-8"
+              initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.55, duration: 0.6 }}>
+              <ToolsNav onClick={scrollToLabs} />
+            </motion.div>
+          )}
 
           <div style={{ flex: '1.6 1 0', minHeight: '16vh' }} />
         </section>
@@ -661,13 +700,24 @@ export function HomePage({
         <section id="labs-section" className="snap-start pb-24 pt-16 px-4 md:px-12 max-w-[1600px] mx-auto w-full">
           <div className="mb-16 border-b border-dashed border-white/10 pb-4">
             <h3 className="text-zinc-500 text-sm tracking-widest" style={{ fontFamily: MONO }}>AVAILABLE TOOLS (9) + SOON (3)</h3>
+            {!user && (
+              <p style={{ marginTop: 8, fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
+                Entrar (canto superior) para acessar as ferramentas.
+              </p>
+            )}
           </div>
           <div className="grid gap-0">
             {LABS.map((lab, idx) => (
               <motion.div key={lab.id} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }} transition={{ delay: idx * 0.04, duration: 0.5 }}
-                className={`group border-t border-dashed border-white/10 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start hover:bg-white/5 transition-colors cursor-pointer ${(!lab.enabled && !adminMode) ? 'opacity-40' : ''}`}
-                onClick={() => (lab.enabled || adminMode) && onEnterLab(lab.id)}>
+                className={`group border-t border-dashed border-white/10 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start transition-colors ${user ? 'hover:bg-white/5 cursor-pointer' : 'opacity-70 cursor-default'} ${(!lab.enabled && !adminMode) ? 'opacity-40' : ''}`}
+                onClick={() => {
+                  if (!user) {
+                    setShowAuthModal(true);
+                    return;
+                  }
+                  if (lab.enabled || adminMode) onEnterLab(lab.id);
+                }}>
                 <div className="col-span-1 md:col-span-1 text-2xl text-zinc-600 font-light" style={{ fontFamily: MONO }}>{lab.num}</div>
                 <div className="col-span-1 md:col-span-4 flex items-center gap-4">
                   <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all" style={{ color: lab.tagColor }}>{lab.symbol}</span>
@@ -705,6 +755,17 @@ export function HomePage({
         </footer>
 
       </motion.div>
+
+      {/* ── Login/Register modal ─────────────────────────────────────────────── */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onAuthChange={(u) => {
+            onAuthChange?.(u);
+            setShowAuthModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

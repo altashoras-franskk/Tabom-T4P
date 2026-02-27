@@ -110,6 +110,8 @@ import { TreeOfLifeLab } from '../ui/labs/TreeOfLifeLab';
 import { MilPlatosLab } from '../ui/labs/MilPlatosLab';
 import { HomePage } from './components/HomePage';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { useAuth } from './components/AuthModal';
+import { setStoredToken } from '../sim/rhizome/rhizomeBackend';
 import { Renderer3D, View3DConfig, DEFAULT_VIEW3D, typeColor, getZMicro, clamp3d, Particle3D } from '../render/Renderer3D';
 import { getPsycheState, registerPsycheState } from '../sim/psyche/psycheLabGlobal';
 import { View3DControls } from '../ui/View3DControls';
@@ -575,7 +577,17 @@ const App: React.FC = () => {
   
   // Achievement system
   const achievements = useAchievements();
-  
+
+  // Auth — gate access to tools; sync token for backend
+  const { user: authUser, setUser: setAuthUser } = useAuth();
+  useEffect(() => {
+    if (authUser?.accessToken) {
+      setStoredToken(authUser.accessToken);
+    } else {
+      setStoredToken(null);
+    }
+  }, [authUser]);
+
   // SOCIOGENESIS: Lab mode & state
   const [showHome, setShowHome] = useState(true); // start on homepage
   const [activeLab, setActiveLab] = useState<LabId>('complexityLife');
@@ -4965,7 +4977,13 @@ const App: React.FC = () => {
       {/* ── Homepage — shown at startup, pauses all labs ────────────────── */}
       {showHome && (
         <HomePage
+          user={authUser}
+          onAuthChange={setAuthUser}
           onEnterLab={(lab) => {
+            if (!authUser) {
+              toast.info('Entre ou cadastre-se para acessar as ferramentas.', { duration: 3000 });
+              return;
+            }
             if (!canAccessLab(lab)) {
               toast.info('Tool trancada', {
                 description: 'Ative Admin Mode (morin2026) para acessar.',

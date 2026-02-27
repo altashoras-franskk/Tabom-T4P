@@ -2,7 +2,7 @@
 // Agents = social actors. Groups = identity coalitions.
 // Symbols (Totem/Tabu/Ritual) = laws inscribed in the field.
 
-export const MAX_STUDY_AGENTS = 300;
+export const MAX_STUDY_AGENTS = 600;
 export const MAX_STUDY_GROUPS = 5;
 
 export const GROUP_COLORS: readonly string[] = [
@@ -36,6 +36,7 @@ export interface StudyAgent {
 
   // Social identity
   groupId: number;
+  familyId: number;  // 0 = no family; 1+ = household/clan — same group, spawn clustered, signaled on canvas
 
   // Core social traits
   opinion:    number;  // -1..1 — ideological position
@@ -157,6 +158,30 @@ export interface StudySymbols {
   rituals: StudyRitual[];
 }
 
+// ── Group Profile (Bourdieu: each group = a social field with its own logic) ──
+export type GroupSphere = 'political' | 'economic' | 'religious' | 'artistic' | 'scientific' | 'military' | 'popular';
+export interface GroupProfile {
+  name: string;
+  sphere: GroupSphere;
+  fieldSensitivity: { n: number; l: number; r: number }; // how much this group weighs each field (0..2)
+  ideologyBias: number;    // -1..1 — initial ideology tendency (order ↔ freedom)
+  trustBias: number;       // 0..1 — baseline trust modifier
+  aggressionBias: number;  // 0..1 — baseline aggression modifier
+  cohesionBias: number;    // 0..1 — in-group cohesion modifier
+  desireBias: number;      // 0..1 — desire/transgression tendency
+}
+
+export function defaultGroupProfiles(groupCount: number): GroupProfile[] {
+  const templates: GroupProfile[] = [
+    { name: 'Político',   sphere: 'political',  fieldSensitivity: { n: 1.4, l: 1.6, r: 0.6 }, ideologyBias: -0.3, trustBias: 0.5, aggressionBias: 0.3, cohesionBias: 0.6, desireBias: 0.3 },
+    { name: 'Mercador',   sphere: 'economic',   fieldSensitivity: { n: 0.6, l: 0.8, r: 1.8 }, ideologyBias:  0.2, trustBias: 0.4, aggressionBias: 0.2, cohesionBias: 0.4, desireBias: 0.6 },
+    { name: 'Devoto',     sphere: 'religious',   fieldSensitivity: { n: 1.8, l: 1.2, r: 0.4 }, ideologyBias: -0.5, trustBias: 0.7, aggressionBias: 0.2, cohesionBias: 0.8, desireBias: 0.2 },
+    { name: 'Artista',    sphere: 'artistic',    fieldSensitivity: { n: 0.5, l: 1.0, r: 1.0 }, ideologyBias:  0.5, trustBias: 0.5, aggressionBias: 0.1, cohesionBias: 0.3, desireBias: 0.8 },
+    { name: 'Científico', sphere: 'scientific',  fieldSensitivity: { n: 1.0, l: 1.4, r: 1.0 }, ideologyBias:  0.3, trustBias: 0.6, aggressionBias: 0.1, cohesionBias: 0.5, desireBias: 0.5 },
+  ];
+  return Array.from({ length: groupCount }, (_, i) => ({ ...templates[i % templates.length] }));
+}
+
 // ── Config ────────────────────────────────────────────────────────────────────
 export interface StudyConfig {
   agentCount: number;   // 50..200
@@ -207,6 +232,12 @@ export interface StudyConfig {
   violationThreshold: number;  // violations per minute to trigger exception
   exceptionDuration:  number;  // seconds
   autoSymbols: boolean;         // engine auto-places symbols when conditions emerge
+
+  // Group profiles (Bourdieu social fields — each group has its own field logic)
+  groupProfiles: GroupProfile[];
+
+  // World size: 1 = "sala" (-1..1), 2 = "bairro" (-2..2), more space for clusters/emergence
+  worldHalf: number;
 
   // Archetype identity
   archetypeHoldSec: number;     // seconds candidate must persist before committing stable archetype
@@ -300,7 +331,7 @@ export interface StudyPing {
 // ── Factories ─────────────────────────────────────────────────────────────────
 export function createStudyConfig(): StudyConfig {
   return {
-    agentCount: 120, groupCount: 3,
+    agentCount: 280, groupCount: 3,
     speed: 0.52, friction: 0.87, rMax: 0.32,
     autonomy: 0.60, cohesion: 0.45, pressure: 0.40,
     aggressionBase: 0.28, trustBase: 0.52, needBase: 0.58,
@@ -317,13 +348,15 @@ export function createStudyConfig(): StudyConfig {
     panopticism: 0.50,
     violationThreshold: 3, exceptionDuration: 25,
     autoSymbols: true,
+    groupProfiles: defaultGroupProfiles(3),
+    worldHalf: 2,  // "bairro": world [-2,2] x [-2,2], more space for emergence
     archetypeHoldSec: 1.8,
     // Morin
-    perceptionBias: 0.12,
-    hybrisThreshold: 0.70,
-    fervorThreshold: 1.50,
-    ethicsGrowth: 0.10,
-    understandingGrowth: 0.08,
+    perceptionBias: 0.25,
+    hybrisThreshold: 0.65,
+    fervorThreshold: 1.30,
+    ethicsGrowth: 0.18,
+    understandingGrowth: 0.15,
     ecoDegradation: 0.04,
     consensusDecay: 0.02,
   };

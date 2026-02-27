@@ -24,11 +24,14 @@ import { RecordingButton } from './components/recording/RecordingButton';
 
 // Lazy load 3D renderer to avoid blocking initial load
 const Music3DRenderer = lazy(() => import('../render/music3DRenderer'));
+import { computeMusicMorin } from '../sim/music/musicComplexity';
+import type { MorinIndices } from '../sim/complexity/complexityLens';
 import { StudioSequencer, DEFAULT_STUDIO_ROWS, SRow, PatternDef } from './components/music/StudioSequencer';
 import { MusicGuide } from './components/music/MusicGuide';
 import { RadialMenu, RadialItem } from './components/music/RadialMenu';
 import { DraggablePanel } from './components/DraggablePanel';
 import { WhatsNewBanner } from './components/music/WhatsNewBanner';
+import { MusicLabHubPanel } from './components/music/MusicLabHubPanel';
 import { ZoomControls } from './components/ZoomControls';
 import { useZoomPan, screenToWorldMusic } from '../hooks/useZoomPan';
 import {
@@ -309,6 +312,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [running,     setRunning]    = useState(false);
   const [cinematic,   setCinematic]  = useState(false);
   const [showGrid,    setShowGrid]   = useState(false);
+  const [showHubPanel, setShowHubPanel] = useState(false);
   const [lens,        setLens]       = useState<MusicLens>(INIT_PRESET.lens);
   const [bpm,         setBpm]        = useState(INIT_PRESET.bpm);
   const [fxAmount,    setFxAmount]   = useState(0.5);
@@ -327,7 +331,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [hasSnapshot, setHasSnapshot] = useState(false);
   // leftOpen removed — left panel is now always-visible slim strip
   const [rightOpen,   setRightOpen]  = useState(false);
-  const [rightTab,    setRightTab]   = useState<'timbre'|'harmony'|'physics'|'matrix'|'palette'|'aesthetic'>('harmony');
+  const [rightTab,    setRightTab]   = useState<'timbre'|'harmony'|'physics'|'matrix'|'palette'|'aesthetic'|'morin'>('harmony');
   const [editRole,    setEditRole]   = useState<VoiceRole>('PAD');
   const [showVel,     setShowVel]    = useState(false);
   const [phys,        setPhys]       = useState<PhysicsParams>({ ...DEFAULT_PHYSICS, motionStyle: INIT_PRESET.motionStyle ?? 'drift' });
@@ -403,6 +407,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   const [zoneStrength, setZoneStrength] = useState(0.7);
   const [zoneParam,    setZoneParam]    = useState(0.5);
   const [metroStrength, setMetroStrength] = useState(0.10);
+
+  // ── Morin complexity ────────────────────────────────────────────────────────
+  const morinRef = useRef<MorinIndices>({ dialogica: 0, recursivo: 0, hologramatico: 0, sapiensDemens: 0.5, tetralogia: 0 });
+  const [morin, setMorin] = useState<MorinIndices>(morinRef.current);
+  const [showMorin, setShowMorin] = useState(false);
+  const showMorinRef = useRef(false);
+  useEffect(() => { showMorinRef.current = showMorin; }, [showMorin]);
 
   // ── Studio Sequencer refs ──────────────────────────────────────────────────
   const studioRowsRef     = useRef<SRow[]>(DEFAULT_STUDIO_ROWS());
@@ -730,6 +741,33 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fxAmount, makePhysicsForPreset, masterVol, seedParticleTimbresForPreset]);
 
+  // ── Apply preset + physics (for hub loaded compositions) ───────────────────
+  const applyPresetAndPhysics = useCallback((p: MusicPreset, newPhys: PhysicsParams) => {
+    const variation = Math.random();
+    presetRef.current  = p;
+    stateRef.current   = createMusicState(p, { variation });
+    stateRef.current.bpm = p.bpm;
+    roleOverRef.current  = {};
+    setPresetId(p.id); setBpm(p.bpm); setLens(p.lens);
+    setQuantaCount(p.quantaCount);
+    seedParticleTimbresForPreset(p, variation);
+    physRef.current = newPhys;
+    setPhys(newPhys);
+    setBehaviorId((newPhys as any).motionStyle ?? 'drift');
+    setSeqActive(stateRef.current.sequencer.active);
+    setSeqSteps(stateRef.current.sequencer.steps.length);
+    setSeqTempoMult(stateRef.current.sequencer.tempoMult);
+    setLiveRoot(p.root);
+    setLiveScale(p.scale);
+    setLiveHarmonyMode((p as any).harmonyMode ?? 'any');
+    setLiveEventRate((p as any).eventRate ?? 1.0);
+    if (audioEngine.ready) {
+      audioEngine.setReverb(p.reverbAmt * fxAmount);
+      audioEngine.setDelay(p.delayAmt * fxAmount, p.delayTime);
+      audioEngine.setMasterGain(p.masterGain * masterVol);
+    }
+  }, [fxAmount, masterVol, seedParticleTimbresForPreset]);
+
   // ── Sync BPM ──────────────────────────────────────────────────────────────
   useEffect(() => { if (stateRef.current) stateRef.current.bpm = bpm; }, [bpm]);
 
@@ -915,6 +953,12 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
           if (stepped) setStudioCursorUI(studioCursorRef.current);
         }
       }
+      // Morin complexity computation (every ~60 frames)
+      if (state.tick % 60 === 0 && showMorinRef.current) {
+        morinRef.current = computeMusicMorin(state.quanta, physRef.current);
+        setMorin(morinRef.current);
+      }
+
       const beatPulse = state.beatPhase < 0.08 || state.beatPhase > 0.92;
       const cursor: ToolCursor = {
         tool: activeTool, wx: cursorRef.current.wx, wy: cursorRef.current.wy,
@@ -2832,6 +2876,14 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 <span style={{fontSize:6,color:'rgba(255,255,255,0.15)',marginLeft:'auto'}}>change</span>
               </button>
 
+              {/* Hub: Minhas composições */}
+              <button onClick={()=>setShowHubPanel(true)} title="Salvar / carregar composições"
+                className="flex items-center gap-1.5 px-3 py-2 transition-all hover:bg-white/[0.03]"
+                style={{borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
+                <Image size={8} style={{color:'rgba(125,211,252,0.88)'}}/>
+                <span style={{fontSize:8,color:'rgba(125,211,252,0.9)',letterSpacing:'0.04em'}}>Minhas composições</span>
+              </button>
+
               {/* Tabs */}
               <div className="flex" style={{flexWrap:'wrap',borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
                 {([
@@ -2841,6 +2893,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   {id:'matrix',  label:'Matrix',  icon:<span style={{fontSize:7,marginRight:2}}>⊞</span>},
                   {id:'palette', label:'Palette', icon:<span style={{fontSize:7,marginRight:2}}>◈</span>},
                   {id:'aesthetic', label:'Look',  icon:<span style={{fontSize:7,marginRight:2}}>✦</span>},
+                  {id:'morin',     label:'Morin', icon:<span style={{fontSize:7,marginRight:2}}>◎</span>},
                 ] as const).map(tab=>(
                   <button key={tab.id} onClick={()=>setRightTab(tab.id)} title={tab.label}
                     className="flex-1 py-1.5 transition-all min-w-[38px]"
@@ -3706,6 +3759,45 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   </div>
                 </div>
               )}
+
+              {/* ── MORIN TAB ────────────────────────────────────────────── */}
+              {rightTab === 'morin' && (
+                <div className="p-3 flex flex-col gap-3">
+                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>
+                    COMPLEXIDADE — EDGAR MORIN
+                  </div>
+                  <div style={{fontSize:7,color:'rgba(255,255,255,0.30)',lineHeight:1.5,fontFamily:MONO}}>
+                    Índices derivados em tempo real da simulação musical, baseados na teoria da complexidade de Edgar Morin.
+                  </div>
+                  {([
+                    { key: 'dialogica',     label: 'Dialógica',         desc: 'Coexistência de ordem e desordem', c: '#ff6464', v: morin.dialogica },
+                    { key: 'recursivo',     label: 'Recursivo',         desc: 'Feedback: produto é produtor',     c: '#64c8ff', v: morin.recursivo },
+                    { key: 'hologramatico', label: 'Hologramático',     desc: 'A parte contém o todo',            c: '#64ffa0', v: morin.hologramatico },
+                    { key: 'sapiensDemens', label: 'Sapiens / Demens',  desc: 'Razão vs. paixão criadora',        c: '#ffc850', v: morin.sapiensDemens },
+                    { key: 'tetralogia',    label: 'Tetralogia',        desc: 'Ciclo ordem↔desordem↔interações↔organização', c: '#b478ff', v: morin.tetralogia },
+                  ] as const).map(({ key, label, desc, c, v }) => (
+                    <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 8, color: c, fontFamily: MONO, letterSpacing: '0.06em' }}>{label}</span>
+                        <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.5)', fontFamily: MONO }}>{v.toFixed(2)}</span>
+                      </div>
+                      <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 2 }}>
+                        <div style={{ width: `${v * 100}%`, height: '100%', background: c, borderRadius: 2, transition: 'width 0.5s', opacity: 0.7 }} />
+                      </div>
+                      <span style={{ fontSize: 6, color: 'rgba(255,255,255,0.18)', fontFamily: MONO }}>{desc}</span>
+                    </div>
+                  ))}
+                  <div style={{borderTop:'1px dashed rgba(255,255,255,0.06)',paddingTop:8,marginTop:4}}>
+                    <div style={{fontSize:7,color:'rgba(255,255,255,0.25)',fontFamily:MONO,lineHeight:1.6}}>
+                      Alto <span style={{color:'#ff6464'}}>dialógica</span> = consonância e dissonância coexistem.<br/>
+                      Alto <span style={{color:'#64c8ff'}}>recursivo</span> = feedback musical ativo (eventos geram energia que gera eventos).<br/>
+                      Alto <span style={{color:'#64ffa0'}}>hologramático</span> = cada voz carrega a essência do todo.<br/>
+                      <span style={{color:'#ffc850'}}>Sapiens/Demens</span> ≈ 0.50 = equilíbrio ideal entre ordem e caos.<br/>
+                      Alto <span style={{color:'#b478ff'}}>tetralogia</span> = todos os pólos ativos (sistema mais rico).
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -3813,6 +3905,18 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {/* ── PRESET GRID ─────────────────────────────────────────────────────── */}
       {showGrid && (
         <PresetGrid currentId={presetId} onSelect={applyPreset} onClose={()=>setShowGrid(false)}/>
+      )}
+
+      {/* ── HUB: Minhas composições ─────────────────────────────────────────── */}
+      {showHubPanel && (
+        <DraggablePanel id="ml_hub" title="Minhas composições" titleColor="#7dd3fc" defaultX={window.innerWidth - 280} defaultY={80} zIndex={25} width={260}
+          onClose={()=>setShowHubPanel(false)}>
+          <MusicLabHubPanel
+            preset={presetRef.current}
+            physics={phys}
+            onLoadComposition={applyPresetAndPhysics}
+          />
+        </DraggablePanel>
       )}
 
       {/* ── COMPOSE MODE HINT ──────────────────────────────────────────────── */}

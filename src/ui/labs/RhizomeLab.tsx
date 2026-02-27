@@ -51,6 +51,7 @@ import { scoreNodes } from '../../sim/rhizome/graphMetrics';
 import type { NodeScore } from '../../sim/rhizome/graphMetrics';
 import { AuthModal, useAuth } from '../../app/components/AuthModal';
 import type { AuthUser } from '../../app/components/AuthModal';
+import { setStoredToken } from '../../sim/rhizome/rhizomeBackend';
 
 interface Props { active: boolean; }
 
@@ -861,6 +862,13 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
 
   // Auth
   const { user: authUser, signOut, setUser: setAuthUser } = useAuth();
+
+  // Keep backend token in sync with auth session (for rhizome API)
+  useEffect(() => {
+    if (authUser?.accessToken) {
+      setStoredToken(authUser.accessToken);
+    }
+  }, [authUser]);
 
   // 3D camera state — mutable ref for RAF loop, plus display state for sliders
   const cam3DRef = useRef<Camera3D>({ ...DEFAULT_CAMERA3D });
@@ -1859,7 +1867,14 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
 
             {/* Auth button */}
             <button
-              onClick={() => authUser ? signOut() : setShowAuthModal(true)}
+              onClick={() => {
+                if (authUser) {
+                  setStoredToken(null);
+                  signOut();
+                } else {
+                  setShowAuthModal(true);
+                }
+              }}
               title={authUser ? `${authUser.email} — Clique para sair` : 'Entrar para sincronizar coleções'}
               style={{
                 padding: '5px 10px', borderRadius: 1, fontFamily: MONO,
@@ -1883,6 +1898,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
               onClose={() => setShowAuthModal(false)}
               onAuthChange={(user) => {
                 setAuthUser(user);
+                setStoredToken(user.accessToken);
                 setShowAuthModal(false);
               }}
             />

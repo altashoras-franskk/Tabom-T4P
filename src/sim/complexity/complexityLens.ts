@@ -348,7 +348,7 @@ function computeEmergenceIndex(m: ComplexityMetrics): number {
 // Morin Deep Indices — derived from forces and metrics
 // ─────────────────────────────────────────────────────────────────────────────
 
-function computeMorinIndices(f: ComplexityForces, m: ComplexityMetrics): MorinIndices {
+export function computeMorinIndices(f: ComplexityForces, m: ComplexityMetrics): MorinIndices {
   // Dialógica: co-presence of antagonistic forces.
   // Amplificação (R-loop) and Regulação (B-loop) are antagonistic;
   // Perturbação and Auto-Organização are antagonistic.

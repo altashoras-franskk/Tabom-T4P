@@ -9,11 +9,18 @@ import type {
 import { GROUP_COLORS } from './studyTypes';
 import type { AgentRole } from './studyEngine';
 import type { SocialFields } from './socialFields';
-import { archetypeKeyToColor, archetypeKeyToLabel, computeArchetypeKey } from './studyArchetypes';
+import { archetypeKeyToColor, computeArchetypeKey } from './studyArchetypes';
 
-// ── Coordinate helpers ────────────────────────────────────────────────────────
-function cx(wx: number, cw: number) { return ((wx + 1.0) * 0.5) * cw; }
-function cy(wy: number, ch: number) { return ((wy + 1.0) * 0.5) * ch; }
+// ── Coordinate helpers: world [-worldHalf, worldHalf] → screen [0, cw/ch] ─────
+let _worldHalf = 1;
+function cx(wx: number, cw: number, worldHalf?: number) {
+  const wh = worldHalf ?? _worldHalf;
+  return ((wx + wh) / (2 * wh)) * cw;
+}
+function cy(wy: number, ch: number, worldHalf?: number) {
+  const wh = worldHalf ?? _worldHalf;
+  return ((wy + wh) / (2 * wh)) * ch;
+}
 
 // ── Visual config ─────────────────────────────────────────────────────────────
 export interface StudyVisualConfig {
@@ -21,18 +28,21 @@ export interface StudyVisualConfig {
   showTrails: boolean;
   showDirection: boolean;
   trailOpacity: number;  // 0..1
+  showFamilyConnections: boolean;  // rhizome: lines between agents in the same family
 }
 
 export const defaultVisualConfig: StudyVisualConfig = {
-  agentScale: 1.0,
+  agentScale: 0.30,   // small dots by default — see many agents and family structures
   showTrails: true,
-  showDirection: true,
-  trailOpacity: 0.5,
+  showDirection: false, // off by default — less visual noise
+  trailOpacity: 0.7,   // trails clearly visible
+  showFamilyConnections: true,  // show how agents are connected within families (rhizome)
 };
 
 // ── Agent radius ──────────────────────────────────────────────────────────────
 let _visualCfg: StudyVisualConfig = defaultVisualConfig;
-function agentR(cw: number, ch: number): number { return 0.030 * 0.5 * Math.min(cw, ch) * _visualCfg.agentScale; }
+// Base radius: smaller dots so many agents read as patterns (Complexity Life Lab–style)
+function agentR(cw: number, ch: number): number { return 0.022 * 0.5 * Math.min(cw, ch) * _visualCfg.agentScale; }
 
 // ── Hex → rgba ────────────────────────────────────────────────────────────────
 function hexA(hex: string, a: number): string {
@@ -52,10 +62,6 @@ let _fieldImgL: ImageData | null = null;
 let _fieldImgR: ImageData | null = null;
 
 // ── Archetype legend cache ────────────────────────────────────────────────────
-let _archLegendBucket = -1;
-let _archLegendAgentCount = -1;
-let _archLegendTop: Array<{ n: number; label: string; color: string }> = [];
-
 function ensureFieldCache(size: number): CanvasRenderingContext2D | null {
   if (!_fieldCanvas || _fieldSize !== size) {
     _fieldCanvas = document.createElement('canvas');
@@ -123,6 +129,7 @@ export function renderStudy(
   visualConfig?: StudyVisualConfig,
 ): void {
   _visualCfg = visualConfig ?? defaultVisualConfig;
+  _worldHalf = _cfg.worldHalf ?? 1;
   ctx.clearRect(0, 0, cw, ch);
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, cw, ch);
@@ -183,10 +190,15 @@ export function renderStudy(
     renderSymbols(ctx, cw, ch, symbols, ws.exceptionActive, agents);
   }
 
-  // ── Organic Trails ──
-  if (_visualCfg.showTrails && lens !== 'off' && lens !== 'events') {
+  // ── Organic Trails — always when showTrails (ignore lens so they never “vanish”) ──
+  if (_visualCfg.showTrails) {
+    ctx.save();
     renderTails(ctx, cw, ch, agents, roles);
+    ctx.restore();
   }
+
+  // ── Family structures: hull + label per household (before agents so they sit on top) ──
+  renderFamilyStructures(ctx, cw, ch, agents);
 
   // ── Agents (always rendered; lens changes style only) ──
   const r = agentR(cw, ch);
@@ -236,98 +248,95 @@ export function renderStudy(
 
   // ── Pings (always) ──
   renderPings(ctx, cw, ch, pings);
+}
 
-  // ── Archetype legend (only in archetype lens) ──
-  if (lens === 'archetype') {
-    const bucket = ((_t * 2) | 0); // recompute ~2Hz
-    if (bucket !== _archLegendBucket || agents.length !== _archLegendAgentCount) {
-      _archLegendBucket = bucket;
-      _archLegendAgentCount = agents.length;
-      const counts = new Map<number, { n: number; label: string; color: string }>();
-      for (let i = 0; i < agents.length; i++) {
-        const k = stableKey(agents[i]);
-        const e = counts.get(k);
-        if (e) e.n++;
-        else counts.set(k, { n: 1, label: archetypeKeyToLabel(k), color: archetypeKeyToColor(k) });
-      }
-      _archLegendTop = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 8);
-    }
+// ── Family structures: rhizome (connections between members) ──────────────────
+function renderFamilyStructures(
+  ctx: CanvasRenderingContext2D, cw: number, ch: number,
+  agents: StudyAgent[],
+): void {
+  if (!_visualCfg.showFamilyConnections) return;
 
-    const top = _archLegendTop;
-    if (top.length) {
-      ctx.save();
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(10, 10, 255, 18 + top.length * 12);
-      ctx.font = '10px system-ui, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(255,255,255,0.75)';
-      ctx.fillText('Archetype (stable)', 16, 14);
-      for (let i = 0; i < top.length; i++) {
-        const y = 28 + i * 12;
-        ctx.fillStyle = top[i].color;
-        ctx.globalAlpha = 0.9;
-        ctx.fillRect(16, y + 2, 7, 7);
-        ctx.globalAlpha = 0.75;
-        ctx.fillStyle = 'rgba(255,255,255,0.70)';
-        ctx.fillText(`${top[i].n} · ${top[i].label}`, 28, y);
-      }
-      ctx.restore();
-    }
+  const byFam = new Map<number, number[]>();
+  for (let i = 0; i < agents.length; i++) {
+    const fid = agents[i].familyId;
+    if (fid == null || fid <= 0) continue;
+    const list = byFam.get(fid) ?? [];
+    list.push(i);
+    byFam.set(fid, list);
   }
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 0.5;
+
+  byFam.forEach((indices) => {
+    if (indices.length < 2) return;
+    const groupId = agents[indices[0]].groupId;
+    const groupColor = GROUP_COLORS[groupId % GROUP_COLORS.length] ?? '#ffffff';
+    const [r, g, b] = [parseInt(groupColor.slice(1,3),16), parseInt(groupColor.slice(3,5),16), parseInt(groupColor.slice(5,7),16)];
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.26)`;
+
+    for (let a = 0; a < indices.length; a++) {
+      const i = indices[a];
+      const ax = cx(agents[i].x, cw), ay = cy(agents[i].y, ch);
+      for (let b = a + 1; b < indices.length; b++) {
+        const j = indices[b];
+        const bx = cx(agents[j].x, cw), by = cy(agents[j].y, ch);
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+      }
+    }
+  });
+
+  ctx.restore();
 }
 
 // ── Trails (History) ──────────────────────────────────────────────────────────
-// Smooth quadratic bezier curves with gentle fade. Art-quality.
+// Line segments along trail positions; opacity fades with age.
+// Drawn for every agent every frame when showTrails is on; no dependency on lens.
 function renderTails(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[],
   _roles: AgentRole[],
 ): void {
-  const stride = agents.length > 260 ? 3 : agents.length > 180 ? 2 : 1;
+  const stride = agents.length > 400 ? 4 : agents.length > 200 ? 2 : 1;
   const tLen = 15;
 
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  ctx.globalAlpha = 1;
 
   for (let ai = 0; ai < agents.length; ai += stride) {
     const a = agents[ai];
-    if (!a.trailX) continue;
+    if (!a.trailX || !a.trailY || a.trailX.length !== tLen || a.trailY.length !== tLen) continue;
 
     const col = archetypeKeyToColor(stableKey(a));
     const [tr, tg, tb] = _hexToRgb(col);
 
-    // Collect valid trail points (newest first)
+    // Trail order: oldest = (trailIdx+1)%tLen, ..., newest = trailIdx
     const pts: [number, number][] = [];
-    for (let i = tLen - 1; i >= 0; i--) {
-      const idx = (a.trailIdx + i) % tLen;
+    for (let i = 0; i < tLen; i++) {
+      const idx = (a.trailIdx + 1 + i) % tLen;
       const px = a.trailX[idx], py = a.trailY[idx];
-      if (px === 0 && py === 0) continue;
-      pts.push([cx(px, cw), cy(py, ch)]);
+      if (Number.isFinite(px) && Number.isFinite(py)) pts.push([cx(px, cw), cy(py, ch)]);
     }
-    if (pts.length < 3) continue;
+    if (pts.length < 2) continue;
 
-    // Draw as a single smooth path with gradient-like fade via segments
+    const baseAlpha = 0.6 * _visualCfg.trailOpacity;
+    const baseWidth = 1.2;
+
     for (let i = 1; i < pts.length; i++) {
-      const t = 1 - i / pts.length; // 1=newest, 0=oldest
-      const alpha = t * t * 0.30 * _visualCfg.trailOpacity;
-      const width = 0.4 + t * 1.0;
-
-      if (alpha < 0.01) continue;
-
+      const t = i / pts.length;
+      const alpha = baseAlpha * t * t;
+      const width = baseWidth * (0.3 + 0.7 * t);
+      if (alpha < 0.02) continue;
       ctx.beginPath();
-      if (i >= 2) {
-        // Quadratic curve through midpoint for smoothness
-        const prev = pts[i - 1];
-        const midX = (prev[0] + pts[i][0]) * 0.5;
-        const midY = (prev[1] + pts[i][1]) * 0.5;
-        ctx.moveTo(prev[0], prev[1]);
-        ctx.quadraticCurveTo(pts[i][0], pts[i][1], midX, midY);
-      } else {
-        ctx.moveTo(pts[i - 1][0], pts[i - 1][1]);
-        ctx.lineTo(pts[i][0], pts[i][1]);
-      }
+      ctx.moveTo(pts[i - 1][0], pts[i - 1][1]);
+      ctx.lineTo(pts[i][0], pts[i][1]);
       ctx.strokeStyle = `rgba(${tr},${tg},${tb},${alpha})`;
       ctx.lineWidth = width;
       ctx.stroke();
@@ -348,8 +357,7 @@ function _hexToRgb(color: string): [number, number, number] {
 }
 
 // ── Agents: Core draw ────────────────────────────────────────────────────────
-// Art-exhibition quality: radial gradient body with directional glow arc.
-// No chunky nose/wedge. Clean, organic, luminous.
+// Flat solid circles (no gradient). Color = archetype/group.
 function _drawAgent(ctx: CanvasRenderingContext2D, ax: number, ay: number, vx: number, vy: number, r: number, color: string, alpha: number) {
   const spd = Math.sqrt(vx * vx + vy * vy);
   const nx = spd > 0.0001 ? vx / spd : 1;
@@ -361,28 +369,18 @@ function _drawAgent(ctx: CanvasRenderingContext2D, ax: number, ay: number, vx: n
   ctx.save();
   ctx.globalAlpha = alpha;
 
-  // Body: radial gradient — bright center fading to color at edge
-  const grad = ctx.createRadialGradient(
-    ax - nx * r * 0.15, ay - ny * r * 0.15, r * 0.05,
-    ax, ay, r,
-  );
-  grad.addColorStop(0.0, `rgba(${Math.min(255, cr + 80)},${Math.min(255, cg + 80)},${Math.min(255, cb + 80)},1)`);
-  grad.addColorStop(0.55, `rgba(${cr},${cg},${cb},0.95)`);
-  grad.addColorStop(1.0, `rgba(${Math.max(0, cr - 30)},${Math.max(0, cg - 30)},${Math.max(0, cb - 30)},0.85)`);
-
+  // Body: solid flat circle (no gradient)
   ctx.beginPath();
   ctx.arc(ax, ay, r, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
+  ctx.fillStyle = `rgba(${cr},${cg},${cb},0.92)`;
   ctx.fill();
 
-  // Subtle rim light — gives depth
-  ctx.beginPath();
-  ctx.arc(ax, ay, r, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(255,255,255,0.12)`;
-  ctx.lineWidth = 0.6;
+  // Very subtle edge so circles don’t merge
+  ctx.strokeStyle = `rgba(255,255,255,0.08)`;
+  ctx.lineWidth = 0.5;
   ctx.stroke();
 
-  // Direction: thin tapered line from edge, length proportional to speed.
+  // Direction: thin line from edge (optional)
   if (_visualCfg.showDirection && sp01 > 0.05) {
     const lineLen = r * (0.6 + sp01 * 1.8);
     const tipX = ax + nx * (r + lineLen);
@@ -390,10 +388,9 @@ function _drawAgent(ctx: CanvasRenderingContext2D, ax: number, ay: number, vx: n
     ctx.beginPath();
     ctx.moveTo(ax + nx * r * 0.85, ay + ny * r * 0.85);
     ctx.lineTo(tipX, tipY);
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.7)`;
     ctx.lineWidth = Math.max(0.5, r * 0.12 * (1 - sp01 * 0.3));
     ctx.lineCap = 'round';
-    ctx.globalAlpha = alpha * (0.25 + sp01 * 0.40);
     ctx.stroke();
   }
 
@@ -471,7 +468,7 @@ function renderAgentsGroups(
       ctx.globalAlpha = 1;
     }
 
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.88);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.65);
 
     // Group identity: thin colored dot below agent instead of full ring
     ctx.beginPath();
@@ -532,7 +529,7 @@ function renderAgentsPower(
     const fb = Math.round(cb + (50 - cb) * fearBlend);
     const fillHex = `#${fr.toString(16).padStart(2, '0')}${fg.toString(16).padStart(2, '0')}${fb.toString(16).padStart(2, '0')}`;
 
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, fillHex, 0.85);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, fillHex, 0.62);
     _drawRoleIndicator(ctx, ax, ay, ar, baseCol, role);
   }
 }
@@ -612,7 +609,7 @@ function renderAgentsPlain(
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const baseCol = archetypeKeyToColor(stableKey(a));
     const ar = r * (0.72 + a.status * 0.72);
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.85);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.62);
   }
 }
 
@@ -651,7 +648,7 @@ function renderAgentsArchetype(
       ctx.globalAlpha = 1;
     }
 
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, col, 0.88);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, col, 0.65);
     _drawRoleIndicator(ctx, ax, ay, ar, col, role);
   }
 }

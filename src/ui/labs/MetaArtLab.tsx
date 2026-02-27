@@ -55,10 +55,13 @@ import { MetaArt3DRenderer } from '../../sim/metaart/metaArt3DRenderer';
 import { MatrixPanel } from '../metaart/MatrixPanel';
 import { PhysicsPanel } from '../metaart/PhysicsPanel';
 import { PowersPanel } from '../metaart/PowersPanel';
+import { MetaArtHubPanel } from './MetaArtHubPanel';
+import { computeMetaArtMorin } from '../../sim/metaart/metaArtComplexity';
+import type { MorinIndices } from '../../sim/complexity/complexityLens';
 
 interface Props { active: boolean; }
 
-type RightPanel = 'layers' | 'dna' | 'archive' | 'vitrine' | 'geo' | 'matrix' | 'physics' | 'powers' | null;
+type RightPanel = 'layers' | 'dna' | 'archive' | 'vitrine' | 'geo' | 'matrix' | 'physics' | 'powers' | 'hub' | null;
 
 // ── Design tokens — matches homepage identity ──────────────────────────────────
 const MONO = "'IBM Plex Mono', monospace";
@@ -529,6 +532,11 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   // Singleton big-agent size
   const [singletonSize, setSingletonSize] = useState(6.0);
 
+  // Morin complexity indices (computed every N frames)
+  const morinRef = useRef<MorinIndices>({ dialogica: 0, recursivo: 0, hologramatico: 0, sapiensDemens: 0.5, tetralogia: 0 });
+  const [morin, setMorin] = useState<MorinIndices>(morinRef.current);
+  const [showMorin, setShowMorin] = useState(false);
+
   const gestaltTickRef = useRef(0);
   const simSpeedRef  = useRef(1.0);
   const sizeMulRef   = useRef(1.0);
@@ -845,6 +853,8 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           prevDensRef.current = m.density;
           setMetrics(m);
           setQuantaCount(quantaRef.current.length);
+          morinRef.current = computeMetaArtMorin(quantaRef.current, dnaRef.current);
+          setMorin(morinRef.current);
         }
       }
 
@@ -873,11 +883,12 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
       } else {
         // ── 2D rendering path ─────────────────────────────────────────────
         const trailLayer = getLayer(layersRef.current, 'trail');
+        const hasQuanta = quantaRef.current.length > 0;
         if (trailLayer?.canvas) {
           const tCtx = trailLayer.canvas.getContext('2d')!;
-          if (gMode === 'geometric') {
+          if (gMode === 'geometric' && hasQuanta) {
             tCtx.clearRect(0, 0, W, H);
-          } else if (!pausedNow) {
+          } else if (!pausedNow && hasQuanta) {
             fadeTrailLayer(trailLayer, dnaRef.current, dt);
             if (gMode === 'fluid' || gMode === 'hybrid') {
               renderQuantaTrail(tCtx, quantaRef.current, dnaRef.current, W, H, tick, sizeMulRef.current, brushTextureRef.current);
@@ -1375,6 +1386,25 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     setGrimoire(prev => addGrimoireEntry(prev, 'tela limpa — reinício do gesto', 'observation'));
   }, []);
 
+  const handleBlankCanvas = useCallback(() => {
+    for (const layer of layersRef.current) {
+      if (!layer.canvas) continue;
+      const ctx = layer.canvas.getContext('2d')!;
+      ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+    }
+    quantaRef.current = [];
+    setQuantaCount(0);
+    gesturesRef.current = [];
+    const fields = createFieldGrid();
+    generateFlowField(fields, dnaRef.current, seedRef.current);
+    fields.interactionMatrix = buildInteractionMatrix(dnaRef.current, seedRef.current);
+    fieldsRef.current = fields;
+    setMatrixValues(Array.from(fields.interactionMatrix));
+    setPaused(true);
+    pausedRef.current = true;
+    setGrimoire(prev => addGrimoireEntry(prev, 'blank canvas — modo pintura livre', 'milestone'));
+  }, []);
+
   const handleLayerChange = useCallback((id: string, patch: Partial<LayerState>) => {
     layersRef.current = layersRef.current.map(l => l.id === id ? { ...l, ...patch } : l);
     setLayers(layersRef.current.map(l => ({ ...l })));
@@ -1403,6 +1433,17 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     seedRef.current = entry.seed;
     setGrimoire(prev => addGrimoireEntry(prev, 'snapshot restaurado', 'observation'));
   }, [handleDNAChange]);
+
+  const handleHubLoadPreset = useCallback((newDNA: DNA) => {
+    handleDNAChange(newDNA);
+    initSim(newDNA, seedRef.current);
+  }, [handleDNAChange, initSim]);
+
+  const handleHubLoadArte = useCallback((newDNA: DNA, seed: number) => {
+    handleDNAChange(newDNA);
+    seedRef.current = seed;
+    initSim(newDNA, seed);
+  }, [handleDNAChange, initSim]);
 
   // ── Random Canvas — truly random DNA + agents ─────────────────────────────
   const handleRandomCanvas = useCallback(() => {
@@ -1748,6 +1789,12 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             {paused ? <Play size={12} strokeWidth={1.5} /> : <Pause size={12} strokeWidth={1.5} />}
           </button>
 
+          {/* Blank Canvas — clears everything, pauses, ready for manual painting */}
+          <button onClick={handleBlankCanvas} title="Tela em branco (limpa tudo, pausa, modo pintura)"
+            style={{ ...topBtnSty, color: '#fff', fontSize: 8, letterSpacing: '0.08em', fontFamily: MONO }}>
+            BLANK
+          </button>
+
           {/* Clear canvas */}
           <button onClick={handleClearAll} title="Limpar tela" style={topBtnSty}>
             <RotateCcw size={12} strokeWidth={1.5} />
@@ -1848,6 +1895,12 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             <Zap size={12} strokeWidth={1.5} />
             <span style={{ fontSize: 8, marginLeft: 2 }}>BRILHO</span>
           </button>
+          <button
+            onClick={() => setShowMorin(v => !v)}
+            title="Índices de Complexidade (Morin)"
+            style={ovlBtnStyle(showMorin)}>
+            <span style={{ fontSize: 8 }}>MORIN</span>
+          </button>
 
           <Divider />
 
@@ -1925,6 +1978,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             ['physics', null, 'PHY'],
             ['powers',  null, 'PWR'],
             ['geo',     null, 'GEO'],
+            ['hub',     null, 'HUB'],
           ] as [RightPanel, React.ReactNode | null, string][]).map(([panel, icon, label]) => (
             <button title={panel} key={panel}
               onClick={() => setRightPanel(prev => prev === panel ? null : panel)}
@@ -2185,6 +2239,35 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             </div>
           )}
 
+          {/* Morin complexity panel */}
+          {showMorin && !cinematic && (
+            <div style={{
+              position: 'absolute', top: 8, left: 8,
+              display: 'flex', flexDirection: 'column', gap: 3, pointerEvents: 'none',
+              background: 'rgba(0,0,0,0.55)', padding: '8px 12px', borderRadius: 2,
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <div style={{ fontSize: 7, color: ACCENT, letterSpacing: '0.14em', fontFamily: MONO, marginBottom: 2 }}>MORIN</div>
+              {([
+                { key: 'dialogica',     label: 'DIALÓG',   c: 'rgba(255,100,100,0.7)',  v: morin.dialogica },
+                { key: 'recursivo',     label: 'RECURS',   c: 'rgba(100,200,255,0.7)',  v: morin.recursivo },
+                { key: 'hologramatico', label: 'HOLOGR',   c: 'rgba(100,255,160,0.7)',  v: morin.hologramatico },
+                { key: 'sapiensDemens', label: 'SAP/DEM',  c: 'rgba(255,200,80,0.7)',   v: morin.sapiensDemens },
+                { key: 'tetralogia',    label: 'TETRAL',   c: 'rgba(180,120,255,0.7)',  v: morin.tetralogia },
+              ] as const).map(({ key, label, c, v }) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 6, color: DIM, width: 32, textAlign: 'right',
+                    letterSpacing: '0.08em', fontFamily: MONO }}>{label}</span>
+                  <div style={{ width: 60, height: 3, background: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
+                    <div style={{ width: `${v * 100}%`, height: '100%', background: c,
+                      borderRadius: 1, transition: 'width 0.5s' }} />
+                  </div>
+                  <span style={{ fontSize: 6, color: DIM, width: 18, fontFamily: MONO }}>{v.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Overlay legend */}
           {!cinematic && (overlays.connections || overlays.glow) && (
             <div style={{
@@ -2353,6 +2436,14 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
                 onLitShift={handleLitShift}
                 onSizeAll={handleSizeAll}
                 onRespawn={() => initSim(dnaRef.current, Date.now())}
+              />
+            )}
+            {rightPanel === 'hub' && (
+              <MetaArtHubPanel
+                dna={dna}
+                seed={seedRef.current}
+                onLoadPreset={handleHubLoadPreset}
+                onLoadArte={handleHubLoadArte}
               />
             )}
           </div>

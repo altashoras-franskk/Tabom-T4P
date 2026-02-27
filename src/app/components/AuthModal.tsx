@@ -4,6 +4,12 @@ import { createClient } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { X, LogIn, UserPlus, Eye, EyeOff } from 'lucide-react';
 
+const MONO = "'IBM Plex Mono', monospace";
+const DOTO = "'Doto', monospace";
+const BORDER = 'rgba(255,255,255,0.06)';
+const BG_INPUT = 'rgba(255,255,255,0.05)';
+const BG_PANEL = 'rgba(0,0,0,0.94)';
+
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-0834700c`;
 
 const supabase = createClient(
@@ -13,7 +19,7 @@ const supabase = createClient(
 
 interface Props {
   onClose: () => void;
-  onAuthChange: (user: AuthUser | null) => void;
+  onAuthChange?: (user: AuthUser | null) => void;
 }
 
 export interface AuthUser {
@@ -25,6 +31,20 @@ export interface AuthUser {
 
 type Mode = 'login' | 'register';
 
+const MIN_PASSWORD_LENGTH = 8;
+
+function validatePassword(pw: string): { ok: boolean; message?: string } {
+  if (pw.length < MIN_PASSWORD_LENGTH) {
+    return { ok: false, message: `Senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.` };
+  }
+  const hasLetter = /[a-zA-Z]/.test(pw);
+  const hasNumber = /[0-9]/.test(pw);
+  if (!hasLetter || !hasNumber) {
+    return { ok: false, message: 'Use letras e números na senha.' };
+  }
+  return { ok: true };
+}
+
 export function AuthModal({ onClose, onAuthChange }: Props) {
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
@@ -34,17 +54,39 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
+
+  const handleForgotPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError('Digite seu email e clique em Esqueci a senha.');
+      return;
+    }
+    setError('');
+    setForgotSent(false);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+      });
+      if (resetError) throw resetError;
+      setForgotSent(true);
+      setSuccess('Se esse email estiver cadastrado, você receberá um link para redefinir a senha.');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao enviar email.');
+    }
+  };
 
   const inputSty: React.CSSProperties = {
     width: '100%',
     padding: '9px 12px',
-    borderRadius: 6,
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    background: BG_INPUT,
+    border: `1px dashed rgba(255,255,255,0.1)`,
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     outline: 'none',
-    fontFamily: 'system-ui',
+    fontFamily: MONO,
+    letterSpacing: '0.02em',
     boxSizing: 'border-box',
     transition: 'border-color 0.15s',
   };
@@ -66,12 +108,14 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       const user = data.session?.user;
       const token = data.session?.access_token;
       if (!user || !token) throw new Error('Login falhou — sem sessão.');
-      onAuthChange({
-        id: user.id,
-        email: user.email!,
-        name: user.user_metadata?.name,
-        accessToken: token,
-      });
+      if (typeof onAuthChange === 'function') {
+        onAuthChange({
+          id: user.id,
+          email: user.email!,
+          name: user.user_metadata?.name,
+          accessToken: token,
+        });
+      }
       setSuccess('Login realizado! Coleções sincronizadas.');
       setTimeout(() => onClose(), 1000);
     } catch (err: any) {
@@ -87,8 +131,13 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       setError('Preencha email e senha.');
       return;
     }
-    if (password.length < 6) {
-      setError('Senha deve ter pelo menos 6 caracteres.');
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+    const pv = validatePassword(password);
+    if (!pv.ok) {
+      setError(pv.message || 'Senha inválida.');
       return;
     }
     setLoading(true);
@@ -116,12 +165,14 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       const user = data.session?.user;
       const token = data.session?.access_token;
       if (!user || !token) throw new Error('Conta criada mas login falhou. Tente fazer login.');
-      onAuthChange({
-        id: user.id,
-        email: user.email!,
-        name: user.user_metadata?.name || name,
-        accessToken: token,
-      });
+      if (typeof onAuthChange === 'function') {
+        onAuthChange({
+          id: user.id,
+          email: user.email!,
+          name: user.user_metadata?.name || name,
+          accessToken: token,
+        });
+      }
       setSuccess('Conta criada! Bem-vindo ao Rhizome.');
       setTimeout(() => onClose(), 1000);
     } catch (err: any) {
@@ -135,18 +186,20 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+        background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: MONO,
       }}
       onClick={onClose}
     >
       <div
         style={{
-          width: 360, background: 'rgba(8,5,20,0.98)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: 12, padding: '28px 28px 24px',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
+          width: 360,
+          background: BG_PANEL,
+          border: `1px dashed ${BORDER}`,
+          borderRadius: 10,
+          padding: '24px 24px 20px',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
           position: 'relative',
         }}
         onClick={e => e.stopPropagation()}
@@ -155,7 +208,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
         <button title="Fechar"
           onClick={onClose}
           style={{
-            position: 'absolute', top: 14, right: 14,
+            position: 'absolute', top: 12, right: 12,
             background: 'none', border: 'none', cursor: 'pointer',
             color: 'rgba(255,255,255,0.3)', padding: 4,
           }}
@@ -164,14 +217,14 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
         </button>
 
         {/* Header */}
-        <div style={{ marginBottom: 22, textAlign: 'center' }}>
-          <div style={{ fontSize: 9, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 6 }}>
+        <div style={{ marginBottom: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 9, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', marginBottom: 6, fontFamily: MONO }}>
             Devices for Intuition
           </div>
-          <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginBottom: 4 }}>
+          <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)', fontWeight: 500, marginBottom: 4, fontFamily: DOTO, letterSpacing: '0.02em' }}>
             {mode === 'login' ? 'Entrar' : 'Criar conta'}
           </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)' }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em', fontFamily: MONO }}>
             {mode === 'login'
               ? 'Coleções sincronizadas entre dispositivos'
               : 'Pesquisa rizomática persistente em todos os dispositivos'}
@@ -180,19 +233,21 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
 
         {/* Mode tabs */}
         <div style={{
-          display: 'flex', gap: 4, marginBottom: 20,
-          background: 'rgba(255,255,255,0.04)', borderRadius: 7, padding: 3,
+          display: 'flex', gap: 4, marginBottom: 18,
+          background: 'rgba(255,255,255,0.02)', borderRadius: 10, padding: 3,
+          border: `1px dashed ${BORDER}`,
         }}>
           {(['login', 'register'] as Mode[]).map(m => (
             <button title={m}
               key={m}
-              onClick={() => { setMode(m); setError(''); setSuccess(''); }}
+              onClick={() => { setMode(m); setError(''); setSuccess(''); setForgotSent(false); }}
               style={{
-                flex: 1, padding: '6px 0', borderRadius: 5, cursor: 'pointer',
-                background: mode === m ? 'rgba(124,58,237,0.3)' : 'transparent',
-                border: `1px solid ${mode === m ? 'rgba(124,58,237,0.5)' : 'transparent'}`,
-                color: mode === m ? 'rgba(196,181,253,0.95)' : 'rgba(255,255,255,0.4)',
+                flex: 1, padding: '6px 0', borderRadius: 8, cursor: 'pointer',
+                background: mode === m ? 'rgba(255,255,255,0.06)' : 'transparent',
+                border: mode === m ? '1px dashed rgba(255,255,255,0.12)' : '1px dashed transparent',
+                color: mode === m ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
                 fontSize: 10, fontWeight: mode === m ? 600 : 400,
+                fontFamily: MONO, letterSpacing: '0.06em', textTransform: 'uppercase',
                 transition: 'all 0.15s',
               }}
             >
@@ -205,7 +260,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
           {/* Name (register only) */}
           {mode === 'register' && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase', fontFamily: MONO }}>
                 Nome (opcional)
               </div>
               <input
@@ -214,7 +269,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 style={inputSty}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)')}
+                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)')}
                 onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
             </div>
@@ -222,7 +277,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
 
           {/* Email */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase', fontFamily: MONO }}>
               Email
             </div>
             <input
@@ -232,15 +287,15 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
               onChange={e => setEmail(e.target.value)}
               style={inputSty}
               autoFocus
-              onFocus={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)')}
+              onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)')}
               onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
             />
           </div>
 
           {/* Password */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase' }}>
-              Senha {mode === 'register' && <span style={{ color: 'rgba(255,255,255,0.25)' }}>(mín. 6 caracteres)</span>}
+          <div style={{ marginBottom: mode === 'login' ? 8 : 20 }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase', fontFamily: MONO }}>
+              Senha {mode === 'register' && <span style={{ color: 'rgba(255,255,255,0.25)' }}>(mín. 8 caracteres, letras e números)</span>}
             </div>
             <div style={{ position: 'relative' }}>
               <input
@@ -249,7 +304,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 style={{ ...inputSty, paddingRight: 36 }}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)')}
+                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)')}
                 onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
               <button title={showPw ? "Esconder senha" : "Mostrar senha"}
@@ -264,23 +319,36 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
                 {showPw ? <EyeOff size={12} /> : <Eye size={12} />}
               </button>
             </div>
+            {mode === 'login' && (
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                style={{
+                  marginTop: 6, background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 9, color: 'rgba(255,255,255,0.4)', textDecoration: 'underline',
+                  fontFamily: MONO, letterSpacing: '0.04em',
+                }}
+              >
+                Esqueci a senha
+              </button>
+            )}
           </div>
 
           {/* Error / Success */}
           {error && (
             <div style={{
-              marginBottom: 14, padding: '8px 12px', borderRadius: 6,
-              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
-              fontSize: 10, color: 'rgba(252,165,165,0.9)', lineHeight: 1.4,
+              marginBottom: 14, padding: '8px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.12)',
+              fontSize: 10, color: 'rgba(255,255,255,0.6)', lineHeight: 1.4, fontFamily: MONO,
             }}>
               {error}
             </div>
           )}
           {success && (
             <div style={{
-              marginBottom: 14, padding: '8px 12px', borderRadius: 6,
-              background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)',
-              fontSize: 10, color: 'rgba(134,239,172,0.9)',
+              marginBottom: 14, padding: '8px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.12)',
+              fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: MONO,
             }}>
               {success}
             </div>
@@ -291,11 +359,12 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
             type="submit"
             disabled={loading}
             style={{
-              width: '100%', padding: '10px 0', borderRadius: 7, cursor: loading ? 'not-allowed' : 'pointer',
-              background: loading ? 'rgba(124,58,237,0.1)' : 'rgba(124,58,237,0.25)',
-              border: `1px solid ${loading ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.5)'}`,
-              color: loading ? 'rgba(196,181,253,0.5)' : 'rgba(196,181,253,0.95)',
-              fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
+              width: '100%', padding: '10px 0', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer',
+              background: loading ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)',
+              border: `1px dashed ${loading ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)'}`,
+              color: loading ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.85)',
+              fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+              fontFamily: MONO,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               transition: 'all 0.15s',
             }}
@@ -315,11 +384,10 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
 
         {/* Note */}
         <div style={{
-          marginTop: 16, fontSize: 8, color: 'rgba(255,255,255,0.2)',
-          textAlign: 'center', lineHeight: 1.5,
+          marginTop: 14, fontSize: 8, color: 'rgba(255,255,255,0.2)',
+          textAlign: 'center', lineHeight: 1.5, fontFamily: MONO, letterSpacing: '0.03em',
         }}>
-          Coleções, pastas e mapas rizomáticos sincronizados entre dispositivos.<br/>
-          Sem conta, dados ficam apenas neste browser.
+          Coleções sincronizadas entre dispositivos. Sem conta, dados ficam apenas neste browser.
         </div>
       </div>
 

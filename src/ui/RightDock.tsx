@@ -3,6 +3,7 @@ import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from 'lucide-react'
 import { Patchboard } from './Patchboard';
 import { MatrixEditor } from './MatrixEditor';
 import { SeedPanel } from './SeedPanel';
+import { SaveLoadPanel } from './SaveLoadPanel';
 import { Codex } from './Codex';
 import { PerformanceStats } from './PerformanceStats';
 import { ArchetypesPanel } from './ArchetypesPanel'; // PATCH 04.3
@@ -546,6 +547,13 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
               />
             )}
 
+            {tab === 'save' && (
+              <SaveLoadPanel
+                onSave={props.onSaveSnapshot}
+                onLoad={props.onLoadSnapshot}
+              />
+            )}
+
             {tab === 'stats' && (
               <PerformanceStats
                 fps={props.fps}
@@ -609,8 +617,9 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
     { id: 'powers' as const,     label: 'PWR',  num: '03' },
     { id: 'matrix' as const,     label: 'MTX',  num: '04' },
     { id: 'seed' as const,       label: 'SEED', num: '05' },
-    { id: 'stats' as const,      label: 'STAT', num: '06' },
-    { id: 'codex' as const,      label: 'CDX',  num: '07' },
+    { id: 'save' as const,       label: 'SAVE', num: '06' },
+    { id: 'stats' as const,      label: 'STAT', num: '07' },
+    { id: 'codex' as const,      label: 'CDX',  num: '08' },
   ];
 
   return (
@@ -908,6 +917,13 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
               <SeedPanel
                 currentSeed={props.currentSeed || Date.now()}
                 onLoadSeed={props.onLoadSeed || (() => {})}
+              />
+            )}
+
+            {tab === 'save' && (
+              <SaveLoadPanel
+                onSave={props.onSaveSnapshot}
+                onLoad={props.onLoadSnapshot}
               />
             )}
 

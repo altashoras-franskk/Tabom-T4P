@@ -1,7 +1,7 @@
 // ─── Sociogenesis Study Mode — 20 Scenarios ──────────────────────────────────
 // Five thematic clusters: Genesis · Conflict · Economy · Culture · Power
 
-import type { StudyConfig, StudySymbols, StudyTotem, StudyRitual, StudyTabu } from './studyTypes';
+import type { StudyConfig, StudySymbols, StudyTotem, StudyRitual, StudyTabu, GroupProfile } from './studyTypes';
 import type { SocialFieldConfig, SocialFields } from './socialFields';
 import { depositN, depositL, depositR } from './socialFields';
 
@@ -9,7 +9,7 @@ export interface StudyScenario {
   id: string;
   name: string;
   icon: string;
-  category: 'genesis' | 'conflict' | 'economy' | 'culture' | 'power';
+  category: 'genesis' | 'conflict' | 'economy' | 'culture' | 'power' | 'multi-field';
   description: string;
   apply: (cfg: StudyConfig, fcfg: SocialFieldConfig) => void;
   setupWorld?: (fields: SocialFields, symbols: StudySymbols) => void;
@@ -38,6 +38,12 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.trustBase = 0.45; cfg.kBelief = 0.20; cfg.harvestRate = 0.10; cfg.decayWealth = 0.008;
       cfg.ideologyPressure = 0.15; cfg.violationThreshold = 6; cfg.autoSymbols = true;
       fcfg.decayN = 0.035; fcfg.regenR = 0.040;
+      cfg.groupProfiles = [
+        { name: 'Oligarca',   sphere: 'economic',   fieldSensitivity: { n: 0.4, l: 1.0, r: 2.0 }, ideologyBias: 0.3,  trustBias: 0.3, aggressionBias: 0.2, cohesionBias: 0.6, desireBias: 0.7 },
+        { name: 'Comerciante',sphere: 'economic',   fieldSensitivity: { n: 0.6, l: 0.8, r: 1.8 }, ideologyBias: 0.2,  trustBias: 0.4, aggressionBias: 0.2, cohesionBias: 0.4, desireBias: 0.6 },
+        { name: 'Trabalhador',sphere: 'popular',     fieldSensitivity: { n: 1.3, l: 0.6, r: 1.4 }, ideologyBias: -0.1, trustBias: 0.5, aggressionBias: 0.3, cohesionBias: 0.5, desireBias: 0.5 },
+        { name: 'Artesão',    sphere: 'artistic',    fieldSensitivity: { n: 0.5, l: 0.8, r: 1.2 }, ideologyBias: 0.1,  trustBias: 0.5, aggressionBias: 0.1, cohesionBias: 0.4, desireBias: 0.5 },
+      ];
     },
     setupWorld(f, _s) {
       depositR(f,  0.55,  0.00, 0.60, 0.28); depositR(f, -0.45,  0.50, 0.50, 0.22);
@@ -53,6 +59,11 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.trustBase = 0.65; cfg.kBelief = 0.65; cfg.kFear = 0.50; cfg.ideologyPressure = 0.40;
       cfg.violationThreshold = 2; cfg.autoSymbols = true;
       fcfg.decayN = 0.008; fcfg.diffuseN = 0.14; fcfg.regenR = 0.016;
+      cfg.groupProfiles = [
+        { name: 'Governante', sphere: 'political',  fieldSensitivity: { n: 1.0, l: 2.0, r: 1.0 }, ideologyBias: -0.6, trustBias: 0.6, aggressionBias: 0.15, cohesionBias: 0.8, desireBias: 0.2 },
+        { name: 'Funcionário',sphere: 'political',  fieldSensitivity: { n: 1.2, l: 1.5, r: 0.8 }, ideologyBias: -0.4, trustBias: 0.7, aggressionBias: 0.1, cohesionBias: 0.6, desireBias: 0.3 },
+        { name: 'Súdito',     sphere: 'popular',     fieldSensitivity: { n: 1.5, l: 0.6, r: 1.2 }, ideologyBias: -0.2, trustBias: 0.5, aggressionBias: 0.2, cohesionBias: 0.5, desireBias: 0.4 },
+      ];
     },
     setupWorld(f, s) {
       for (let i = 0; i < f.n.length; i++) f.n[i] = Math.min(1, f.n[i] + 0.38);
@@ -101,6 +112,13 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.agentCount = 150; cfg.groupCount = 5; cfg.speed = 0.45; cfg.cohesion = 0.65;
       cfg.aggressionBase = 0.28; cfg.ideologyPressure = 0.20; cfg.autoSymbols = true;
       fcfg.diffuseN = 0.08;
+      cfg.groupProfiles = [
+        { name: 'Tribo do Fogo',  sphere: 'military',   fieldSensitivity: { n: 1.0, l: 1.0, r: 1.2 }, ideologyBias: -0.3, trustBias: 0.5, aggressionBias: 0.35, cohesionBias: 0.8, desireBias: 0.4 },
+        { name: 'Tribo da Água',  sphere: 'religious',   fieldSensitivity: { n: 1.6, l: 1.0, r: 0.6 }, ideologyBias: -0.4, trustBias: 0.6, aggressionBias: 0.1, cohesionBias: 0.7, desireBias: 0.3 },
+        { name: 'Tribo do Vento', sphere: 'artistic',    fieldSensitivity: { n: 0.6, l: 0.8, r: 1.0 }, ideologyBias:  0.4, trustBias: 0.4, aggressionBias: 0.1, cohesionBias: 0.5, desireBias: 0.7 },
+        { name: 'Tribo da Terra', sphere: 'economic',    fieldSensitivity: { n: 0.8, l: 0.6, r: 1.8 }, ideologyBias:  0.1, trustBias: 0.5, aggressionBias: 0.2, cohesionBias: 0.6, desireBias: 0.5 },
+        { name: 'Tribo do Raio',  sphere: 'political',   fieldSensitivity: { n: 0.8, l: 1.6, r: 0.8 }, ideologyBias: -0.5, trustBias: 0.4, aggressionBias: 0.3, cohesionBias: 0.7, desireBias: 0.3 },
+      ];
     },
     setupWorld(f, s) {
       const positions = [
@@ -142,6 +160,10 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.trustBase = 0.15; cfg.ideologyPressure = 0.70; cfg.kFear = 0.55;
       cfg.violationThreshold = 2; cfg.exceptionDuration = 40; cfg.autoSymbols = true;
       fcfg.diffuseN = 0.04;
+      cfg.groupProfiles = [
+        { name: 'Cruzado',    sphere: 'religious',   fieldSensitivity: { n: 2.0, l: 1.5, r: 0.4 }, ideologyBias: -0.7, trustBias: 0.6, aggressionBias: 0.5, cohesionBias: 0.9, desireBias: 0.2 },
+        { name: 'Herege',     sphere: 'religious',   fieldSensitivity: { n: 1.8, l: 0.8, r: 0.6 }, ideologyBias:  0.5, trustBias: 0.3, aggressionBias: 0.5, cohesionBias: 0.7, desireBias: 0.6 },
+      ];
     },
     setupWorld(f, s) {
       s.totems.push(totem('RIFT', -0.55,  0.10, 0.32, 0, 1.1));
@@ -442,6 +464,11 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.conformity = 0.10; cfg.kDesire = 0.70; cfg.cooperationBias = 0.55;
       cfg.resourceScarcity = 0.20; cfg.harvestRate = 0.12; cfg.decayWealth = 0.020;
       cfg.violationThreshold = 2; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Aristocrata',sphere: 'political',  fieldSensitivity: { n: 0.5, l: 2.0, r: 1.8 }, ideologyBias: -0.7, trustBias: 0.3, aggressionBias: 0.15, cohesionBias: 0.8, desireBias: 0.2 },
+        { name: 'Operário',   sphere: 'popular',     fieldSensitivity: { n: 1.4, l: 0.5, r: 1.4 }, ideologyBias:  0.4, trustBias: 0.4, aggressionBias: 0.4, cohesionBias: 0.6, desireBias: 0.7 },
+        { name: 'Intelectual',sphere: 'scientific',  fieldSensitivity: { n: 1.0, l: 1.3, r: 0.8 }, ideologyBias:  0.5, trustBias: 0.5, aggressionBias: 0.1, cohesionBias: 0.3, desireBias: 0.6 },
+      ];
     },
     setupWorld(f) {
       for (let i = 0; i < f.r.length; i++) f.r[i] = 0.08;
@@ -523,6 +550,12 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.agentCount = 180; cfg.groupCount = 4; cfg.hierarchyStrength = 0.75;
       cfg.cooperationBias = 0.10; cfg.harvestRate = 0.15; cfg.decayWealth = 0.005;
       cfg.resourceScarcity = 0.35; cfg.conformity = 0.55; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Colono',     sphere: 'political',  fieldSensitivity: { n: 0.5, l: 2.0, r: 1.8 }, ideologyBias: -0.6, trustBias: 0.3, aggressionBias: 0.3, cohesionBias: 0.8, desireBias: 0.4 },
+        { name: 'Missionário',sphere: 'religious',   fieldSensitivity: { n: 2.0, l: 1.2, r: 0.4 }, ideologyBias: -0.7, trustBias: 0.6, aggressionBias: 0.1, cohesionBias: 0.7, desireBias: 0.15 },
+        { name: 'Nativo',     sphere: 'popular',     fieldSensitivity: { n: 1.2, l: 0.4, r: 1.2 }, ideologyBias:  0.1, trustBias: 0.5, aggressionBias: 0.3, cohesionBias: 0.6, desireBias: 0.5 },
+        { name: 'Escravo',    sphere: 'popular',     fieldSensitivity: { n: 1.5, l: 0.3, r: 1.5 }, ideologyBias:  0.3, trustBias: 0.2, aggressionBias: 0.4, cohesionBias: 0.5, desireBias: 0.7 },
+      ];
     },
     setupWorld(f, s) {
       for (let i = 0; i < f.r.length; i++) f.r[i] = 0.10;
@@ -543,6 +576,13 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.empathy = 0.60; cfg.contagion = 0.55; cfg.culturalInertia = 0.10;
       cfg.cooperationBias = 0.45; cfg.hierarchyStrength = 0.40;
       cfg.aggressionBase = 0.08; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Mecenas',    sphere: 'economic',   fieldSensitivity: { n: 0.6, l: 1.2, r: 1.8 }, ideologyBias: 0.2,  trustBias: 0.5, aggressionBias: 0.08, cohesionBias: 0.5, desireBias: 0.5 },
+        { name: 'Artista',    sphere: 'artistic',    fieldSensitivity: { n: 0.4, l: 0.8, r: 1.0 }, ideologyBias: 0.6,  trustBias: 0.5, aggressionBias: 0.05, cohesionBias: 0.3, desireBias: 0.9 },
+        { name: 'Humanista',  sphere: 'scientific',  fieldSensitivity: { n: 1.0, l: 1.5, r: 0.8 }, ideologyBias: 0.4,  trustBias: 0.7, aggressionBias: 0.05, cohesionBias: 0.4, desireBias: 0.6 },
+        { name: 'Clero',      sphere: 'religious',   fieldSensitivity: { n: 1.8, l: 1.3, r: 0.4 }, ideologyBias: -0.5, trustBias: 0.6, aggressionBias: 0.1, cohesionBias: 0.7, desireBias: 0.15 },
+        { name: 'Povo',       sphere: 'popular',     fieldSensitivity: { n: 1.2, l: 0.5, r: 1.3 }, ideologyBias: -0.1, trustBias: 0.4, aggressionBias: 0.2, cohesionBias: 0.5, desireBias: 0.5 },
+      ];
     },
     setupWorld(f, s) {
       s.totems.push(totem('ORACLE', 0, 0, 0.30, 0, 1.0));
@@ -606,6 +646,11 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.conformity = 0.80; cfg.kBelief = 0.75; cfg.empathy = 0.30;
       cfg.culturalInertia = 0.80; cfg.innovationRate = 0.01;
       cfg.violationThreshold = 1; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Sacerdote',  sphere: 'religious',   fieldSensitivity: { n: 2.0, l: 1.8, r: 0.3 }, ideologyBias: -0.8, trustBias: 0.7, aggressionBias: 0.1, cohesionBias: 0.9, desireBias: 0.1 },
+        { name: 'Fiel',       sphere: 'religious',   fieldSensitivity: { n: 1.8, l: 1.0, r: 0.6 }, ideologyBias: -0.5, trustBias: 0.6, aggressionBias: 0.15, cohesionBias: 0.7, desireBias: 0.2 },
+        { name: 'Herético',   sphere: 'artistic',    fieldSensitivity: { n: 0.5, l: 0.6, r: 1.0 }, ideologyBias:  0.6, trustBias: 0.2, aggressionBias: 0.2, cohesionBias: 0.2, desireBias: 0.8 },
+      ];
     },
     setupWorld(f, s) {
       for (let i = 0; i < f.n.length; i++) f.n[i] = 0.75;
@@ -623,6 +668,12 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     apply(cfg) {
       cfg.agentCount = 120; cfg.groupCount = 4; cfg.hierarchyStrength = 0.0;
       cfg.cooperationBias = 0.80; cfg.empathy = 0.70; cfg.conformity = 0.0;
+      cfg.groupProfiles = [
+        { name: 'Assembleia', sphere: 'political',  fieldSensitivity: { n: 1.0, l: 1.0, r: 1.0 }, ideologyBias:  0.5, trustBias: 0.7, aggressionBias: 0.05, cohesionBias: 0.3, desireBias: 0.5 },
+        { name: 'Artesão',    sphere: 'artistic',    fieldSensitivity: { n: 0.5, l: 0.8, r: 1.2 }, ideologyBias:  0.6, trustBias: 0.6, aggressionBias: 0.05, cohesionBias: 0.3, desireBias: 0.7 },
+        { name: 'Agricultor', sphere: 'economic',    fieldSensitivity: { n: 0.6, l: 0.6, r: 1.6 }, ideologyBias:  0.2, trustBias: 0.6, aggressionBias: 0.1, cohesionBias: 0.4, desireBias: 0.4 },
+        { name: 'Nômade',     sphere: 'popular',     fieldSensitivity: { n: 0.8, l: 0.5, r: 1.0 }, ideologyBias:  0.7, trustBias: 0.4, aggressionBias: 0.1, cohesionBias: 0.15, desireBias: 0.8 },
+      ];
       cfg.kBelief = 0.05; cfg.kFear = 0.10; cfg.aggressionBase = 0.08;
       cfg.innovationRate = 0.12; cfg.mobility = 0.40; cfg.autoSymbols = true;
       cfg.violationThreshold = 99;
@@ -715,12 +766,219 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       f.dirty = true;
     },
   },
+  // ══════════════════════════════════════════════════════ MULTI-FIELD ══════════
+
+  {
+    id: 'bourdieu_fields', name: 'Campos Sociais', icon: '🔷', category: 'multi-field',
+    description: '5 grupos com lógicas de campo distintas (Bourdieu) — político, econômico, religioso, artístico, científico',
+    apply(cfg) {
+      cfg.agentCount = 200; cfg.groupCount = 5; cfg.speed = 0.48;
+      cfg.cohesion = 0.55; cfg.empathy = 0.35; cfg.mobility = 0.10;
+      cfg.ideologyPressure = 0.30; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Político',   sphere: 'political',  fieldSensitivity: { n: 1.4, l: 1.8, r: 0.5 }, ideologyBias: -0.4, trustBias: 0.5, aggressionBias: 0.35, cohesionBias: 0.7, desireBias: 0.4 },
+        { name: 'Mercador',   sphere: 'economic',   fieldSensitivity: { n: 0.5, l: 0.7, r: 2.0 }, ideologyBias:  0.3, trustBias: 0.4, aggressionBias: 0.2, cohesionBias: 0.4, desireBias: 0.7 },
+        { name: 'Devoto',     sphere: 'religious',   fieldSensitivity: { n: 2.0, l: 1.2, r: 0.3 }, ideologyBias: -0.6, trustBias: 0.8, aggressionBias: 0.15, cohesionBias: 0.9, desireBias: 0.15 },
+        { name: 'Artista',    sphere: 'artistic',    fieldSensitivity: { n: 0.4, l: 0.9, r: 1.1 }, ideologyBias:  0.6, trustBias: 0.5, aggressionBias: 0.1, cohesionBias: 0.25, desireBias: 0.9 },
+        { name: 'Científico', sphere: 'scientific',  fieldSensitivity: { n: 1.0, l: 1.5, r: 1.0 }, ideologyBias:  0.4, trustBias: 0.7, aggressionBias: 0.08, cohesionBias: 0.5, desireBias: 0.55 },
+      ];
+    },
+    setupWorld(f, s) {
+      depositL(f, -0.55, -0.30, 0.40, 0.30);
+      depositR(f,  0.55, -0.30, 0.45, 0.30);
+      depositN(f,  0.00,  0.55, 0.40, 0.35);
+      depositL(f, -0.30,  0.30, 0.30, 0.20);
+      depositR(f,  0.30,  0.30, 0.30, 0.20);
+      s.totems.push(totem('BOND', 0, 0.55, 0.30, 2, 0.8));
+      s.totems.push(totem('ARCHIVE', -0.30, 0.30, 0.25, 4, 0.6));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'stratified_society', name: 'Sociedade Estratificada', icon: '🏛️', category: 'multi-field',
+    description: 'Classes sociais com capitais diferentes — elite política, burguesia, clero, proletariado, marginais',
+    apply(cfg) {
+      cfg.agentCount = 200; cfg.groupCount = 5; cfg.speed = 0.42;
+      cfg.hierarchyStrength = 0.70; cfg.cooperationBias = 0.20;
+      cfg.mobility = 0.06; cfg.conformity = 0.50; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Elite',       sphere: 'political',  fieldSensitivity: { n: 0.8, l: 2.0, r: 1.5 }, ideologyBias: -0.6, trustBias: 0.3, aggressionBias: 0.2, cohesionBias: 0.8, desireBias: 0.3 },
+        { name: 'Burguesia',   sphere: 'economic',   fieldSensitivity: { n: 0.5, l: 1.0, r: 2.0 }, ideologyBias:  0.1, trustBias: 0.5, aggressionBias: 0.15, cohesionBias: 0.5, desireBias: 0.65 },
+        { name: 'Clero',       sphere: 'religious',   fieldSensitivity: { n: 2.0, l: 1.5, r: 0.3 }, ideologyBias: -0.7, trustBias: 0.8, aggressionBias: 0.1, cohesionBias: 0.9, desireBias: 0.1 },
+        { name: 'Trabalhador', sphere: 'popular',     fieldSensitivity: { n: 1.2, l: 0.6, r: 1.5 }, ideologyBias: -0.1, trustBias: 0.5, aggressionBias: 0.3, cohesionBias: 0.6, desireBias: 0.5 },
+        { name: 'Marginal',    sphere: 'artistic',    fieldSensitivity: { n: 0.3, l: 0.4, r: 0.8 }, ideologyBias:  0.7, trustBias: 0.2, aggressionBias: 0.5, cohesionBias: 0.2, desireBias: 0.9 },
+      ];
+    },
+    setupWorld(f, s) {
+      depositL(f, 0, -0.50, 0.50, 0.45);
+      depositR(f, 0.50, 0, 0.45, 0.35);
+      depositN(f, -0.50, 0, 0.40, 0.40);
+      s.totems.push(totem('BOND', 0, -0.50, 0.30, 0, 0.9));
+      s.tabus.push(tabu('NO_MIX', 0, 0, 0.15, 0.70));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'cultural_melting_pot', name: 'Caldeirão Cultural', icon: '🫕', category: 'multi-field',
+    description: 'Alta mobilidade, diversidade radical — subculturas se misturam e colidem',
+    apply(cfg) {
+      cfg.agentCount = 180; cfg.groupCount = 5; cfg.speed = 0.55;
+      cfg.mobility = 0.35; cfg.empathy = 0.50; cfg.innovationRate = 0.12;
+      cfg.culturalInertia = 0.15; cfg.conformity = 0.20; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Imigrante',   sphere: 'popular',     fieldSensitivity: { n: 1.3, l: 0.7, r: 1.5 }, ideologyBias: -0.2, trustBias: 0.4, aggressionBias: 0.2, cohesionBias: 0.7, desireBias: 0.6 },
+        { name: 'Nativo',      sphere: 'political',   fieldSensitivity: { n: 1.0, l: 1.5, r: 1.0 }, ideologyBias: -0.3, trustBias: 0.5, aggressionBias: 0.3, cohesionBias: 0.6, desireBias: 0.35 },
+        { name: 'Artista',     sphere: 'artistic',    fieldSensitivity: { n: 0.4, l: 0.8, r: 1.0 }, ideologyBias:  0.6, trustBias: 0.5, aggressionBias: 0.08, cohesionBias: 0.3, desireBias: 0.85 },
+        { name: 'Comerciante', sphere: 'economic',    fieldSensitivity: { n: 0.5, l: 0.7, r: 2.0 }, ideologyBias:  0.2, trustBias: 0.4, aggressionBias: 0.15, cohesionBias: 0.4, desireBias: 0.6 },
+        { name: 'Religioso',   sphere: 'religious',   fieldSensitivity: { n: 1.8, l: 1.2, r: 0.4 }, ideologyBias: -0.5, trustBias: 0.7, aggressionBias: 0.12, cohesionBias: 0.8, desireBias: 0.2 },
+      ];
+    },
+    setupWorld(f) {
+      depositN(f, 0, 0, 0.80, 0.25);
+      depositL(f, 0, 0, 0.60, 0.20);
+      depositR(f, -0.3, -0.3, 0.50, 0.30);
+      depositR(f,  0.3,  0.3, 0.50, 0.30);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'revolution_1789', name: 'Revolução', icon: '🔥', category: 'multi-field',
+    description: 'Nobreza × Clero × Burguesia × Povo × Sans-culottes — tensão pré-revolucionária',
+    apply(cfg) {
+      cfg.agentCount = 200; cfg.groupCount = 5; cfg.speed = 0.50;
+      cfg.aggressionBase = 0.40; cfg.ideologyPressure = 0.50;
+      cfg.hierarchyStrength = 0.65; cfg.cooperationBias = 0.10;
+      cfg.mobility = 0.08; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Nobreza',       sphere: 'political',  fieldSensitivity: { n: 0.6, l: 2.0, r: 1.8 }, ideologyBias: -0.8, trustBias: 0.3, aggressionBias: 0.2, cohesionBias: 0.85, desireBias: 0.2 },
+        { name: 'Clero',         sphere: 'religious',   fieldSensitivity: { n: 2.0, l: 1.5, r: 0.5 }, ideologyBias: -0.7, trustBias: 0.7, aggressionBias: 0.1, cohesionBias: 0.8, desireBias: 0.1 },
+        { name: 'Burguesia',     sphere: 'economic',    fieldSensitivity: { n: 0.7, l: 1.2, r: 2.0 }, ideologyBias:  0.3, trustBias: 0.5, aggressionBias: 0.2, cohesionBias: 0.5, desireBias: 0.7 },
+        { name: 'Povo',          sphere: 'popular',     fieldSensitivity: { n: 1.4, l: 0.5, r: 1.2 }, ideologyBias: -0.1, trustBias: 0.4, aggressionBias: 0.35, cohesionBias: 0.5, desireBias: 0.6 },
+        { name: 'Sans-culotte',  sphere: 'military',    fieldSensitivity: { n: 1.0, l: 0.3, r: 0.8 }, ideologyBias:  0.8, trustBias: 0.2, aggressionBias: 0.65, cohesionBias: 0.6, desireBias: 0.9 },
+      ];
+    },
+    setupWorld(f, s) {
+      depositL(f, 0, -0.55, 0.55, 0.50);
+      depositR(f, 0.50, -0.20, 0.40, 0.35);
+      depositN(f, -0.50, 0, 0.40, 0.40);
+      s.totems.push(totem('BOND', 0, -0.55, 0.30, 0, 1.0));
+      s.totems.push(totem('RIFT', 0, 0.30, 0.25, 4, 0.9));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'neoliberal_city', name: 'Metrópole Neoliberal', icon: '🏙️', category: 'multi-field',
+    description: 'Financistas, tecnocratas, precários, artistas underground, migrantes — desigualdade extrema',
+    apply(cfg) {
+      cfg.agentCount = 200; cfg.groupCount = 5; cfg.speed = 0.52;
+      cfg.resourceScarcity = 0.35; cfg.hierarchyStrength = 0.60;
+      cfg.cooperationBias = 0.12; cfg.mobility = 0.15;
+      cfg.innovationRate = 0.10; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Financista',  sphere: 'economic',    fieldSensitivity: { n: 0.3, l: 1.0, r: 2.0 }, ideologyBias: 0.5,  trustBias: 0.3, aggressionBias: 0.15, cohesionBias: 0.7, desireBias: 0.5 },
+        { name: 'Tecnocrata',  sphere: 'scientific',  fieldSensitivity: { n: 0.8, l: 1.6, r: 1.2 }, ideologyBias: 0.2,  trustBias: 0.6, aggressionBias: 0.1, cohesionBias: 0.5, desireBias: 0.4 },
+        { name: 'Precário',    sphere: 'popular',     fieldSensitivity: { n: 1.5, l: 0.5, r: 1.5 }, ideologyBias: -0.1, trustBias: 0.3, aggressionBias: 0.4, cohesionBias: 0.5, desireBias: 0.7 },
+        { name: 'Underground', sphere: 'artistic',    fieldSensitivity: { n: 0.3, l: 0.6, r: 0.7 }, ideologyBias: 0.7,  trustBias: 0.4, aggressionBias: 0.12, cohesionBias: 0.2, desireBias: 0.95 },
+        { name: 'Migrante',    sphere: 'popular',     fieldSensitivity: { n: 1.4, l: 0.4, r: 1.6 }, ideologyBias: -0.2, trustBias: 0.35, aggressionBias: 0.25, cohesionBias: 0.8, desireBias: 0.55 },
+      ];
+    },
+    setupWorld(f) {
+      depositR(f, 0.50, -0.50, 0.50, 0.45);
+      depositR(f, -0.40, 0.40, 0.30, 0.15);
+      depositL(f, 0, -0.30, 0.40, 0.30);
+      depositN(f, -0.50, -0.20, 0.35, 0.25);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'medieval_guilds', name: 'Guildas Medievais', icon: '⚒️', category: 'multi-field',
+    description: 'Nobres, clero, mercadores, artesãos, camponeses — capitais simbólicos distintos',
+    apply(cfg) {
+      cfg.agentCount = 180; cfg.groupCount = 5; cfg.speed = 0.38;
+      cfg.hierarchyStrength = 0.55; cfg.conformity = 0.60;
+      cfg.culturalInertia = 0.65; cfg.mobility = 0.04;
+      cfg.cooperationBias = 0.30; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Nobre',     sphere: 'political',  fieldSensitivity: { n: 0.7, l: 2.0, r: 1.5 }, ideologyBias: -0.7, trustBias: 0.4, aggressionBias: 0.25, cohesionBias: 0.8, desireBias: 0.2 },
+        { name: 'Clérigo',   sphere: 'religious',   fieldSensitivity: { n: 2.0, l: 1.3, r: 0.3 }, ideologyBias: -0.6, trustBias: 0.7, aggressionBias: 0.08, cohesionBias: 0.85, desireBias: 0.15 },
+        { name: 'Mercador',  sphere: 'economic',    fieldSensitivity: { n: 0.5, l: 0.8, r: 2.0 }, ideologyBias: 0.2,  trustBias: 0.5, aggressionBias: 0.15, cohesionBias: 0.5, desireBias: 0.6 },
+        { name: 'Artesão',   sphere: 'artistic',    fieldSensitivity: { n: 0.6, l: 0.7, r: 1.3 }, ideologyBias: 0.1,  trustBias: 0.6, aggressionBias: 0.12, cohesionBias: 0.6, desireBias: 0.5 },
+        { name: 'Camponês',  sphere: 'popular',     fieldSensitivity: { n: 1.5, l: 0.4, r: 1.2 }, ideologyBias: -0.2, trustBias: 0.4, aggressionBias: 0.3, cohesionBias: 0.6, desireBias: 0.4 },
+      ];
+    },
+    setupWorld(f, s) {
+      depositL(f, 0, -0.50, 0.50, 0.40);
+      depositR(f, 0, 0.20, 0.60, 0.25);
+      depositN(f, -0.50, 0, 0.35, 0.35);
+      s.totems.push(totem('BOND', 0, -0.50, 0.30, 0, 0.8));
+      s.totems.push(totem('BOND', -0.50, 0, 0.25, 1, 0.7));
+      s.rituals.push(ritual('FEAST', 0, 0.20, 0.35, 12));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'cold_war_blocs', name: 'Blocos Ideológicos', icon: '🌐', category: 'multi-field',
+    description: '3 blocos (Ocidente, Leste, Não-alinhados) + militares + intelectuais dissidentes',
+    apply(cfg) {
+      cfg.agentCount = 200; cfg.groupCount = 5; cfg.speed = 0.44;
+      cfg.aggressionBase = 0.35; cfg.ideologyPressure = 0.55;
+      cfg.panopticism = 0.65; cfg.conformity = 0.55;
+      cfg.mobility = 0.05; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Ocidente',      sphere: 'political',  fieldSensitivity: { n: 0.6, l: 1.8, r: 1.8 }, ideologyBias:  0.5, trustBias: 0.5, aggressionBias: 0.25, cohesionBias: 0.7, desireBias: 0.5 },
+        { name: 'Leste',         sphere: 'political',  fieldSensitivity: { n: 1.6, l: 1.8, r: 0.4 }, ideologyBias: -0.7, trustBias: 0.5, aggressionBias: 0.3, cohesionBias: 0.8, desireBias: 0.2 },
+        { name: 'Não-alinhado',  sphere: 'popular',     fieldSensitivity: { n: 1.2, l: 0.8, r: 1.2 }, ideologyBias:  0.0, trustBias: 0.4, aggressionBias: 0.2, cohesionBias: 0.4, desireBias: 0.5 },
+        { name: 'Militar',       sphere: 'military',    fieldSensitivity: { n: 0.8, l: 1.5, r: 0.8 }, ideologyBias: -0.5, trustBias: 0.3, aggressionBias: 0.6, cohesionBias: 0.9, desireBias: 0.3 },
+        { name: 'Dissidente',    sphere: 'artistic',    fieldSensitivity: { n: 0.5, l: 0.5, r: 0.6 }, ideologyBias:  0.8, trustBias: 0.3, aggressionBias: 0.1, cohesionBias: 0.2, desireBias: 0.9 },
+      ];
+    },
+    setupWorld(f, s) {
+      depositL(f, -0.55, 0, 0.50, 0.40);
+      depositL(f, 0.55, 0, 0.50, 0.40);
+      depositN(f, 0.55, 0, 0.40, 0.30);
+      depositR(f, -0.55, 0, 0.40, 0.30);
+      s.totems.push(totem('RIFT', -0.55, 0, 0.30, 0, 0.9));
+      s.totems.push(totem('RIFT',  0.55, 0, 0.30, 1, 0.9));
+      s.totems.push(totem('PANOPTICON', 0.55, 0, 0.40, 1, 0.8));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'digital_platform', name: 'Plataforma Digital', icon: '📱', category: 'multi-field',
+    description: 'Influencers, trolls, moderadores, consumidores, ativistas — economia da atenção',
+    apply(cfg) {
+      cfg.agentCount = 200; cfg.groupCount = 5; cfg.speed = 0.60;
+      cfg.contagion = 0.55; cfg.empathy = 0.25; cfg.mobility = 0.25;
+      cfg.innovationRate = 0.15; cfg.conformity = 0.35; cfg.autoSymbols = true;
+      cfg.groupProfiles = [
+        { name: 'Influencer',  sphere: 'artistic',    fieldSensitivity: { n: 0.6, l: 1.5, r: 1.5 }, ideologyBias: 0.3,  trustBias: 0.3, aggressionBias: 0.1, cohesionBias: 0.3, desireBias: 0.8 },
+        { name: 'Troll',       sphere: 'military',    fieldSensitivity: { n: 0.8, l: 0.5, r: 0.5 }, ideologyBias: 0.6,  trustBias: 0.1, aggressionBias: 0.7, cohesionBias: 0.2, desireBias: 0.7 },
+        { name: 'Moderador',   sphere: 'political',   fieldSensitivity: { n: 1.2, l: 1.8, r: 0.8 }, ideologyBias: -0.3, trustBias: 0.6, aggressionBias: 0.1, cohesionBias: 0.5, desireBias: 0.3 },
+        { name: 'Consumidor',  sphere: 'economic',    fieldSensitivity: { n: 0.7, l: 0.6, r: 1.8 }, ideologyBias: 0.0,  trustBias: 0.5, aggressionBias: 0.15, cohesionBias: 0.4, desireBias: 0.6 },
+        { name: 'Ativista',    sphere: 'popular',     fieldSensitivity: { n: 1.5, l: 1.0, r: 0.5 }, ideologyBias: 0.5,  trustBias: 0.4, aggressionBias: 0.35, cohesionBias: 0.6, desireBias: 0.7 },
+      ];
+    },
+    setupWorld(f) {
+      depositN(f, 0, 0, 0.90, 0.20);
+      depositL(f, 0, 0, 0.70, 0.15);
+      depositR(f, 0, 0, 0.60, 0.15);
+      f.dirty = true;
+    },
+  },
 ];
 
 export const SCENARIO_CATEGORIES: Record<string, string> = {
-  genesis:  'Genesis',
-  conflict: 'Conflict',
-  economy:  'Economy',
-  culture:  'Culture',
-  power:    'Power',
+  genesis:      'Genesis',
+  conflict:     'Conflict',
+  economy:      'Economy',
+  culture:      'Culture',
+  power:        'Power',
+  'multi-field': 'Campos Sociais',
 };

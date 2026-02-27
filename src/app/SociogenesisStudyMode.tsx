@@ -10,11 +10,12 @@ import { CanvasRecorder, RecorderState } from './components/recording/canvasReco
 import { RecordingButton } from './components/recording/RecordingButton';
 import {
   createStudyConfig, createStudyMetrics, createStudySymbols, createStudyWorldState,
-  GROUP_COLORS,
-  type StudyAgent, type StudyConfig, type StudyMetrics,
+  GROUP_COLORS, defaultGroupProfiles,
+  type StudyAgent, type StudyConfig, type StudyMetrics, type StudyPhase,
   type StudySymbols, type StudyTotem, type StudyTabu, type StudyRitual,
   type StudyLens, type StudyTool, type StudyWorldState, type StudySpawnLayout,
   type StudyPing, type StudyEvent,
+  type GroupProfile,
 } from '../sim/study/studyTypes';
 import {
   spawnStudyAgents, microTick, macroTick,
@@ -28,6 +29,18 @@ import {
 } from '../sim/study/socialFields';
 import { STUDY_SCENARIOS, SCENARIO_CATEGORIES, type StudyScenario } from '../sim/study/studyScenarios';
 import { archetypeKeyToColor, archetypeKeyToLabel, computeArchetypeKey } from '../sim/study/studyArchetypes';
+import {
+  getPhaseLabel,
+  getRoleLabel,
+  getTotemLabel,
+  getTabuLabel,
+  getRitualLabel,
+  getEventSociologicalLabel,
+  archetypeKeyToSociologicalLabel,
+  TOOL_SOCIOLOGICAL_LABELS,
+  getPhaseCodex,
+  METRIC_LABELS,
+} from '../sim/study/studySociologicalLexicon';
 
 function makeRng(seed: number) {
   let s = seed;
@@ -153,17 +166,17 @@ function Section({ title, badge, open, onToggle, children }: {
   return (
     <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
       <button onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2 transition-colors"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 transition-colors min-w-0"
         style={{ fontFamily: MONO }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}>
-        <span className="flex items-center gap-2 text-[9px] uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        <span className="flex items-center gap-2 text-[9px] uppercase tracking-[0.12em] min-w-0 truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
           {title}
           {badge !== undefined && (
-            <span className="text-[8px] px-1 py-px" style={{ color: 'rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.06)' }}>{badge}</span>
+            <span className="text-[8px] px-1 py-px shrink-0" style={{ color: 'rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.06)' }}>{badge}</span>
           )}
         </span>
-        <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} style={{ color: 'rgba(255,255,255,0.20)' }} />
+        <ChevronDown size={10} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} style={{ color: 'rgba(255,255,255,0.20)' }} />
       </button>
       {open && <div className="px-3 pb-3 space-y-2">{children}</div>}
     </div>
@@ -248,6 +261,10 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   const visualCfgRef = useRef<StudyVisualConfig>({ ...defaultVisualConfig });
   const [, setVisualVer] = useState(0);
   const [showVisual, setShowVisual] = useState(false);
+  const [showGroups, setShowGroups] = useState(false);
+  const [showCodex, setShowCodex] = useState(false);
+  const [archetypesUI, setArchetypesUI] = useState<Array<{ key: number; count: number; color: string; label: string }>>([]);
+  const lastPhaseRef = useRef<string>('');
   const patchVisual = (p: Partial<StudyVisualConfig>) => {
     Object.assign(visualCfgRef.current, p);
     setVisualVer(v => v + 1);
@@ -279,6 +296,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     const newFCfg   = createSocialFieldConfig();
     sc.apply(newCfg, newFCfg);
     if (keepAutoSymbols !== undefined) newCfg.autoSymbols = keepAutoSymbols;
+    if (newCfg.groupProfiles.length !== newCfg.groupCount) {
+      newCfg.groupProfiles = defaultGroupProfiles(newCfg.groupCount);
+    }
     cfgRef.current    = newCfg;
     fieldCfgRef.current = newFCfg;
 
@@ -307,6 +327,17 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     setInspectorIdx(-1);
     setInspectorSnap(null);
     inspectorIdxRef.current = -1;
+
+    const archCounts = new Map<number, number>();
+    for (const a of agentsRef.current) {
+      const k = (a.archKeyStable >>> 0) || computeArchetypeKey(a);
+      archCounts.set(k, (archCounts.get(k) ?? 0) + 1);
+    }
+    const topArch = Array.from(archCounts.entries())
+      .map(([key, count]) => ({ key, count, color: archetypeKeyToColor(key), label: archetypeKeyToSociologicalLabel(key) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+    setArchetypesUI(topArch);
   }, []);
 
   useEffect(() => { resetWorld('discipline_state'); }, []);// eslint-disable-line
@@ -430,7 +461,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         clockRef.current.elapsed += dt;
         const t = clockRef.current.elapsed;
 
-        const grid = buildMicroGrid(agentsRef.current);
+        const grid = buildMicroGrid(agentsRef.current, cfgRef.current.worldHalf);
         microTick(agentsRef.current, grid, cfgRef.current, wsRef.current, dt);
 
         for (const p of pingsRef.current) p.age += dt;
@@ -481,14 +512,30 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 role === 'dictator'  ? 0.18 :
                 role === 'authority' ? 0.14 :
                 role === 'priest'    ? 0.10 :
+                role === 'rebel'     ? 0.08 :
+                role === 'artist'    ? 0.06 :
+                role === 'innovator' ? 0.06 :
+                role === 'predator'  ? 0.04 :
                 0;
               const score = a.centrality * 0.55 + a.status * 0.35 + a.charisma * 0.25 - a.fear * 0.08 + roleBoost;
               const k = (a.archKeyStable >>> 0) || computeArchetypeKey(a);
-              return { idx, score, role, color: archetypeKeyToColor(k), label: archetypeKeyToLabel(k) };
+              return { idx, score, role, color: archetypeKeyToColor(k), label: archetypeKeyToSociologicalLabel(k) };
             })
             .sort((a, b) => b.score - a.score)
             .slice(0, 6);
           setLeadersUI(ranked);
+
+          // Top archetypes present (species/culture/niche) for dynamic legend
+          const archCounts = new Map<number, number>();
+          for (const a of agentsRef.current) {
+            const k = (a.archKeyStable >>> 0) || computeArchetypeKey(a);
+            archCounts.set(k, (archCounts.get(k) ?? 0) + 1);
+          }
+          const topArch = Array.from(archCounts.entries())
+            .map(([key, count]) => ({ key, count, color: archetypeKeyToColor(key), label: archetypeKeyToSociologicalLabel(key) }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+          setArchetypesUI(topArch);
         }
       } else {
         lastFrameRef.current = now;
@@ -506,7 +553,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
       ctx.translate(W/2 + vcPanX, H/2 + vcPanY);
       ctx.scale(vcZoom, vcZoom);
       ctx.translate(-W/2, -H/2);
-      renderStudy(
+        renderStudy(
         ctx, canvas.width, canvas.height,
         agentsRef.current, rolesRef.current,
         cfgRef.current, metricsRef.current,
@@ -516,7 +563,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         wsRef.current,
         pingsRef.current,
         clockRef.current.elapsed,
-        visualCfgRef.current,
+        { ...defaultVisualConfig, ...visualCfgRef.current },
       );
       ctx.restore();
     };
@@ -592,11 +639,18 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
   const { phase } = metricsUI;
   const phaseColor = PHASE_COLORS[phase] ?? '#fff';
-  const canvasW = Math.max(300, dims.w - 256);
-  const canvasH = Math.max(200, dims.h - 44);
+
+  useEffect(() => {
+    if (phase !== lastPhaseRef.current) {
+      lastPhaseRef.current = phase;
+      setShowCodex(true);
+    }
+  }, [phase]);
+  const canvasW = Math.max(400, dims.w - 256);
+  const canvasH = Math.max(300, dims.h - 40);
   const syms = symbolsRef.current;
   const symTotal = syms.totems.length + syms.tabus.length + syms.rituals.length;
-  const currentScenario = STUDY_SCENARIOS.find(s => s.id === scenario);
+  const currentScenario = STUDY_SCENARIOS.find(s => s.id === scenario) ?? STUDY_SCENARIOS[0];
 
   // ── Recording ────────────────────────────────────────────────────────────
   const recorderRef  = useRef<CanvasRecorder | null>(null);
@@ -620,7 +674,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
       () => ({
         labName: 'Sociogenesis Tool',
         lines: [
-          `fase: ${wsRef.current.phase}  ·  agentes: ${agentsRef.current.length}`,
+          `fase: ${metricsRef.current?.phase ?? '—'}  ·  agentes: ${agentsRef.current.length}`,
           `coesão: ${(metricsRef.current.cohesion * 100).toFixed(0)}%  polariz.: ${(metricsRef.current.polarization * 100).toFixed(0)}%  conflito: ${(metricsRef.current.conflict * 100).toFixed(0)}%`,
           `lens: ${lensRef.current}  ·  cenário: ${scenario}`,
           `totens: ${symbolsRef.current.totems.length}  tabus: ${symbolsRef.current.tabus.length}  rituais: ${symbolsRef.current.rituals.length}`,
@@ -679,18 +733,19 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           </div>
         </Dropdown>
 
-        {/* Scenario dropdown — grouped by category */}
-        <Dropdown label={currentScenario ? `${currentScenario.icon} ${currentScenario.name}` : 'Scenario'}>
+        {/* Scenario dropdown — grouped by category (Campos Sociais first = guildas, metrópoles, sociedades) */}
+        <Dropdown label={currentScenario ? `${currentScenario.icon} ${currentScenario.name}` : 'Cenário'}>
           <div className="py-1 max-h-80 overflow-y-auto">
-            {(['genesis','conflict','economy','culture','power'] as const).map(cat => {
+            {(['multi-field', 'genesis', 'conflict', 'economy', 'culture', 'power'] as const).map(cat => {
               const items = STUDY_SCENARIOS.filter(s => s.category === cat);
+              if (items.length === 0) return null;
               return (
                 <div key={cat}>
-                  <DropSep label={SCENARIO_CATEGORIES[cat]} />
+                  <DropSep label={cat === 'multi-field' ? 'Campos Sociais (Guildas, Metrópoles, Sociedades)' : SCENARIO_CATEGORIES[cat]} />
                   {items.map(sc => (
                     <DropItem key={sc.id} icon={sc.icon} label={sc.name} sub={sc.description}
                       active={scenario === sc.id}
-                      onClick={() => resetWorld(sc.id, autoSymbols)} />
+                      onClick={() => { setScenario(sc.id); resetWorld(sc.id, autoSymbols); }} />
                   ))}
                 </div>
               );
@@ -726,11 +781,19 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
         <div className="flex-1" />
 
-        {/* Phase chip */}
-        <div className="flex items-center gap-2 px-2.5 py-0.5 border"
-          style={{ borderColor: phaseColor + '35', background: phaseColor + '0e', fontFamily: MONO }}>
-          <span className="text-[10px]">{PHASE_ICONS[phase]}</span>
-          <span className="text-[9px] uppercase tracking-[0.12em]" style={{ color: phaseColor }}>{phase}</span>
+        {/* Phase + Scenario chip — deixa claro qual sociedade (guildas, metrópole, etc.) */}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2 px-2.5 py-0.5 border"
+            style={{ borderColor: phaseColor + '35', background: phaseColor + '0e', fontFamily: MONO }}>
+            <span className="text-[10px]">{PHASE_ICONS[phase]}</span>
+            <span className="text-[9px] uppercase tracking-[0.12em]" style={{ color: phaseColor }} title={phase}>{getPhaseLabel(phase)}</span>
+          </div>
+          {currentScenario && (
+            <div className="text-[8px] uppercase tracking-wider px-2 py-0.5" style={{ fontFamily: MONO, color: 'rgba(255,255,255,0.35)' }} title={currentScenario.description}>
+              {currentScenario.icon} {currentScenario.name}
+              {currentScenario.category === 'multi-field' ? ' · Campos Sociais' : ` · ${SCENARIO_CATEGORIES[currentScenario.category] ?? ''}`}
+            </div>
+          )}
         </div>
 
         {/* Recording button */}
@@ -751,27 +814,94 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             style={{ display: 'block', width: '100%', height: '100%', cursor: tool !== 'select' ? 'crosshair' : 'default' }}
             onClick={handleCanvasClick} />
 
-          {/* Phase + bars — bottom left */}
-          <div className="absolute bottom-5 left-5 pointer-events-none">
-            <div className="text-3xl font-light tracking-widest uppercase mb-2"
-              style={{ color: phaseColor, textShadow: `0 0 24px ${phaseColor}55`, letterSpacing: '0.3em' }}>
-              {phase}
+          {/* Phase + codex + bars — bottom left */}
+          <div className="absolute bottom-5 left-5 pointer-events-auto">
+            {/* Phase title: click toggles codex card */}
+            <button
+              type="button"
+              onClick={() => { setShowCodex(v => !v); lastPhaseRef.current = phase; }}
+              className="text-left block w-full mb-2 rounded-lg border transition-all px-3 py-2"
+              style={{
+                borderColor: phaseColor + '40',
+                background: phaseColor + '0c',
+                color: phaseColor,
+              }}
+            >
+              <div className="text-2xl font-light tracking-widest uppercase" style={{ letterSpacing: '0.2em', textShadow: `0 0 20px ${phaseColor}44` }}>
+                {getPhaseLabel(phase)}
+              </div>
+              <div className="text-[9px] uppercase tracking-wider mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Clique para ver o codex
+              </div>
+            </button>
+
+            {/* Metric bars — labels from METRIC_LABELS; title = long description */}
+            <div className="space-y-2.5 w-60">
+              <MetricBar label={METRIC_LABELS.cohesion?.short ?? 'Coesão'} v={metricsUI.cohesion} c="#34d399" title={METRIC_LABELS.cohesion?.long} />
+              <MetricBar label={METRIC_LABELS.polarization?.short ?? 'Polarização'} v={metricsUI.polarization} c="#fbd38d" title={METRIC_LABELS.polarization?.long} />
+              <MetricBar label={METRIC_LABELS.conflict?.short ?? 'Conflito'} v={metricsUI.conflict} c="#ef4444" title={METRIC_LABELS.conflict?.long} />
+              <MetricBar label={METRIC_LABELS.consensus?.short ?? 'Consenso'} v={metricsUI.consensus} c="#a78bfa" title={METRIC_LABELS.consensus?.long} />
             </div>
-            <div className="space-y-2 w-52">
-              <MetricBar label="Cohesion"     v={metricsUI.cohesion}     c="#34d399" />
-              <MetricBar label="Polarization" v={metricsUI.polarization} c="#fbd38d" />
-              <MetricBar label="Conflict"     v={metricsUI.conflict}     c="#ef4444" />
-            </div>
+
+            {/* Codex card — didactic explanation of current phase */}
+            {showCodex && (
+              <PhaseCodexCard
+                phase={phase}
+                phaseColor={phaseColor}
+                onClose={() => setShowCodex(false)}
+              />
+            )}
           </div>
 
-          {/* Group legend — bottom right */}
-          <div className="absolute bottom-5 right-5 flex flex-col items-end gap-1 pointer-events-none">
-            {Array.from({ length: cfgRef.current.groupCount }).map((_, g) => (
-              <div key={g} className="flex items-center gap-2" style={{ fontFamily: MONO }}>
-                <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.30)' }}>G{g}</span>
-                <div className="w-2 h-2 rounded-full" style={{ background: GROUP_COLORS[g] }} />
+          {/* Group + Archetype legend — bottom right (dynamic by species/culture/niche) */}
+          <div className="absolute bottom-5 right-5 flex flex-col items-end gap-3 pointer-events-none max-w-[200px]">
+            {/* Símbolos sobre agentes (papéis / roles) — o que são os ícones em cima dos agentes */}
+            <div className="flex flex-col items-end gap-0.5">
+              <div className="text-[8px] uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }} title="Ícones que aparecem em cima de alguns agentes">Símbolos sobre agentes</div>
+              {([
+                { role: 'leader' as const, sym: '●', color: '#fbbf24' },
+                { role: 'authority' as const, sym: '◆', color: '#60a5fa' },
+                { role: 'dictator' as const, sym: '▲', color: '#ef4444' },
+                { role: 'aggressor' as const, sym: '×', color: '#ef4444' },
+                { role: 'guardian' as const, sym: '■', color: '#fbd38d' },
+                { role: 'mediator' as const, sym: '·', color: '#fff' },
+                { role: 'rebel' as const, sym: '⁄', color: '#f87171' },
+                { role: 'priest' as const, sym: '○', color: '#c084fc' },
+              ]).map(({ role, sym, color }) => (
+                <div key={role} className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+                  <span className="text-[9px] text-right" style={{ color: 'rgba(255,255,255,0.5)' }}>{getRoleLabel(role)}</span>
+                  <span className="text-[10px] shrink-0" style={{ color }} title={getRoleLabel(role, true)}>{sym}</span>
+                </div>
+              ))}
+            </div>
+            {/* Groups (sociedades / nichos) */}
+            <div className="flex flex-col items-end gap-1">
+              <div className="text-[8px] uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}>Grupos</div>
+              {Array.from({ length: cfgRef.current.groupCount }).map((_, g) => {
+                const profiles = cfgRef.current.groupProfiles ?? defaultGroupProfiles(cfgRef.current.groupCount);
+                const gp = profiles[g];
+                return (
+                  <div key={g} className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+                    <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.45)' }}>{gp ? gp.name : `G${g}`}</span>
+                    <span className="text-[7px] uppercase" style={{ color: 'rgba(255,255,255,0.2)' }}>{gp?.sphere ?? ''}</span>
+                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: GROUP_COLORS[g] }} />
+                  </div>
+                );
+              })}
+            </div>
+            {/* Arquétipos presentes (muda conforme simulação) */}
+            {archetypesUI.length > 0 && (
+              <div className="flex flex-col items-end gap-0.5">
+                <div className="text-[8px] uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}>Arquétipos presentes</div>
+                {archetypesUI.slice(0, 8).map((arch, i) => (
+                  <div key={i} className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+                    <span className="text-[9px] text-right truncate max-w-[120px]" style={{ color: 'rgba(255,255,255,0.5)' }} title={arch.label}>{arch.label}</span>
+                    <span className="text-[8px] shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }}>{arch.count}</span>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: arch.color }} />
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
 
           {/* Tool hint */}
@@ -780,7 +910,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               <div className="flex items-center gap-2 px-3 py-1 border text-[10px]"
                 style={{ borderColor: 'rgba(56,189,248,0.25)', background: 'rgba(56,189,248,0.08)', color: 'rgba(186,230,253,0.85)', fontFamily: MONO }}>
                 <span>{TOOLS.find(t2 => t2.id === tool)?.icon}</span>
-                <span>{TOOLS.find(t2 => t2.id === tool)?.label}</span>
+                <span>{TOOL_SOCIOLOGICAL_LABELS[tool]?.short ?? TOOLS.find(t2 => t2.id === tool)?.label}</span>
                 <span style={{ color: 'rgba(56,189,248,0.45)' }}>· click to place · Esc to cancel</span>
               </div>
             </div>
@@ -814,7 +944,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         </div>
 
         {/* ── Right panel ──────────────────────────────────────────────────── */}
-        <div className="w-64 shrink-0 flex flex-col overflow-y-auto" style={{ borderLeft: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.92)' }}>
+        <div className="w-64 shrink-0 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden" style={{ borderLeft: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.92)' }}>
 
           {/* TOOLS */}
           <Section title="Tools" open={showTools} onToggle={() => setShowTools(v => !v)}>
@@ -822,19 +952,19 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               {TOOLS.map(t2 => (
                 <button key={t2.id}
                   onClick={() => { setTool(t2.id); toolRef.current = t2.id; }}
-                  title={t2.desc}
+                  title={TOOL_SOCIOLOGICAL_LABELS[t2.id]?.long ?? t2.desc}
                   className="flex items-center gap-1.5 px-2 py-1.5 border text-[10px] transition-all"
                   style={tool === t2.id
                     ? { borderColor: t2.color + '55', background: t2.color + '12', color: t2.color, fontFamily: MONO }
                     : { borderColor: 'rgba(255,255,255,0.07)', background: 'transparent', color: 'rgba(255,255,255,0.40)', fontFamily: MONO }}>
                   <span className="text-[11px]">{t2.icon}</span>
-                  <span className="truncate">{t2.label}</span>
+                  <span className="truncate">{TOOL_SOCIOLOGICAL_LABELS[t2.id]?.short ?? t2.label}</span>
                 </button>
               ))}
             </div>
             {/* Active tool description */}
             <div className="text-[9px] leading-relaxed mt-1 px-0.5" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}>
-              {TOOLS.find(t2 => t2.id === tool)?.desc ?? ''}
+              {TOOL_SOCIOLOGICAL_LABELS[tool]?.long ?? TOOLS.find(t2 => t2.id === tool)?.desc ?? ''}
             </div>
             {/* Auto-symbols toggle */}
             <div className="flex items-center justify-between pt-2 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -902,10 +1032,10 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               </div>
             </div>
 
-            <SliderRow label="Count" v={cfgRef.current.agentCount} min={10} max={300} step={5}
+            <SliderRow label="Count" v={cfgRef.current.agentCount} min={20} max={600} step={10}
               onChange={v => { cfgRef.current.agentCount = v; }} />
             <SliderRow label="Groups" v={cfgRef.current.groupCount} min={2} max={5} step={1}
-              onChange={v => { cfgRef.current.groupCount = v; }} />
+              onChange={v => { cfgRef.current.groupCount = v; cfgRef.current.groupProfiles = defaultGroupProfiles(v); }} />
             <SliderRow label="Speed"  v={cfgRef.current.speed}  min={0.1} max={1.0} step={0.05}
               onChange={v => patchCfg({ speed: v })} />
             <SliderRow label="Autonomy" v={cfgRef.current.autonomy} min={0} max={1} step={0.05}
@@ -942,6 +1072,53 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                   background: visualCfgRef.current.showDirection ? '#00d4aa08' : 'transparent',
                 }}>{visualCfgRef.current.showDirection ? 'ON' : 'OFF'}</button>
             </div>
+            <div className="flex items-center justify-between py-1">
+              <span className="text-[9px] uppercase tracking-wider" style={{ fontFamily: MONO, color: 'rgba(255,255,255,0.35)' }} title="Linhas entre agentes da mesma família (rizoma)">Conexões família</span>
+              <button onClick={() => patchVisual({ showFamilyConnections: !(visualCfgRef.current.showFamilyConnections ?? true) })}
+                className="text-[9px] px-2 py-0.5" style={{
+                  fontFamily: MONO, letterSpacing: '0.08em',
+                  color: (visualCfgRef.current.showFamilyConnections ?? true) ? '#00d4aa' : 'rgba(255,255,255,0.25)',
+                  border: `1px dashed ${(visualCfgRef.current.showFamilyConnections ?? true) ? '#00d4aa33' : 'rgba(255,255,255,0.08)'}`,
+                  background: (visualCfgRef.current.showFamilyConnections ?? true) ? '#00d4aa08' : 'transparent',
+                }}>{(visualCfgRef.current.showFamilyConnections ?? true) ? 'ON' : 'OFF'}</button>
+            </div>
+          </Section>
+
+          {/* GRUPOS (Bourdieu) */}
+          <Section title="Campos Sociais" open={showGroups} onToggle={() => setShowGroups(v => !v)}>
+            {(() => {
+              const profiles = cfgRef.current.groupProfiles ?? defaultGroupProfiles(cfgRef.current.groupCount);
+              if (!cfgRef.current.groupProfiles) cfgRef.current.groupProfiles = profiles;
+              return profiles.map((gp, gi) => (
+              <div key={gi} className="mb-2 pb-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: GROUP_COLORS[gi] }} />
+                  <input
+                    className="bg-transparent text-[9px] font-medium tracking-wide w-full outline-none"
+                    style={{ fontFamily: MONO, color: 'rgba(255,255,255,0.65)' }}
+                    value={gp.name}
+                    onChange={e => {
+                      cfgRef.current.groupProfiles[gi] = { ...gp, name: e.target.value };
+                      setShowGroups(v => v); // force re-render
+                    }}
+                  />
+                  <span className="text-[7px] uppercase tracking-widest flex-shrink-0" style={{ color: 'rgba(255,255,255,0.20)', fontFamily: MONO }}>{gp.sphere}</span>
+                </div>
+                <SliderRow label="N sens." v={gp.fieldSensitivity.n} min={0} max={2} step={0.1}
+                  onChange={v => { cfgRef.current.groupProfiles[gi] = { ...gp, fieldSensitivity: { ...gp.fieldSensitivity, n: v } }; }} />
+                <SliderRow label="L sens." v={gp.fieldSensitivity.l} min={0} max={2} step={0.1}
+                  onChange={v => { cfgRef.current.groupProfiles[gi] = { ...gp, fieldSensitivity: { ...gp.fieldSensitivity, l: v } }; }} />
+                <SliderRow label="R sens." v={gp.fieldSensitivity.r} min={0} max={2} step={0.1}
+                  onChange={v => { cfgRef.current.groupProfiles[gi] = { ...gp, fieldSensitivity: { ...gp.fieldSensitivity, r: v } }; }} />
+                <SliderRow label="Ideology" v={gp.ideologyBias} min={-1} max={1} step={0.1}
+                  onChange={v => { cfgRef.current.groupProfiles[gi] = { ...gp, ideologyBias: v }; }} />
+                <SliderRow label="Cohesion" v={gp.cohesionBias} min={0} max={1} step={0.05}
+                  onChange={v => { cfgRef.current.groupProfiles[gi] = { ...gp, cohesionBias: v }; }} />
+                <SliderRow label="Desire" v={gp.desireBias} min={0} max={1} step={0.05}
+                  onChange={v => { cfgRef.current.groupProfiles![gi] = { ...gp, desireBias: v }; }} />
+              </div>
+            ));
+            })()}
           </Section>
 
           {/* DYNAMICS */}
@@ -1004,12 +1181,12 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
           {/* INSPECTOR */}
           {inspectorIdx >= 0 && inspectorSnap && (
-            <Section title={`Agent #${inspectorIdx}`} badge={inspectorRole} open={showInspect} onToggle={() => setShowInspect(v => !v)}>
+            <Section title={`Agent #${inspectorIdx}`} badge={getRoleLabel(inspectorRole)} open={showInspect} onToggle={() => setShowInspect(v => !v)}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3.5 h-3.5 rounded-full shrink-0"
                   style={{ background: GROUP_COLORS[inspectorSnap.groupId % GROUP_COLORS.length] }} />
                 <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.65)', fontFamily: MONO }}>Group {inspectorSnap.groupId}</span>
-                <span className="text-[9px] ml-auto capitalize" style={{ color: 'rgba(255,255,255,0.30)', fontFamily: MONO }}>{inspectorRole}</span>
+                <span className="text-[9px] ml-auto" style={{ color: 'rgba(255,255,255,0.30)', fontFamily: MONO }}>{getRoleLabel(inspectorRole, true)}</span>
                 <button onClick={() => { setInspectorIdx(-1); setInspectorSnap(null); inspectorIdxRef.current = -1; }}
                   className="ml-1 transition-colors" style={{ color: 'rgba(255,255,255,0.20)' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; }}
@@ -1162,7 +1339,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                         <div className="shrink-0" style={{ width: 8, height: 8, borderRadius: 2, background: l.color, opacity: 0.9 }} />
                         <div className="min-w-0">
                           <div className="text-[9px] truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                            {k + 1}. {l.role}
+                            {k + 1}. {getRoleLabel(l.role)}
                           </div>
                           <div className="text-[8px] truncate" style={{ color: 'rgba(255,255,255,0.28)' }}>
                             {l.label}
@@ -1184,9 +1361,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 <div className="text-[8px] uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>Chronicle</div>
                 <div className="space-y-1">
                   {eventsUI.slice(0, 12).map((ev, i) => (
-                    <div key={i} className="flex gap-1.5 items-baseline">
+                    <div key={i} className="flex gap-1.5 items-baseline" title={ev.message}>
                       <span className="text-[10px] shrink-0">{ev.icon}</span>
-                      <span className="text-[9px] leading-tight" style={{ color: ev.color }}>{ev.message}</span>
+                      <span className="text-[9px] leading-tight" style={{ color: ev.color }}>{getEventSociologicalLabel(ev.message)}</span>
                     </div>
                   ))}
                 </div>
@@ -1196,11 +1373,16 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
           {/* Role + Field legend */}
           <div className="px-3 py-3 mt-auto" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="text-[8px] uppercase tracking-[0.12em] mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>Papéis (lente sociológica)</div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-              <LegRow sym="◯◯" label="Leader"    c="#fbbf24" />
-              <LegRow sym="▲"  label="Aggressor" c="#ef4444" />
-              <LegRow sym="⊙"  label="Guardian"  c="#fbd38d" />
-              <LegRow sym="·"  label="Mediator"  c="#94a3b8" />
+              <LegRow sym="◯◯" label={getRoleLabel('leader')}    c="#fbbf24" />
+              <LegRow sym="▲"  label={getRoleLabel('aggressor')} c="#ef4444" />
+              <LegRow sym="⊙"  label={getRoleLabel('guardian')} c="#fbd38d" />
+              <LegRow sym="·"  label={getRoleLabel('mediator')} c="#94a3b8" />
+              <LegRow sym="✕"  label={getRoleLabel('rebel')}    c="#ff6b6b" />
+              <LegRow sym="◇"  label={getRoleLabel('priest')}   c="#a78bfa" />
+              <LegRow sym="◆"  label={getRoleLabel('dictator')} c="#ef4444" />
+              <LegRow sym="△"  label={getRoleLabel('artist')}   c="#34d399" />
             </div>
             <div className="mt-2 pt-2 grid grid-cols-3 gap-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               <FieldLeg c="#34d399" label="N" title="Norma" />
@@ -1216,9 +1398,36 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function MetricBar({ label, v, c }: { label: string; v: number; c: string }) {
+function PhaseCodexCard({ phase, phaseColor, onClose }: { phase: StudyPhase; phaseColor: string; onClose: () => void }) {
+  const codex = getPhaseCodex(phase);
   return (
-    <div className="flex items-center gap-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+    <div
+      className="mt-2 py-2.5 px-3 rounded-lg border pointer-events-auto"
+      style={{
+        background: 'rgba(0,0,0,0.4)',
+        borderColor: phaseColor + '25',
+        maxWidth: 280,
+      }}
+    >
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: phaseColor }}>
+          {codex.title}
+        </span>
+        <button type="button" onClick={onClose} className="text-white/30 hover:text-white/60 text-sm leading-none" aria-label="Fechar">×</button>
+      </div>
+      <p className="text-[9px] leading-snug m-0" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        {codex.what}
+      </p>
+      <p className="text-[8px] leading-snug mt-1 m-0" style={{ color: 'rgba(255,255,255,0.4)' }} title={codex.conditions}>
+        {codex.why}
+      </p>
+    </div>
+  );
+}
+
+function MetricBar({ label, v, c, title }: { label: string; v: number; c: string; title?: string }) {
+  return (
+    <div className="flex items-center gap-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }} title={title}>
       <span className="text-[10px] w-20 shrink-0" style={{ color: 'rgba(255,255,255,0.40)' }}>{label}</span>
       <div className="flex-1 h-px overflow-hidden" style={{ background: 'rgba(255,255,255,0.10)' }}>
         <div className="h-full transition-all duration-500" style={{ width: `${(v * 100).toFixed(0)}%`, background: c }} />

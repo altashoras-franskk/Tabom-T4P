@@ -157,4 +157,54 @@ app.post("/make-server-0834700c/rhizome/saved/:deviceId", async (c) => {
   }
 });
 
+// ── User Hub — Presets & Saves per lab (requires auth) ─────────────────────
+
+app.get("/make-server-0834700c/user/hub", async (c) => {
+  try {
+    const userId = await getUserId(c);
+    if (!userId) {
+      return c.json({ error: "Unauthorized", message: "Login required" }, 401);
+    }
+    const lab = c.req.query("lab");
+    if (!lab) {
+      return c.json({ error: "Missing lab query" }, 400);
+    }
+    const key = `hub_${userId}_${lab}`;
+    const data = await kv.get(key);
+    const payload = data || { presets: [], saves: [] };
+    return c.json({
+      presets: Array.isArray(payload.presets) ? payload.presets : [],
+      saves: Array.isArray(payload.saves) ? payload.saves : [],
+    });
+  } catch (err) {
+    console.log("[Hub] GET error:", err);
+    return c.json({ error: "Failed to load hub", message: String(err) }, 500);
+  }
+});
+
+app.post("/make-server-0834700c/user/hub", async (c) => {
+  try {
+    const userId = await getUserId(c);
+    if (!userId) {
+      return c.json({ error: "Unauthorized", message: "Login required" }, 401);
+    }
+    const body = await c.req.json();
+    const { lab, presets, saves } = body;
+    if (!lab || typeof lab !== "string") {
+      return c.json({ error: "Missing lab" }, 400);
+    }
+    const key = `hub_${userId}_${lab}`;
+    const existing = (await kv.get(key)) || { presets: [], saves: [] };
+    const next = {
+      presets: Array.isArray(presets) ? presets : (existing.presets ?? []),
+      saves: Array.isArray(saves) ? saves : (existing.saves ?? []),
+    };
+    await kv.set(key, next);
+    return c.json({ success: true });
+  } catch (err) {
+    console.log("[Hub] POST error:", err);
+    return c.json({ error: "Failed to save hub", message: String(err) }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

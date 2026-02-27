@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Save, Upload, Download, Trash2, Clock, FileText } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Save, Upload, Download, Trash2, Clock, FileText, Cloud } from 'lucide-react';
 import { 
   SimulationSnapshot, 
   saveToFile, 
@@ -9,6 +9,17 @@ import {
   listLocalStorageSaves,
   deleteLocalStorageSave 
 } from '../engine/snapshot';
+import { useAuth } from '../app/components/AuthModal';
+import { getHubData, addHubEntry, removeHubEntry } from '../storage/userStorage';
+
+const LAB_ID = 'complexityLife';
+
+export interface ComplexityHubSave {
+  id: string;
+  name: string;
+  timestamp: number;
+  snapshot: SimulationSnapshot;
+}
 
 interface SaveLoadPanelProps {
   onSave: (name: string) => SimulationSnapshot;
@@ -19,6 +30,25 @@ export const SaveLoadPanel: React.FC<SaveLoadPanelProps> = ({ onSave, onLoad }) 
   const [saveName, setSaveName] = useState('');
   const [saves, setSaves] = useState(listLocalStorageSaves());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id ?? null;
+  const [hubSaves, setHubSaves] = useState<ComplexityHubSave[]>([]);
+  const [hubLoading, setHubLoading] = useState(false);
+
+  const refreshHubSaves = async () => {
+    setHubLoading(true);
+    try {
+      const data = await getHubData<ComplexityHubSave>(LAB_ID, userId);
+      const list = Array.isArray(data.saves) ? data.saves : [];
+      setHubSaves(list);
+    } finally {
+      setHubLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshHubSaves();
+  }, [userId]);
 
   const refreshSaves = () => {
     setSaves(listLocalStorageSaves());
@@ -181,6 +211,93 @@ export const SaveLoadPanel: React.FC<SaveLoadPanelProps> = ({ onSave, onLoad }) 
             );
           })}
         </div>
+      </div>
+
+      {/* Hub saves (account) */}
+      <div className="border-t border-white/10 pt-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-white/70 text-xs font-mono flex items-center gap-1">
+            {userId ? <Cloud size={10} className="text-blue-400" /> : null}
+            Meus presets {userId ? '(conta)' : '(entre para sincronizar)'}
+          </label>
+          {userId && (
+            <button
+              onClick={refreshHubSaves}
+              disabled={hubLoading}
+              className="text-white/50 hover:text-white/80 text-xs disabled:opacity-50"
+            >
+              {hubLoading ? '...' : 'Refresh'}
+            </button>
+          )}
+        </div>
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {hubSaves.length === 0 && !hubLoading && (
+            <div className="text-white/30 text-xs italic py-2">Nenhum preset salvo na conta.</div>
+          )}
+          {hubSaves.map((entry) => (
+            <div
+              key={entry.id}
+              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 rounded p-2 transition-colors"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-white text-sm truncate">{entry.name}</div>
+                <div className="flex items-center gap-1 text-white/40 text-xs">
+                  <Clock size={10} />
+                  {formatDate(entry.timestamp)}
+                </div>
+              </div>
+              <button
+                onClick={() => onLoad(entry.snapshot)}
+                className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                title="Carregar"
+              >
+                <Upload size={14} className="text-green-400" />
+              </button>
+              {userId && (
+                <button
+                  onClick={() => {
+                    removeHubEntry<ComplexityHubSave>(LAB_ID, 'saves', entry.id, userId);
+                    setHubSaves((prev) => prev.filter((e) => e.id !== entry.id));
+                  }}
+                  className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                  title="Excluir"
+                >
+                  <Trash2 size={14} className="text-red-400" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {(userId || !authUser) && (
+          <div className="flex gap-2 pt-1">
+            <input
+              type="text"
+              placeholder="Nome do preset"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-white/30"
+            />
+            <button
+              onClick={() => {
+                const name = saveName.trim() || `Preset ${Date.now()}`;
+                const snapshot = onSave(name);
+                const entry: ComplexityHubSave = {
+                  id: `save_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                  name,
+                  timestamp: Date.now(),
+                  snapshot,
+                };
+                addHubEntry(LAB_ID, 'saves', entry, userId);
+                setHubSaves((prev) => [...prev, entry]);
+                setSaveName('');
+              }}
+              className="flex items-center gap-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded px-2 py-1.5 text-blue-300 text-xs transition-colors"
+            >
+              <Save size={12} />
+              Salvar na conta
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white/5 rounded p-3 border border-white/10">

@@ -23,11 +23,11 @@ import {
 // ── Spatial Grid ──────────────────────────────────────────────────────────────
 export type Grid = Map<number, number[]>;
 
-function buildGrid(agents: StudyAgent[], cellSize: number): Grid {
+function buildGrid(agents: StudyAgent[], cellSize: number, worldHalf: number): Grid {
   const grid: Grid = new Map();
   for (let i = 0; i < agents.length; i++) {
-    const gx = ((agents[i].x + 1.0) / cellSize) | 0;
-    const gy = ((agents[i].y + 1.0) / cellSize) | 0;
+    const gx = ((agents[i].x + worldHalf) / cellSize) | 0;
+    const gy = ((agents[i].y + worldHalf) / cellSize) | 0;
     const key = gx * 1024 + gy;
     let cell = grid.get(key);
     if (!cell) { cell = []; grid.set(key, cell); }
@@ -39,10 +39,11 @@ function buildGrid(agents: StudyAgent[], cellSize: number): Grid {
 function getNeighbors(
   idx: number, agents: StudyAgent[], grid: Grid,
   rMax: number, cellSize: number, maxN: number,
+  worldHalf: number,
 ): number[] {
   const a = agents[idx];
-  const gx = ((a.x + 1.0) / cellSize) | 0;
-  const gy = ((a.y + 1.0) / cellSize) | 0;
+  const gx = ((a.x + worldHalf) / cellSize) | 0;
+  const gy = ((a.y + worldHalf) / cellSize) | 0;
   const r2 = rMax * rMax;
   const result: number[] = [];
   outer: for (let dx = -2; dx <= 2; dx++) {
@@ -68,22 +69,23 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
   const { agentCount, groupCount } = cfg;
   const agents: StudyAgent[] = [];
 
-  const clampPos = (v: number) => Math.max(-0.95, Math.min(0.95, v));
+  const clampPos = (v: number) => Math.max(-cfg.worldHalf * 0.95, Math.min(cfg.worldHalf * 0.95, v));
 
   const centers: [number, number][] = [];
+  const H = cfg.worldHalf;
   if (layout === 'unified_center') {
     for (let g = 0; g < groupCount; g++) centers.push([0, 0]);
   } else if (layout === 'corners') {
     const pts: [number, number][] = [
-      [-0.68, -0.68], [0.68, -0.68], [0.68, 0.68], [-0.68, 0.68],
-      [0, -0.78], [0.78, 0], [0, 0.78], [-0.78, 0],
+      [-0.68 * H, -0.68 * H], [0.68 * H, -0.68 * H], [0.68 * H, 0.68 * H], [-0.68 * H, 0.68 * H],
+      [0, -0.78 * H], [0.78 * H, 0], [0, 0.78 * H], [-0.78 * H, 0],
     ];
     for (let g = 0; g < groupCount; g++) centers.push(pts[g % pts.length]);
   } else {
     // default: separated clusters on a ring
     for (let g = 0; g < groupCount; g++) {
       const angle = (g / groupCount) * Math.PI * 2 - Math.PI / 2;
-      centers.push([Math.cos(angle) * 0.52, Math.sin(angle) * 0.52]);
+      centers.push([Math.cos(angle) * 0.52 * H, Math.sin(angle) * 0.52 * H]);
     }
   }
 
@@ -91,9 +93,12 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
     const g = i % groupCount;
     const [cx, cy] = centers[g] ?? [0, 0];
     const angle = rng() * Math.PI * 2;
-    const r = rng() * 0.17 + 0.02;
-    const groupOp = (g / Math.max(groupCount - 1, 1)) * 2 - 1;
-    const ideology = Math.max(-1, Math.min(1, groupOp + (rng() - 0.5) * 0.6));
+    const r = rng() * 0.17 * H + 0.02 * H;
+    const gp = cfg.groupProfiles[g % cfg.groupProfiles.length];
+    const groupOp = gp
+      ? gp.ideologyBias + (rng() - 0.5) * 0.6
+      : (g / Math.max(groupCount - 1, 1)) * 2 - 1;
+    const ideology = Math.max(-1, Math.min(1, groupOp));
 
     let px = cx + Math.cos(angle) * r;
     let py = cy + Math.sin(angle) * r;
@@ -102,18 +107,18 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       const sectorAngle = (g / Math.max(groupCount, 1)) * Math.PI * 2 - Math.PI / 2;
       const spread = (Math.PI * 2) / Math.max(groupCount, 1) * 0.8;
       const a2 = sectorAngle + (rng() - 0.5) * spread;
-      const rr = 0.55 + (rng() - 0.5) * 0.22;
+      const rr = (0.55 + (rng() - 0.5) * 0.22) * H;
       px = Math.cos(a2) * rr;
       py = Math.sin(a2) * rr;
     } else if (layout === 'line') {
       const band = g / Math.max(groupCount - 1, 1);
       const along = rng();
-      const across = (rng() - 0.5) * 0.28;
-      px = (along - 0.5) * 1.6 + across;
-      py = (band - 0.5) * 1.6 + (along - 0.5) * 0.4 + (rng() - 0.5) * 0.12;
+      const across = (rng() - 0.5) * 0.28 * H;
+      px = (along - 0.5) * 1.6 * H + across;
+      py = (band - 0.5) * 1.6 * H + (along - 0.5) * 0.4 * H + (rng() - 0.5) * 0.12 * H;
     } else if (layout === 'random') {
-      px = (rng() - 0.5) * 1.8;
-      py = (rng() - 0.5) * 1.8;
+      px = (rng() - 0.5) * 1.8 * H * 2;
+      py = (rng() - 0.5) * 1.8 * H * 2;
     }
 
     // ── Archetype seeding: inject rich trait diversity so emergences vary ──────
@@ -155,15 +160,16 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       vx: (rng() - 0.5) * 0.07,
       vy: (rng() - 0.5) * 0.07,
       groupId: g,
+      familyId: 0,  // set below after forming households
       opinion: ideology,
-      trust:      Math.max(0, Math.min(1, cfg.trustBase      + (rng() - 0.5) * 0.35)),
-      aggression: Math.max(0, Math.min(1, baseAgg)),
+      trust:      Math.max(0, Math.min(1, cfg.trustBase * (gp ? 0.5 + gp.trustBias : 1) + (rng() - 0.5) * 0.35)),
+      aggression: Math.max(0, Math.min(1, baseAgg * (gp ? 0.5 + gp.aggressionBias : 1))),
       need:       Math.max(0, Math.min(1, cfg.needBase        + (rng() - 0.5) * 0.30)),
       goalX: cx, goalY: cy,
       memory: [], centrality: 0, hostileCount: 0,
       belief:   Math.max(0, Math.min(1, baseBelief)),
       fear:     Math.max(0, Math.min(1, baseFear)),
-      desire:   Math.max(0, Math.min(1, baseDesire)),
+      desire:   Math.max(0, Math.min(1, baseDesire * (gp ? 0.5 + gp.desireBias : 1))),
       status:   Math.max(0, Math.min(1, baseStatus)),
       wealth:   0.12 + rng() * 0.30,
       ideology,
@@ -171,7 +177,7 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       conformity:   Math.max(0, Math.min(1, (isProtoPriest ? 0.60 : isProtoRebel ? 0.08 : cfg.conformity) + (rng() - 0.5) * 0.30)),
       empathy:      Math.max(0, Math.min(1, cfg.empathy + (rng() - 0.5) * 0.30)),
       charisma:     Math.max(0, Math.min(1, baseCharisma)),
-      groupLoyalty: isProtoRebel ? 0.12 + rng() * 0.22 : 0.35 + rng() * 0.55,
+      groupLoyalty: isProtoRebel ? 0.12 + rng() * 0.22 : (gp ? gp.cohesionBias * 0.4 + 0.25 : 0.35) + rng() * 0.45,
       memeId:       g,
       visibility:   0,
       resistance:   Math.max(0, Math.min(1, baseResist)),
@@ -185,11 +191,11 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       archCandidateAt: 0,
       archStableAt: 0,
       // Morin dimensions
-      perception: 0.40 + rng() * 0.45,
+      perception: 0.35 + rng() * 0.40,
       hybris: isProtoLeader ? 0.15 + rng() * 0.20 : 0.02 + rng() * 0.08,
       fervor: isProtoPriest ? 0.12 + rng() * 0.15 : 0.01 + rng() * 0.05,
-      ethics: 0.02 + rng() * 0.10,
-      understanding: 0.02 + rng() * 0.08,
+      ethics: 0.05 + rng() * 0.15,
+      understanding: 0.05 + rng() * 0.15,
       ecoFootprint: 0,
     };
     const k = computeArchetypeKey(a);
@@ -198,6 +204,45 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
     a.archKeyCandidate = k;
     agents.push(a);
   }
+
+  // ── Form family structures: same group, clusters of 3–6, slightly pulled toward centroid ──
+  const byGroup = new Map<number, number[]>();
+  for (let i = 0; i < agents.length; i++) byGroup.set(agents[i].groupId, (byGroup.get(agents[i].groupId) ?? []).concat(i));
+  let nextFamId = 1;
+  const minFamilySize = 3;
+  const maxFamilySize = 6;
+  const pullTowardCentroid = 0.35;  // 0..1 — how much to pull members toward family center
+  byGroup.forEach((indices) => {
+    // Shuffle so families aren't just first N
+    for (let t = indices.length - 1; t > 0; t--) {
+      const j = (rng() * (t + 1)) | 0;
+      [indices[t], indices[j]] = [indices[j], indices[t]];
+    }
+    let idx = 0;
+    while (idx < indices.length) {
+      const size = Math.min(maxFamilySize, minFamilySize + (rng() * (maxFamilySize - minFamilySize + 1)) | 0);
+      const fam = indices.slice(idx, idx + size);
+      idx += size;
+      if (fam.length < 2) continue;
+      const fid = nextFamId++;
+      let cx = 0, cy = 0;
+      for (const i of fam) {
+        agents[i].familyId = fid;
+        cx += agents[i].x;
+        cy += agents[i].y;
+      }
+      cx /= fam.length;
+      cy /= fam.length;
+      for (const i of fam) {
+        const a = agents[i];
+        a.x = clampPos(a.x + (cx - a.x) * pullTowardCentroid);
+        a.y = clampPos(a.y + (cy - a.y) * pullTowardCentroid);
+        a.trailX.fill(a.x);
+        a.trailY.fill(a.y);
+      }
+    }
+  });
+
   return agents;
 }
 
@@ -215,8 +260,8 @@ function agentSepR(a: StudyAgent): number {
   return SEP_BASE + a.status * SEP_STATUS;
 }
 
-export function buildMicroGrid(agents: StudyAgent[]): Grid {
-  return buildGrid(agents, SEP_CELL);
+export function buildMicroGrid(agents: StudyAgent[], worldHalf: number): Grid {
+  return buildGrid(agents, SEP_CELL, worldHalf);
 }
 
 export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws: StudyWorldState, dt: number): void {
@@ -233,8 +278,8 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws
     let cohX = 0, cohY = 0, cohN = 0;
 
     // Separation & Boids
-    const gx = ((a.x + 1.0) / cellSize) | 0;
-    const gy = ((a.y + 1.0) / cellSize) | 0;
+    const gx = ((a.x + cfg.worldHalf) / cellSize) | 0;
+    const gy = ((a.y + cfg.worldHalf) / cellSize) | 0;
     for (let dx2 = -1; dx2 <= 1; dx2++) {
       for (let dy2 = -1; dy2 <= 1; dy2++) {
         const cell = grid.get((gx + dx2) * 1024 + (gy + dy2));
@@ -333,10 +378,10 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws
     a.x += a.vx * dt;
     a.y += a.vy * dt;
 
-    if (a.x < -0.97) { a.x = -0.97; a.vx =  Math.abs(a.vx) * 0.4; }
-    if (a.x >  0.97) { a.x =  0.97; a.vx = -Math.abs(a.vx) * 0.4; }
-    if (a.y < -0.97) { a.y = -0.97; a.vy =  Math.abs(a.vy) * 0.4; }
-    if (a.y >  0.97) { a.y =  0.97; a.vy = -Math.abs(a.vy) * 0.4; }
+    if (a.x < -cfg.worldHalf * 0.95) { a.x = -cfg.worldHalf * 0.95; a.vx =  Math.abs(a.vx) * 0.4; }
+    if (a.x >  cfg.worldHalf * 0.95) { a.x =  cfg.worldHalf * 0.95; a.vx = -Math.abs(a.vx) * 0.4; }
+    if (a.y < -cfg.worldHalf * 0.95) { a.y = -cfg.worldHalf * 0.95; a.vy =  Math.abs(a.vy) * 0.4; }
+    if (a.y >  cfg.worldHalf * 0.95) { a.y =  cfg.worldHalf * 0.95; a.vy = -Math.abs(a.vy) * 0.4; }
     
     a.trailX[a.trailIdx] = a.x;
     a.trailY[a.trailIdx] = a.y;
@@ -347,8 +392,8 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
     const aR = agentSepR(a);
-    const gx = ((a.x + 1.0) / cellSize) | 0;
-    const gy = ((a.y + 1.0) / cellSize) | 0;
+    const gx = ((a.x + cfg.worldHalf) / cellSize) | 0;
+    const gy = ((a.y + cfg.worldHalf) / cellSize) | 0;
     for (let dx2 = -1; dx2 <= 1; dx2++) {
       for (let dy2 = -1; dy2 <= 1; dy2++) {
         const cell = grid.get((gx + dx2) * 1024 + (gy + dy2));
@@ -411,7 +456,7 @@ export function macroTick(
   _depositSymbols(symbols, fields, ws, t, dt, pings, events);
 
   // 3. Build neighbor grid
-  const grid = buildGrid(agents, cfg.rMax * 1.1);
+  const grid = buildGrid(agents, cfg.rMax * 1.1, cfg.worldHalf);
 
   // 4. Group centroids
   const centroids = _buildCentroids(agents, cfg.groupCount);
@@ -424,12 +469,16 @@ export function macroTick(
   // 6. Per-agent update
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
-    const neighbors = getNeighbors(i, agents, grid, cfg.rMax, cfg.rMax * 1.1, MAX_NEIGH);
+    const neighbors = getNeighbors(i, agents, grid, cfg.rMax, cfg.rMax * 1.1, MAX_NEIGH, cfg.worldHalf);
 
-    // Sample fields at agent position
-    const n = sampleN(fields, a.x, a.y);
-    const l = sampleL(fields, a.x, a.y);
-    const r = sampleR(fields, a.x, a.y);
+    // Sample fields at agent position, modulated by group's field sensitivity
+    const gProf = cfg.groupProfiles[a.groupId % cfg.groupProfiles.length];
+    const fsN = gProf ? gProf.fieldSensitivity.n : 1;
+    const fsL = gProf ? gProf.fieldSensitivity.l : 1;
+    const fsR = gProf ? gProf.fieldSensitivity.r : 1;
+    const n = clamp(sampleN(fields, a.x / cfg.worldHalf, a.y / cfg.worldHalf) * fsN, 0, 1);
+    const l = clamp(sampleL(fields, a.x / cfg.worldHalf, a.y / cfg.worldHalf) * fsL, 0, 1);
+    const r = clamp(sampleR(fields, a.x / cfg.worldHalf, a.y / cfg.worldHalf) * fsR, 0, 1);
 
     // ── Foucault: Surveillance & Resistance ────────────────────────────────
     a.visibility = 0;
@@ -464,15 +513,18 @@ export function macroTick(
     }
 
     // ── Morin: Percepção falível (blindness of knowledge) ─────────────────
-    // Perception drifts slowly; distortion only nudges it, never dominates.
+    // Natural clarity drifts slowly upward; ideology/fear/hybris pull it down.
+    // Both forces must be balanced so perception is a meaningful, dynamic variable.
     const percBias = cfg.perceptionBias;
-    const distortionPressure = Math.abs(a.ideology) * 0.3 + a.fear * 0.2 + a.hybris * 0.4;
+    const distortionPressure = Math.abs(a.ideology) * 0.3 + a.fear * 0.25 + a.hybris * 0.45;
+    const clarityDrift = 0.006 + a.ethics * 0.008; // ethics accelerate clarity
+    const distortionDrag = distortionPressure * percBias * 0.08;
     a.perception = clamp(
-      a.perception + (0.025 - distortionPressure * percBias * 0.015) * dt,
-      0.40, 1,
+      a.perception + (clarityDrift - distortionDrag) * dt,
+      0.20, 1,
     );
-    // Perceived fields: light blend (20% max distortion) to preserve diversity
-    const distort = (1 - a.perception) * 0.5;
+    // Perceived fields: distortion blends real fields with agent's biases
+    const distort = (1 - a.perception) * 0.6;
     const pN = n * (1 - distort) + distort * (a.belief * 0.4 + 0.3);
     const pL = l * (1 - distort) + distort * (a.status * 0.3 + 0.2);
     const pR = r * (1 - distort) + distort * (a.wealth * 0.3 + 0.3);
@@ -518,6 +570,7 @@ export function macroTick(
     if (a.hybris > 0.4) {
       a.aggression = clamp(a.aggression + a.hybris * 0.04 * dt, 0, 1);
       a.trust = clamp(a.trust - a.hybris * 0.03 * dt, 0, 1);
+      a.perception = clamp(a.perception - a.hybris * 0.025 * dt, 0.20, 1);
     }
 
     // ── Morin: Fervor — Homo sapiens-demens ─────────────────────────────
@@ -532,7 +585,7 @@ export function macroTick(
     }
     if (a.fervor > 0.5) {
       a.conformity = clamp(a.conformity + a.fervor * 0.03 * dt, 0, 1);
-      a.perception = clamp(a.perception - a.fervor * 0.02 * dt, 0.40, 1);
+      a.perception = clamp(a.perception - a.fervor * 0.03 * dt, 0.20, 1);
       if (rand01(ws) < a.fervor * 0.02) {
         a.aggression = clamp(a.aggression + 0.08, 0, 1);
       }
@@ -660,31 +713,33 @@ export function macroTick(
     }
 
     // ── Morin: Understanding (compreensão) ──────────────────────────────
-    // Grows from repeated peaceful cross-group encounters. Reduces hostility.
+    // Grows from peaceful cross-group encounters. Reduces hostility.
     const crossFriendlyMem = a.memory.filter(m =>
       m.agentIdx < agents.length && agents[m.agentIdx].groupId !== a.groupId && m.friendly
     ).length;
-    if (crossFriendlyMem >= 2) {
-      a.understanding = clamp(a.understanding + cfg.understandingGrowth * 0.05 * dt, 0, 1);
+    if (crossFriendlyMem >= 1) {
+      // Growth scales with number of friendly cross-group memories
+      const underGrowth = cfg.understandingGrowth * (0.10 + crossFriendlyMem * 0.04);
+      a.understanding = clamp(a.understanding + underGrowth * dt, 0, 1);
     } else {
-      a.understanding = clamp(a.understanding - 0.01 * dt, 0, 1);
+      a.understanding = clamp(a.understanding - 0.004 * dt, 0, 1);
     }
-    if (a.understanding > 0.3) {
-      a.aggression = clamp(a.aggression - a.understanding * 0.04 * dt, 0, 1);
-      a.empathy = clamp(a.empathy + a.understanding * 0.02 * dt, 0, 1);
+    if (a.understanding > 0.15) {
+      a.aggression = clamp(a.aggression - a.understanding * 0.05 * dt, 0, 1);
+      a.empathy = clamp(a.empathy + a.understanding * 0.03 * dt, 0, 1);
     }
 
     // ── Morin: Ética emergente (anthropo-ethics) ────────────────────────
-    // Ethics emerge from the combination of understanding + diverse encounters
-    // + self-limitation. High ethics reduce hybris and increase cooperation.
-    if (a.understanding > 0.25 && crossFriendlyMem >= 1) {
-      const ethicsRise = cfg.ethicsGrowth * a.understanding * 0.04 * dt;
+    // Ethics emerge from understanding + diverse encounters + self-limitation.
+    // High ethics reduce hybris and aggression, and accelerate perception clarity.
+    if (a.understanding > 0.10 && crossFriendlyMem >= 1) {
+      const ethicsRise = cfg.ethicsGrowth * (0.08 + a.understanding * 0.12) * dt;
       a.ethics = clamp(a.ethics + ethicsRise, 0, 1);
     }
-    a.ethics = clamp(a.ethics - 0.008 * dt, 0, 1); // slow decay without reinforcement
-    if (a.ethics > 0.4) {
-      a.hybris = clamp(a.hybris - a.ethics * 0.05 * dt, 0, 1);
-      a.aggression = clamp(a.aggression - a.ethics * 0.03 * dt, 0, 1);
+    a.ethics = clamp(a.ethics - 0.003 * dt, 0, 1);
+    if (a.ethics > 0.15) {
+      a.hybris = clamp(a.hybris - a.ethics * 0.06 * dt, 0, 1);
+      a.aggression = clamp(a.aggression - a.ethics * 0.04 * dt, 0, 1);
     }
 
     // ── Meme contagion ─────────────────────────────────────────────────────
@@ -774,7 +829,7 @@ export function macroTick(
       // Resource hunger → find R hotspot (simple: move toward high-R neighbor)
       let bestR = r, bestX = gcx, bestY = gcy;
       for (const j of neighbors) {
-        const bR = sampleR(fields, agents[j].x, agents[j].y);
+        const bR = sampleR(fields, agents[j].x / cfg.worldHalf, agents[j].y / cfg.worldHalf);
         if (bR > bestR) { bestR = bR; bestX = agents[j].x; bestY = agents[j].y; }
       }
       a.goalX = bestX * 0.6 + inAvgX * 0.4;
@@ -887,7 +942,7 @@ export function macroTick(
     for (let i = 0; i < agents.length; i++) {
       const a = agents[i];
       if (rand01(ws) > cfg.mobility * 0.02 * (1 - a.groupLoyalty)) continue;
-      const neighbors2 = getNeighbors(i, agents, grid, cfg.rMax, cfg.rMax * 1.1, MAX_NEIGH);
+      const neighbors2 = getNeighbors(i, agents, grid, cfg.rMax, cfg.rMax * 1.1, MAX_NEIGH, cfg.worldHalf);
       const neighborGroups: number[] = new Array(cfg.groupCount).fill(0);
       for (const j of neighbors2) neighborGroups[agents[j].groupId]++;
       let bestG = a.groupId, bestC = neighborGroups[a.groupId] || 0;
@@ -1247,7 +1302,7 @@ export function computeStudyMetrics(agents: StudyAgent[], cfg: StudyConfig): Stu
   // Morin phases take precedence when conditions are strong enough
   if      (meanFervor2 > 0.40)                                         phase = 'FERVOR';
   else if (ecoHealth < 0.35)                                           phase = 'ECO_CRISIS';
-  else if (meanEthics > 0.45 && meanUnderstanding > 0.35 && conflict < 0.15) phase = 'TRANSCENDENCE';
+  else if (meanEthics > 0.30 && meanUnderstanding > 0.25 && conflict < 0.20) phase = 'TRANSCENDENCE';
   else if (consensus  > 0.78 && conflict  < 0.2)                      phase = 'CONSENSUS';
   else if (conflict   > 0.50)                                          phase = 'CONFLICT';
   else if (polarization > 0.58)                                        phase = 'POLARIZED';
@@ -1272,7 +1327,10 @@ export type AgentRole =
   | 'guardian'
   | 'mediator'
   | 'aggressor'
-  | 'rebel';
+  | 'rebel'
+  | 'artist'
+  | 'innovator'
+  | 'predator';
 
 export function computeAgentRoles(agents: StudyAgent[]): AgentRole[] {
   const roles: AgentRole[] = new Array(agents.length).fill('normal');
@@ -1316,7 +1374,14 @@ export function computeAgentRoles(agents: StudyAgent[]): AgentRole[] {
     const crossFriendly = a.memory.filter(m =>
       m.agentIdx < agents.length && agents[m.agentIdx].groupId !== a.groupId && m.friendly
     ).length;
-    if (a.trust > 0.7 && crossFriendly >= 2) roles[i] = 'mediator';
+    if (a.trust > 0.7 && crossFriendly >= 2) { roles[i] = 'mediator'; continue; }
+
+    // Artist: high desire, low aggression, liberty or resistance (transgressão simbólica)
+    if (a.desire > 0.58 && a.aggression < 0.38 && (a.ideology > 0.2 || a.resistance > 0.4)) { roles[i] = 'artist'; continue; }
+    // Innovator: desire + status + liberty
+    if (a.desire > 0.52 && a.status > 0.35 && a.ideology > 0.22) { roles[i] = 'innovator'; continue; }
+    // Predator: high aggression, low empathy, some status (psicopata social)
+    if (a.aggression > 0.58 && a.empathy < 0.28 && a.status > 0.28) { roles[i] = 'predator'; continue; }
   }
   return roles;
 }
