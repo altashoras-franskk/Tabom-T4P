@@ -26,14 +26,20 @@ export interface SocialFieldConfig {
 
 export function createSocialFields(size = 32): SocialFields {
   const r = new Float32Array(size * size);
-  r.fill(0.28);  // start with modest uniform resource
-  return {
+  r.fill(0.22);  // base level — agents need to find hotspots
+  const fields: SocialFields = {
     n: new Float32Array(size * size),
     l: new Float32Array(size * size),
     r,
     size,
     dirty: true,
   };
+  // Default spatial variation: a few resource hotspots (comida/energia) so agents spread across the bairro
+  depositR(fields, -0.6, -0.5, 0.45, 0.28);
+  depositR(fields,  0.55,  0.4, 0.40, 0.25);
+  depositR(fields,  0.0, -0.7, 0.35, 0.22);
+  depositR(fields, -0.3,  0.65, 0.30, 0.20);
+  return fields;
 }
 
 export function createSocialFieldConfig(): SocialFieldConfig {

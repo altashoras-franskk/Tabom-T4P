@@ -601,14 +601,29 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   // ── Canvas layout ─────────────────────────────────────────────────────────
   const panelWidth = cinematic ? 0 : 92;  // LeftSidebar width
   const rightWidth = (cinematic || rightPanel === null) ? 0 : 240;
-  const canvasW    = Math.max(200, dims.W - panelWidth - rightWidth);
-  const canvasH    = Math.max(200, dims.H - 40 - 36);
+  // Layout size (for flex); may shrink when right panel opens
+  const layoutW = Math.max(200, dims.W - panelWidth - rightWidth);
+  const layoutH = Math.max(200, dims.H - 40 - 36);
+  // Stable canvas pixel size: only change on window resize so params/panel don't clear the buffer
+  const [canvasSize, setCanvasSize] = useState(() => ({
+    w: Math.max(200, typeof window !== 'undefined' ? window.innerWidth - panelWidth : 800),
+    h: Math.max(200, typeof window !== 'undefined' ? window.innerHeight - 40 - 36 : 600),
+  }));
+  const canvasSizeRef = useRef(canvasSize);
+  useEffect(() => { canvasSizeRef.current = canvasSize; }, [canvasSize]);
 
   useEffect(() => {
     const fn = () => setDims({ W: window.innerWidth, H: window.innerHeight });
     window.addEventListener('resize', fn);
     return () => window.removeEventListener('resize', fn);
   }, []);
+
+  useEffect(() => {
+    const w = Math.max(200, dims.W - panelWidth);
+    const h = Math.max(200, dims.H - 40 - 36);
+    setCanvasSize(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
+    canvasSizeRef.current = { w, h };
+  }, [dims.W, dims.H, panelWidth]);
 
   // ── Sync refs ─────────────────────────────────────────────────────────────
   useEffect(() => { dnaRef.current = dna; }, [dna]);
@@ -629,7 +644,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
 
   // ── Initialize simulation ─────────────────────────────────────────────────
   const initSim = useCallback((newDNA: DNA, seed: number) => {
-    const W = canvasW, H = canvasH;
+    const { w: W, h: H } = canvasSizeRef.current;
     dnaRef.current = newDNA;
     seedRef.current = seed;
 
@@ -653,7 +668,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     const newLayers = createLayerStack(W, H);
     layersRef.current = newLayers;
     setLayers(newLayers.map(l => ({ ...l })));
-  }, [canvasW, canvasH]);
+  }, []);
 
   useEffect(() => {
     if (active) initSim(dnaRef.current, Date.now());
@@ -1086,8 +1101,8 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const W = e.currentTarget.width  || canvasW;
-    const H = e.currentTarget.height || canvasH;
+    const W = e.currentTarget.width  || canvasSize.w;
+    const H = e.currentTarget.height || canvasSize.h;
 
     setToolState(ts => {
       const next = { ...ts, isDragging: true, lastX: x, lastY: y };
@@ -1130,7 +1145,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
       if (gesturesRef.current.length > 100) gesturesRef.current.shift();
       return next;
     });
-  }, [canvasW, canvasH, applyAgentTool]);
+  }, [canvasSize.w, canvasSize.h, applyAgentTool]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!toolRef.current.isDragging) return;
@@ -1139,8 +1154,8 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     const y  = e.clientY - rect.top;
     const lx = toolRef.current.lastX;
     const ly = toolRef.current.lastY;
-    const W  = e.currentTarget.width  || canvasW;
-    const H  = e.currentTarget.height || canvasH;
+    const W  = e.currentTarget.width  || canvasSize.w;
+    const H  = e.currentTarget.height || canvasSize.h;
 
     setToolState(ts => {
       const ddx = x - lx, ddy = y - ly;
@@ -1181,7 +1196,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
 
       return next;
     });
-  }, [canvasW, canvasH, applyAgentTool]);
+  }, [canvasSize.w, canvasSize.h, applyAgentTool]);
 
   const handlePointerUp = useCallback(() => {
     const ts = toolRef.current;
@@ -1457,8 +1472,8 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   const handleSpawnSingleton = useCallback(() => {
     const dna_ = dnaRef.current;
     const canvas = mainCanvasRef.current;
-    const W = canvas?.width ?? canvasW;
-    const H = canvas?.height ?? canvasH;
+    const W = canvas?.width ?? canvasSize.w;
+    const H = canvas?.height ?? canvasSize.h;
     const palette = dna_.palette;
     const cidx = Math.floor(Math.random() * palette.length);
     const hex = palette[cidx] ?? '#ff88cc';
@@ -1489,7 +1504,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     };
     quantaRef.current = [...quantaRef.current, singl];
     setQuantaCount(quantaRef.current.length);
-  }, [canvasW, canvasH, singletonSize]);
+  }, [canvasSize.w, canvasSize.h, singletonSize]);
 
   // ── Powers callbacks ──────────────────────────────────────────────────────
   const handleRecolorSpecies = useCallback((species: number, hex: string) => {
@@ -2065,13 +2080,14 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           />
         )}
 
-        {/* Canvas Area */}
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        {/* Canvas Area — overflow hidden so stable canvas size doesn't clear when panel opens */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minWidth: 0 }}>
           {/* 2D simulation canvas (always present, hidden behind 3D canvas when in 3D mode) */}
           <canvas
+            key="meta-art-main-canvas"
             ref={mainCanvasRef}
-            width={canvasW}
-            height={canvasH}
+            width={canvasSize.w}
+            height={canvasSize.h}
             style={{
               display: 'block', width: '100%', height: '100%',
               cursor: activeTool?.cursor ?? 'crosshair',

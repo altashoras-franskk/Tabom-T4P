@@ -127,6 +127,7 @@ export function renderStudy(
   pings:   StudyPing[],
   _t:      number,
   visualConfig?: StudyVisualConfig,
+  selectedAgentIdx?: number,
 ): void {
   _visualCfg = visualConfig ?? defaultVisualConfig;
   _worldHalf = _cfg.worldHalf ?? 1;
@@ -244,6 +245,14 @@ export function renderStudy(
   } else {
     // groups / field
     renderAgentsGroups(ctx, cw, ch, agents, roles, r, leaders, primeLeader);
+  }
+
+  // ── Selected agent highlight (so user sees who is selected) ─────────────────
+  if (selectedAgentIdx != null && selectedAgentIdx >= 0 && selectedAgentIdx < agents.length) {
+    const a = agents[selectedAgentIdx];
+    const ax = cx(a.x, cw), ay = cy(a.y, ch);
+    const ar = r * (0.72 + a.status * 0.72);
+    _drawSelectedHighlight(ctx, ax, ay, ar, selectedAgentIdx);
   }
 
   // ── Pings (always) ──
@@ -394,6 +403,50 @@ function _drawAgent(ctx: CanvasRenderingContext2D, ax: number, ay: number, vx: n
     ctx.stroke();
   }
 
+  ctx.restore();
+}
+
+function _drawSelectedHighlight(
+  ctx: CanvasRenderingContext2D,
+  ax: number,
+  ay: number,
+  r: number,
+  idx: number,
+): void {
+  // Clear ring + glow so selected agent is obvious
+  const ringR = r + 6;
+  const g = ctx.createRadialGradient(ax, ay, r, ax, ay, ringR * 1.8);
+  g.addColorStop(0, 'rgba(0,212,170,0.15)');
+  g.addColorStop(0.6, 'rgba(0,212,170,0.06)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.save();
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(ax, ay, ringR * 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = '#00d4aa';
+  ctx.lineWidth = 2.2;
+  ctx.globalAlpha = 0.95;
+  ctx.beginPath();
+  ctx.arc(ax, ay, r + 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Label above agent
+  const label = `#${idx}`;
+  ctx.save();
+  ctx.font = '600 10px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.strokeStyle = '#00d4aa';
+  ctx.lineWidth = 2.5;
+  ctx.strokeText(label, ax, ay - r - 6);
+  ctx.fillText(label, ax, ay - r - 6);
   ctx.restore();
 }
 

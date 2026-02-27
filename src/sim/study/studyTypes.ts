@@ -47,9 +47,28 @@ export interface StudyAgent {
   // Goal (set by macroTick, consumed by microTick)
   goalX: number;
   goalY: number;
+  /** Current activity label for UI (set each macroTick): e.g. "Buscando recurso", "Com o grupo" */
+  currentActivity: string;
 
   // Short memory (last 3 encounters)
   memory: Encounter[];
+  // Deep memory: birthplace is persistent (never overwritten)
+  birthX: number;
+  birthY: number;
+  // Immutable initial social state (used for long-memory coherence)
+  originGroupId: number;
+  originFamilyId: number;
+  // 0..1 — how strongly the agent is anchored to birthplace under stress
+  birthMemory: number;
+  // 0..1 — emergent social entanglement intensity (organic, not hard links)
+  entanglement: number;
+  // Auditability — dominant behavioral drivers tracked each macroTick
+  auditThreat: number;
+  auditResource: number;
+  auditSocial: number;
+  auditTransgression: number;
+  auditMemoryPull: number;
+  auditReason: string;
 
   // Analytics
   centrality:  number;  // 0..1 — connection richness → leader signal
@@ -239,6 +258,20 @@ export interface StudyConfig {
   // World size: 1 = "sala" (-1..1), 2 = "bairro" (-2..2), more space for clusters/emergence
   worldHalf: number;
 
+  /** If false, agents start with no family (familyId 0); bonds form over time via proximity + friendly encounters. */
+  startWithFamilies: boolean;
+  /**
+   * Birth relation mode:
+   * - families: clustered households from spawn
+   * - sparse: few tiny families (1-2 pair bonds per group)
+   * - none: no initial relations
+   */
+  spawnRelationMode: 'families' | 'sparse' | 'none';
+  /** Probability per macro tick that two unbound neighbors (same group, friendly memory) form a bond. */
+  bondFormationRate: number;
+  /** 0..1 — global gain for birthplace attraction under stress/scarcity. */
+  birthMemoryStrength: number;
+
   // Archetype identity
   archetypeHoldSec: number;     // seconds candidate must persist before committing stable archetype
 
@@ -262,6 +295,8 @@ export interface StudyWorldState {
   meanWealth:          number;
   gini:                number;
   rngState:            number;  // deterministic RNG state for reproducible runs
+  /** Next family id to assign when a new bond is formed (societies from 0). */
+  nextFamilyId:        number;
 }
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
@@ -294,6 +329,7 @@ export interface StudyMetrics {
   meanHybris:     number;   // 0..1 — collective overconfidence
   meanFervor:     number;   // 0..1 — collective irrationality
   meanUnderstanding: number; // 0..1 — cross-group comprehension
+  meanEntanglement: number;  // 0..1 — collective relational coherence
   ecoHealth:      number;   // 0..1 — environmental integrity
 }
 
@@ -320,6 +356,8 @@ export interface StudyEvent {
   icon:    string;
   message: string;
   color:   string;
+  /** Explicação do que causou o evento (ex.: guerra, anomia, filosofia emergente) */
+  cause?:  string;
 }
 
 export interface StudyPing {
@@ -337,7 +375,7 @@ export function createStudyConfig(): StudyConfig {
     aggressionBase: 0.28, trustBase: 0.52, needBase: 0.58,
     macroTickSec: 1.0,
     kBelief: 0.45, kFear: 0.40, kDesire: 0.35,
-    harvestRate: 0.07, decayWealth: 0.014,
+    harvestRate: 0.09, decayWealth: 0.018,
     ideologyPressure: 0.20,
     conformity: 0.38, empathy: 0.32, mobility: 0.12,
     contagion: 0.40, hierarchyStrength: 0.45,
@@ -350,6 +388,10 @@ export function createStudyConfig(): StudyConfig {
     autoSymbols: true,
     groupProfiles: defaultGroupProfiles(3),
     worldHalf: 2,  // "bairro": world [-2,2] x [-2,2], more space for emergence
+    startWithFamilies: true,  // false = "do zero", laços formam com o tempo
+    spawnRelationMode: 'families',
+    bondFormationRate: 0.04,
+    birthMemoryStrength: 0.55,
     archetypeHoldSec: 1.8,
     // Morin
     perceptionBias: 0.25,
@@ -372,6 +414,7 @@ export function createStudyWorldState(): StudyWorldState {
     violationCount: 0, violationsWindowStart: 0, violationsWindow: 0,
     meanWealth: 0.25, gini: 0,
     rngState: 1,
+    nextFamilyId: 1,
   };
 }
 
@@ -380,6 +423,6 @@ export function createStudyMetrics(): StudyMetrics {
     cohesion: 0.2, polarization: 0.1, conflict: 0.05, consensus: 0.5, phase: 'SWARM',
     leaderCount: 0, rebelCount: 0, meanFear: 0.1, meanBelief: 0.2, entropy: 0.5,
     meanPerception: 0.5, meanEthics: 0.05, meanHybris: 0.05, meanFervor: 0.05,
-    meanUnderstanding: 0.05, ecoHealth: 1.0,
+    meanUnderstanding: 0.05, meanEntanglement: 0.1, ecoHealth: 1.0,
   };
 }

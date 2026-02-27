@@ -304,6 +304,146 @@ const App: React.FC = () => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasInnerRef = useRef<HTMLDivElement>(null); // inner canvas-only wrapper for zoom/pan
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  // Global semantic tooltips:
+  // - sliders: explain the functional effect in code dynamics
+  // - telemetry/readouts: explain what each metric means
+  useEffect(() => {
+    const clean = (s?: string | null) => (s ?? '').replace(/\s+/g, ' ').trim();
+    const norm = (s?: string | null) =>
+      clean(s)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const semanticMeaning = (rawLabel: string): string | null => {
+      const k = norm(rawLabel);
+      const has = (x: string) => k.includes(x);
+      if (has('speed') || has('veloc')) return 'controla a escala temporal de atualização (taxa de variação por tick).';
+      if (has('bpm')) return 'controla a frequência temporal musical (batidas por minuto).';
+      if (has('volume') || has('master')) return 'controla ganho/amplitude de saída.';
+      if (has('autonomy')) return 'aumenta quanto o agente segue objetivo próprio em vez do fluxo local.';
+      if (has('cohes')) return 'aumenta atração intra-grupo e compactação de clusters.';
+      if (has('aggress')) return 'eleva probabilidade de interação hostil com out-group.';
+      if (has('trust')) return 'eleva abertura para influência social local.';
+      if (has('need')) return 'eleva drive de pertencimento e busca por coesão.';
+      if (has('conform')) return 'puxa estado individual em direção à norma local.';
+      if (has('empathy')) return 'aumenta contagio afetivo entre vizinhos.';
+      if (has('mobility')) return 'aumenta chance de troca de grupo (migração social).';
+      if (has('contagion')) return 'acelera difusão de memes/ideias.';
+      if (has('hierarchy')) return 'amplifica peso de status/charisma na influência.';
+      if (has('innov')) return 'injeta mutação ideológica espontânea.';
+      if (has('cooperat')) return 'aumenta redistribuição de riqueza entre pares.';
+      if (has('inertia')) return 'resiste mudanças culturais/ideológicas.';
+      if (has('scarcity')) return 'modula regeneração de recurso (escassez ecológica).';
+      if (has('panoptic')) return 'intensifica efeito de vigilância em medo/conformidade.';
+      if (has('boids.al') || has('alignment')) return 'alinha vetores de movimento entre vizinhos.';
+      if (has('boids.co') || has('cohesion')) return 'puxa movimento ao centro de massa local.';
+      if (has('wander')) return 'injeta ruído exploratório estocástico na navegação.';
+      if (has('impulsert') || has('impulse')) return 'frequência de kicks de movimento não linear.';
+      if (has('impulsest')) return 'magnitude dos kicks impulsivos.';
+      if (has('overshoot')) return 'permite passar do alvo para gerar vai-e-volta.';
+      if (has('zigzag')) return 'adiciona componente lateral ao steering.';
+      if (has('bondrate')) return 'taxa de formação de laços/famílias por macroTick.';
+      if (has('birthmem') || has('memory') || has('memoria')) return 'peso da memória de origem no vetor de decisão.';
+      if (has('entangle')) return 'coerência relacional acumulada por encontros e laços.';
+      if (has('percepc')) return 'fidelidade do modelo interno ao campo social observado.';
+      if (has('etica') || has('ethic')) return 'auto-limitação cooperativa; freia hybris e agressão.';
+      if (has('compreens') || has('understand')) return 'aprendizado intergrupal por contato não hostil.';
+      if (has('hybris')) return 'cegueira por poder/status (overconfidence).';
+      if (has('fervor')) return 'excitação coletiva irracional (sapiens→demens).';
+      if (has('eco saude') || has('eco health')) return 'integridade ambiental do campo de recursos.';
+      if (has('cohesion')) return 'grau de compactação espacial e social dos grupos.';
+      if (has('polariz')) return 'distância ideológica média entre grupos.';
+      if (has('conflict')) return 'taxa de hostilidade ativa na população.';
+      if (has('consensus')) return 'alinhamento ideológico global do sistema.';
+      if (has('ameaca') || has('threat')) return 'pressão por risco/hostilidade na decisão local.';
+      if (has('recurso') || has('resource')) return 'pressão de escassez/forrageamento na decisão.';
+      if (has('social')) return 'pressão de pertencimento e acoplamento intra-grupo.';
+      if (has('transgress')) return 'força de exploração de tabu/novidade.';
+      return null;
+    };
+
+    const guessLabel = (el: HTMLInputElement): string => {
+      const aria = clean(el.getAttribute('aria-label'));
+      if (aria) return aria;
+      const id = clean(el.id);
+      if (id) {
+        const byFor = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+        const byForText = clean(byFor?.textContent);
+        if (byForText) return byForText;
+      }
+      const closestLabel = el.closest('label');
+      const closestLabelText = clean(closestLabel?.textContent);
+      if (closestLabelText) return closestLabelText;
+      const parent = el.parentElement;
+      const prev = parent?.previousElementSibling;
+      const prevText = clean(prev?.textContent);
+      if (prevText) return prevText;
+      const parentText = clean(parent?.textContent);
+      if (parentText) return parentText.slice(0, 48);
+      return 'Slider';
+    };
+
+    const buildTip = (el: HTMLInputElement): string => {
+      const label = guessLabel(el);
+      const meaning = semanticMeaning(label) ?? 'ajusta a intensidade do mecanismo associado.';
+      const min = clean(el.min) || '0';
+      const max = clean(el.max) || '1';
+      const step = clean(el.step) || 'auto';
+      const val = clean(el.value);
+      return `${label}: ${meaning} v=${val} (${min}..${max}, step ${step})`;
+    };
+
+    const applyTooltip = (el: HTMLInputElement) => {
+      el.title = buildTip(el);
+      el.dataset.sliderTooltip = '1';
+    };
+
+    const applyAll = () => {
+      document.querySelectorAll<HTMLInputElement>('input[type="range"]').forEach(applyTooltip);
+    };
+
+    const onPointerOver = (ev: Event) => {
+      const t = ev.target as HTMLElement | null;
+      if (!t) return;
+      if (t instanceof HTMLInputElement && t.type === 'range') {
+        applyTooltip(t);
+        return;
+      }
+      // Telemetry/readout semantics on hover (non-editable audit areas).
+      let cur: HTMLElement | null = t;
+      for (let depth = 0; cur && depth < 4; depth++, cur = cur.parentElement) {
+        const raw = clean(cur.textContent);
+        if (!raw || raw.length > 48) continue;
+        const label = raw.replace(/[\d.%\-+/()\s]+$/g, '').trim();
+        if (!label) continue;
+        const meaning = semanticMeaning(label);
+        if (meaning) {
+          cur.title = `${label}: ${meaning}`;
+          break;
+        }
+      }
+    };
+    const onInput = (ev: Event) => {
+      const t = ev.target as HTMLElement | null;
+      if (!t) return;
+      if (t instanceof HTMLInputElement && t.type === 'range') {
+        applyTooltip(t);
+      }
+    };
+
+    applyAll();
+    const obs = new MutationObserver(() => applyAll());
+    obs.observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('pointerover', onPointerOver, true);
+    document.addEventListener('input', onInput, true);
+    return () => {
+      obs.disconnect();
+      document.removeEventListener('pointerover', onPointerOver, true);
+      document.removeEventListener('input', onInput, true);
+    };
+  }, []);
   
   // Core state
   const timeRef = useRef<TimeState>(createTimeState());

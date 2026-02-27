@@ -214,6 +214,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   const seedRef                   = useRef<number>(seed);
   const [spawnLayout, setSpawnLayout] = useState<StudySpawnLayout>('separated_clusters');
   const spawnLayoutRef            = useRef<StudySpawnLayout>('separated_clusters');
+  const [initialRelationMode, setInitialRelationMode] = useState<StudyConfig['spawnRelationMode']>('families');
   const [spawnTemplate, setSpawnTemplate] = useState<'neutral' | 'leader' | 'authority' | 'dictator' | 'priest' | 'rebel'>('neutral');
   const [spawnAdvanced, setSpawnAdvanced] = useState(false);
   const [spawnCustom, setSpawnCustom] = useState({
@@ -264,6 +265,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   const [showGroups, setShowGroups] = useState(false);
   const [showCodex, setShowCodex] = useState(false);
   const [archetypesUI, setArchetypesUI] = useState<Array<{ key: number; count: number; color: string; label: string }>>([]);
+  const [activitySummary, setActivitySummary] = useState<Array<{ label: string; count: number }>>([]);
+  const [driverSummary, setDriverSummary] = useState<Array<{ label: string; count: number }>>([]);
+  const [driverIntensity, setDriverIntensity] = useState<Array<{ label: string; value: number }>>([]);
   const lastPhaseRef = useRef<string>('');
   const patchVisual = (p: Partial<StudyVisualConfig>) => {
     Object.assign(visualCfgRef.current, p);
@@ -290,8 +294,13 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   useEffect(() => { spawnMemeIdRef.current = spawnMemeId; }, [spawnMemeId]);
 
   // ── Reset ──────────────────────────────────────────────────────────────────
-  const resetWorld = useCallback((scId: string, keepAutoSymbols?: boolean) => {
+  const resetWorld = useCallback((scId: string, keepAutoSymbols?: boolean, newSeed?: boolean) => {
     const sc: StudyScenario = STUDY_SCENARIOS.find(s => s.id === scId) ?? STUDY_SCENARIOS[0];
+    if (newSeed) {
+      const fresh = (Math.random() * 0xffffffff) >>> 0;
+      seedRef.current = fresh;
+      setSeed(fresh);
+    }
     const newCfg    = createStudyConfig();
     const newFCfg   = createSocialFieldConfig();
     sc.apply(newCfg, newFCfg);
@@ -299,6 +308,10 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     if (newCfg.groupProfiles.length !== newCfg.groupCount) {
       newCfg.groupProfiles = defaultGroupProfiles(newCfg.groupCount);
     }
+    const initialMode = newCfg.spawnRelationMode ?? (newCfg.startWithFamilies ? 'families' : 'none');
+    newCfg.spawnRelationMode = initialMode;
+    newCfg.startWithFamilies = initialMode === 'families';
+    setInitialRelationMode(initialMode);
     cfgRef.current    = newCfg;
     fieldCfgRef.current = newFCfg;
 
@@ -314,6 +327,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
     wsRef.current     = createStudyWorldState();
     wsRef.current.rngState = seedRef.current >>> 0;
+    wsRef.current.nextFamilyId = agentsRef.current.length
+      ? Math.max(1, ...agentsRef.current.map(a => a.familyId)) + 1
+      : 1;
     pingsRef.current  = [];
     eventsRef.current = [];
     clockRef.current  = { elapsed: 0, lastMacro: -99, lastRole: -99 };
@@ -339,6 +355,54 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
       .slice(0, 10);
     setArchetypesUI(topArch);
   }, []);
+
+  // Respawn usando os parâmetros atuais (sliders) — ex.: 600 agentes, sem reaplicar o cenário
+  const respawnWithCurrentConfig = useCallback(() => {
+    const cfg = cfgRef.current;
+    cfg.spawnRelationMode = initialRelationMode;
+    cfg.startWithFamilies = initialRelationMode === 'families';
+    if (cfg.groupProfiles.length !== cfg.groupCount) {
+      cfg.groupProfiles = defaultGroupProfiles(cfg.groupCount);
+    }
+    const rng = makeRng(seedRef.current >>> 0);
+    agentsRef.current = spawnStudyAgents(cfg, rng, spawnLayoutRef.current);
+    rolesRef.current = new Array(agentsRef.current.length).fill('normal');
+
+    const newFields = createSocialFields();
+    const newSymbols = createStudySymbols();
+    const sc = STUDY_SCENARIOS.find(s => s.id === scenario) ?? STUDY_SCENARIOS[0];
+    if (sc.setupWorld) sc.setupWorld(newFields, newSymbols);
+    fieldsRef.current = newFields;
+    symbolsRef.current = newSymbols;
+
+    wsRef.current = createStudyWorldState();
+    wsRef.current.rngState = seedRef.current >>> 0;
+    wsRef.current.nextFamilyId = agentsRef.current.length
+      ? Math.max(1, ...agentsRef.current.map(a => a.familyId)) + 1
+      : 1;
+    pingsRef.current = [];
+    eventsRef.current = [];
+    clockRef.current = { elapsed: 0, lastMacro: -99, lastRole: -99 };
+
+    setMetricsUI(createStudyMetrics());
+    setWsUI({ ...wsRef.current });
+    setEventsUI([]);
+    setInspectorIdx(-1);
+    setInspectorSnap(null);
+    inspectorIdxRef.current = -1;
+    setSymbolsVer(v => v + 1);
+
+    const archCounts = new Map<number, number>();
+    for (const a of agentsRef.current) {
+      const k = (a.archKeyStable >>> 0) || computeArchetypeKey(a);
+      archCounts.set(k, (archCounts.get(k) ?? 0) + 1);
+    }
+    const topArch = Array.from(archCounts.entries())
+      .map(([key, count]) => ({ key, count, color: archetypeKeyToColor(key), label: archetypeKeyToSociologicalLabel(key) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+    setArchetypesUI(topArch);
+  }, [scenario, initialRelationMode]);
 
   useEffect(() => { resetWorld('discipline_state'); }, []);// eslint-disable-line
 
@@ -497,10 +561,54 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             setInspectorSnap({ ...agentsRef.current[idx] });
             setInspectorRole(rolesRef.current[idx] ?? 'normal');
           }
+          // Activity summary for readability (what agents are doing)
+          const counts = new Map<string, number>();
+          for (const a of agentsRef.current) {
+            const act = a.currentActivity || 'À deriva';
+            counts.set(act, (counts.get(act) ?? 0) + 1);
+          }
+          setActivitySummary(
+            Array.from(counts.entries())
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 6)
+              .map(([label, count]) => ({ label, count }))
+          );
+          const driverCounts = new Map<string, number>();
+          let sumThreat = 0, sumResource = 0, sumSocial = 0, sumTrans = 0, sumMemory = 0;
+          for (const a of agentsRef.current) {
+            const drivers = [
+              { k: 'ameaça', v: a.auditThreat },
+              { k: 'recurso', v: a.auditResource },
+              { k: 'social', v: a.auditSocial },
+              { k: 'transgressão', v: a.auditTransgression },
+              { k: 'memória', v: a.auditMemoryPull },
+            ].sort((x, y) => y.v - x.v);
+            const top = drivers[0];
+            driverCounts.set(top.k, (driverCounts.get(top.k) ?? 0) + 1);
+            sumThreat += a.auditThreat;
+            sumResource += a.auditResource;
+            sumSocial += a.auditSocial;
+            sumTrans += a.auditTransgression;
+            sumMemory += a.auditMemoryPull;
+          }
+          const nAgents = Math.max(1, agentsRef.current.length);
+          setDriverSummary(
+            Array.from(driverCounts.entries())
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5)
+              .map(([label, count]) => ({ label, count })),
+          );
+          setDriverIntensity([
+            { label: 'Ameaça', value: sumThreat / nAgents },
+            { label: 'Recurso', value: sumResource / nAgents },
+            { label: 'Social', value: sumSocial / nAgents },
+            { label: 'Transgressão', value: sumTrans / nAgents },
+            { label: 'Memória', value: sumMemory / nAgents },
+          ]);
         }
 
-        if (t - clockRef.current.lastRole >= 2.0) {
-          rolesRef.current = computeAgentRoles(agentsRef.current);
+        if (t - clockRef.current.lastRole >= 3.5) {
+          rolesRef.current = computeAgentRoles(agentsRef.current, rolesRef.current);
           clockRef.current.lastRole = t;
 
           // Top leaders panel (stable identity color + role label)
@@ -564,6 +672,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         pingsRef.current,
         clockRef.current.elapsed,
         { ...defaultVisualConfig, ...visualCfgRef.current },
+        inspectorIdxRef.current,
       );
       ctx.restore();
     };
@@ -579,20 +688,26 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
   // ── Canvas click — adjusted for viewport transform ─────────────────────────
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const sx   = e.clientX - rect.left;
-    const sy   = e.clientY - rect.top;
-    const W    = rect.width, H = rect.height;
+    const canvas = e.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const canvasW = canvas.width, canvasH = canvas.height;
+    // Click in canvas pixel space (same as renderer)
+    const sx = ((e.clientX - rect.left) / rect.width) * canvasW;
+    const sy = ((e.clientY - rect.top) / rect.height) * canvasH;
     const { zoom, panX, panY } = socioCamRef.current;
-    // Invert viewport transform to get world coordinates
-    const wx = 2 * (sx - W/2 - panX) / (zoom * W);
-    const wy = 2 * (sy - H/2 - panY) / (zoom * H);
+    const wh = cfgRef.current.worldHalf ?? 2;
+    // Invert viewport: screen -> buffer -> world
+    const bufX = (sx - canvasW / 2 - panX) / zoom + canvasW / 2;
+    const bufY = (sy - canvasH / 2 - panY) / zoom + canvasH / 2;
+    const wx = (bufX / canvasW) * (2 * wh) - wh;
+    const wy = (bufY / canvasH) * (2 * wh) - wh;
     const t     = toolRef.current;
     const syms  = symbolsRef.current;
 
     if (t === 'select') {
-      // Find nearest agent
-      let bestIdx = -1, bestD2 = 0.07 * 0.07;
+      // Generous hit radius in world units so agents are easy to click (was 0.07)
+      const hitRadius = 0.38;
+      let bestIdx = -1, bestD2 = hitRadius * hitRadius;
       agentsRef.current.forEach((a, i) => {
         const d2 = (a.x - wx) ** 2 + (a.y - wy) ** 2;
         if (d2 < bestD2) { bestD2 = d2; bestIdx = i; }
@@ -635,7 +750,12 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     setSymbolsVer(v => v + 1);
   }, []);
 
-  const patchCfg = (patch: Partial<StudyConfig>) => { Object.assign(cfgRef.current, patch); };
+  // patchCfg triggers re-render so sliders stay in sync and params apply in real time
+  const [, setCfgVer] = useState(0);
+  const patchCfg = useCallback((patch: Partial<StudyConfig>) => {
+    Object.assign(cfgRef.current, patch);
+    setCfgVer(v => v + 1);
+  }, []);
 
   const { phase } = metricsUI;
   const phaseColor = PHASE_COLORS[phase] ?? '#fff';
@@ -745,7 +865,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                   {items.map(sc => (
                     <DropItem key={sc.id} icon={sc.icon} label={sc.name} sub={sc.description}
                       active={scenario === sc.id}
-                      onClick={() => { setScenario(sc.id); resetWorld(sc.id, autoSymbols); }} />
+                      onClick={() => { setScenario(sc.id); resetWorld(sc.id, autoSymbols, true); }} />
                   ))}
                 </div>
               );
@@ -811,7 +931,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         {/* Canvas */}
         <div className="flex-1 relative">
           <canvas ref={canvasRef} width={canvasW} height={canvasH}
-            style={{ display: 'block', width: '100%', height: '100%', cursor: tool !== 'select' ? 'crosshair' : 'default' }}
+            style={{ display: 'block', width: '100%', height: '100%', cursor: tool === 'select' ? 'pointer' : 'crosshair' }}
             onClick={handleCanvasClick} />
 
           {/* Phase + codex + bars — bottom left */}
@@ -834,6 +954,20 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 Clique para ver o codex
               </div>
             </button>
+
+            {/* What's happening — compact one-line summary (não ocupa o canvas) */}
+            {activitySummary.length > 0 && (
+              <div className="mb-1.5 px-1.5 py-0.5 rounded max-w-[240px]" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)', fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.5)', lineHeight: 1.3 }}>
+                <span className="uppercase tracking-wider mr-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Agora</span>
+                {activitySummary.slice(0, 4).map(({ label, count }, i) => (
+                  <span key={label}>
+                    {i > 0 && ' · '}
+                    <span style={{ color: 'rgba(255,255,255,0.65)' }}>{label}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.35)', marginLeft: 1 }}>{count}</span>
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Metric bars — labels from METRIC_LABELS; title = long description */}
             <div className="space-y-2.5 w-60">
@@ -1023,19 +1157,39 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                   <option value="random">Random</option>
                 </select>
                 <button
-                  onClick={() => resetWorld(scenario, autoSymbols)}
+                  onClick={() => respawnWithCurrentConfig()}
+                  title="Respawn com os parâmetros atuais (ex.: Count 600) — novos agentes, mundo igual"
                   className="px-2 py-1 rounded text-[9px] border border-white/[0.08] text-white/50 hover:text-white/80 hover:border-white/20 transition-all"
                   style={{ fontFamily: MONO, background: 'rgba(255,255,255,0.02)' }}
                 >
                   Respawn
                 </button>
               </div>
+              <div className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+                <span className="text-[9px] w-12 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }}>Laços</span>
+                <select
+                  value={initialRelationMode}
+                  onChange={(e) => {
+                    const mode = e.target.value as StudyConfig['spawnRelationMode'];
+                    setInitialRelationMode(mode);
+                  }}
+                  title="Somente estado inicial: aplica no próximo Respawn/Reset"
+                  className="flex-1 px-2 py-1 text-[10px] rounded border border-white/[0.08]"
+                >
+                  <option value="none">Sem conexões</option>
+                  <option value="sparse">Poucas (1-2)</option>
+                  <option value="families">Com famílias</option>
+                </select>
+              </div>
+              <div className="text-[8px] pl-14 -mt-1" style={{ color: 'rgba(255,255,255,0.3)', fontFamily: MONO }}>
+                aplica no nascimento (Respawn/Reset)
+              </div>
             </div>
 
             <SliderRow label="Count" v={cfgRef.current.agentCount} min={20} max={600} step={10}
-              onChange={v => { cfgRef.current.agentCount = v; }} />
+              onChange={v => patchCfg({ agentCount: v })} />
             <SliderRow label="Groups" v={cfgRef.current.groupCount} min={2} max={5} step={1}
-              onChange={v => { cfgRef.current.groupCount = v; cfgRef.current.groupProfiles = defaultGroupProfiles(v); }} />
+              onChange={v => { patchCfg({ groupCount: v }); cfgRef.current.groupProfiles = defaultGroupProfiles(v); }} />
             <SliderRow label="Speed"  v={cfgRef.current.speed}  min={0.1} max={1.0} step={0.05}
               onChange={v => patchCfg({ speed: v })} />
             <SliderRow label="Autonomy" v={cfgRef.current.autonomy} min={0} max={1} step={0.05}
@@ -1166,6 +1320,10 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               onChange={v => patchCfg({ boidsAlignment: v })} />
             <SliderRow label="Boids.Co" v={cfgRef.current.boidsCohesion} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ boidsCohesion: v })} />
+            <SliderRow label="BirthMem" v={cfgRef.current.birthMemoryStrength} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ birthMemoryStrength: v })} />
+            <SliderRow label="BondRate" v={cfgRef.current.bondFormationRate} min={0} max={0.20} step={0.01}
+              onChange={v => patchCfg({ bondFormationRate: v })} />
             <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }} />
             <SliderRow label="Wander" v={cfgRef.current.wander} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ wander: v })} />
@@ -1182,6 +1340,12 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           {/* INSPECTOR */}
           {inspectorIdx >= 0 && inspectorSnap && (
             <Section title={`Agent #${inspectorIdx}`} badge={getRoleLabel(inspectorRole)} open={showInspect} onToggle={() => setShowInspect(v => !v)}>
+              {inspectorSnap.currentActivity && (
+                <div className="mb-2 px-1.5 py-1 rounded" style={{ background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)' }}>
+                  <span className="text-[8px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}>Fazendo</span>
+                  <div className="text-[11px] mt-0.5" style={{ color: '#00d4aa', fontFamily: MONO }}>{inspectorSnap.currentActivity}</div>
+                </div>
+              )}
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3.5 h-3.5 rounded-full shrink-0"
                   style={{ background: GROUP_COLORS[inspectorSnap.groupId % GROUP_COLORS.length] }} />
@@ -1205,7 +1369,25 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 <PsychBar label="Empathy"   v={inspectorSnap.empathy}  c="#ff6b9d" />
                 <PsychBar label="Charisma"  v={inspectorSnap.charisma} c="#ffd060" />
                 <PsychBar label="Loyalty"   v={inspectorSnap.groupLoyalty} c="#6bcb77" />
+                <PsychBar label="Entangle." v={inspectorSnap.entanglement} c="#67e8f9" />
+                <PsychBar label="BirthMem"  v={inspectorSnap.birthMemory} c="#93c5fd" />
               </div>
+              <div className="mt-1 text-[9px]" style={{ color: 'rgba(255,255,255,0.35)', fontFamily: MONO }}>
+                Origem: ({inspectorSnap.birthX.toFixed(2)}, {inspectorSnap.birthY.toFixed(2)})
+              </div>
+            <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+              <div className="text-[8px] uppercase tracking-[0.10em] mb-1" style={{ color: 'rgba(255,255,255,0.32)' }}>
+                Auditoria de decisão
+              </div>
+              <PsychBar label="Ameaça"      v={inspectorSnap.auditThreat} c="#ef4444" />
+              <PsychBar label="Recurso"      v={inspectorSnap.auditResource} c="#fbbf24" />
+              <PsychBar label="Social"       v={inspectorSnap.auditSocial} c="#34d399" />
+              <PsychBar label="Transgressão" v={inspectorSnap.auditTransgression} c="#f472b6" />
+              <PsychBar label="Memória"      v={inspectorSnap.auditMemoryPull} c="#93c5fd" />
+              <div className="text-[9px] mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                Motivo dominante: {inspectorSnap.auditReason || 'n/d'}
+              </div>
+            </div>
               <div className="space-y-1.5 mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="text-[8px] uppercase tracking-[0.10em] mb-1" style={{ color: '#00d4aa55', fontFamily: MONO }}>Morin</div>
                 <PsychBar label="Percepção"   v={inspectorSnap.perception}    c="#60d0ff" />
@@ -1297,11 +1479,50 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 <PsychBar label="Percepção"     v={metricsUI.meanPerception}    c="#60d0ff" />
                 <PsychBar label="Ética"         v={metricsUI.meanEthics}        c="#00d4aa" />
                 <PsychBar label="Compreensão"   v={metricsUI.meanUnderstanding} c="#34d399" />
+                <PsychBar label="Entanglement"  v={metricsUI.meanEntanglement} c="#67e8f9" />
                 <PsychBar label="Hybris"        v={metricsUI.meanHybris}        c="#ffa000" />
                 <PsychBar label="Fervor"        v={metricsUI.meanFervor}        c="#ff4500" />
                 <PsychBar label="Eco Saúde"     v={metricsUI.ecoHealth}         c="#8b6914" />
               </div>
             </div>
+            {driverSummary.length > 0 && (
+              <div className="pt-2 mb-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+                <div className="text-[8px] uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                  Drivers dominantes
+                </div>
+                <div className="space-y-0.5">
+                  {driverSummary.map((d, i) => (
+                    <div key={d.label + i} className="flex items-center justify-between text-[9px]">
+                      <span style={{ color: 'rgba(255,255,255,0.55)' }}>{d.label}</span>
+                      <span style={{ color: 'rgba(255,255,255,0.35)' }}>{d.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {driverIntensity.length > 0 && (
+              <div className="pt-2 mb-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
+                <div className="text-[8px] uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                  Intensidade média (auditoria)
+                </div>
+                <div className="space-y-1.5">
+                  {driverIntensity.map((d) => (
+                    <PsychBar
+                      key={d.label}
+                      label={d.label}
+                      v={d.value}
+                      c={
+                        d.label === 'Ameaça' ? '#ef4444' :
+                        d.label === 'Recurso' ? '#fbbf24' :
+                        d.label === 'Social' ? '#34d399' :
+                        d.label === 'Transgressão' ? '#f472b6' :
+                        '#93c5fd'
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Economy */}
             <div className="pt-2 mb-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
@@ -1355,15 +1576,22 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               </div>
             )}
 
-            {/* Chronicle */}
+            {/* Chronicle — eventos com causa (guerra, anomia, filosofia) */}
             {eventsUI.length > 0 && (
               <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: MONO }}>
                 <div className="text-[8px] uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>Chronicle</div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {eventsUI.slice(0, 12).map((ev, i) => (
-                    <div key={i} className="flex gap-1.5 items-baseline" title={ev.message}>
-                      <span className="text-[10px] shrink-0">{ev.icon}</span>
-                      <span className="text-[9px] leading-tight" style={{ color: ev.color }}>{getEventSociologicalLabel(ev.message)}</span>
+                    <div key={i} className="flex flex-col gap-0.5" title={ev.cause ?? ev.message}>
+                      <div className="flex gap-1.5 items-baseline">
+                        <span className="text-[10px] shrink-0">{ev.icon}</span>
+                        <span className="text-[9px] leading-tight" style={{ color: ev.color }}>{getEventSociologicalLabel(ev.message)}</span>
+                      </div>
+                      {ev.cause && (
+                        <div className="text-[8px] pl-[1.1rem] leading-tight opacity-80" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                          {ev.cause}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

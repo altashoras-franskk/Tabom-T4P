@@ -75,6 +75,18 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
   },
 
   {
+    id: 'sociedades_do_zero', name: 'Sociedades do zero', icon: '🌱', category: 'genesis',
+    description: 'Agentes começam sem laços; famílias e laços formam com o tempo (proximidade + memória amigável)',
+    apply(cfg, _fcfg) {
+      cfg.agentCount = 200; cfg.groupCount = 4; cfg.speed = 0.48;
+      cfg.startWithFamilies = false;
+      cfg.spawnRelationMode = 'none';
+      cfg.bondFormationRate = 0.06;
+      cfg.trustBase = 0.50; cfg.empathy = 0.38; cfg.cohesion = 0.35;
+    },
+  },
+
+  {
     id: 'polarization_spiral', name: 'Polarization Spiral', icon: '🌀', category: 'conflict',
     description: '2 RIFT totems · low trust · ideology → extreme polarization',
     apply(cfg, fcfg) {
@@ -111,6 +123,10 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     apply(cfg, fcfg) {
       cfg.agentCount = 150; cfg.groupCount = 5; cfg.speed = 0.45; cfg.cohesion = 0.65;
       cfg.aggressionBase = 0.28; cfg.ideologyPressure = 0.20; cfg.autoSymbols = true;
+      cfg.spawnRelationMode = 'none';
+      cfg.startWithFamilies = false;
+      cfg.bondFormationRate = 0.10;
+      cfg.birthMemoryStrength = 0.75;
       fcfg.diffuseN = 0.08;
       cfg.groupProfiles = [
         { name: 'Tribo do Fogo',  sphere: 'military',   fieldSensitivity: { n: 1.0, l: 1.0, r: 1.2 }, ideologyBias: -0.3, trustBias: 0.5, aggressionBias: 0.35, cohesionBias: 0.8, desireBias: 0.4 },
@@ -550,6 +566,10 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       cfg.agentCount = 180; cfg.groupCount = 4; cfg.hierarchyStrength = 0.75;
       cfg.cooperationBias = 0.10; cfg.harvestRate = 0.15; cfg.decayWealth = 0.005;
       cfg.resourceScarcity = 0.35; cfg.conformity = 0.55; cfg.autoSymbols = true;
+      cfg.spawnRelationMode = 'sparse';
+      cfg.startWithFamilies = false;
+      cfg.bondFormationRate = 0.05;
+      cfg.birthMemoryStrength = 0.85;
       cfg.groupProfiles = [
         { name: 'Colono',     sphere: 'political',  fieldSensitivity: { n: 0.5, l: 2.0, r: 1.8 }, ideologyBias: -0.6, trustBias: 0.3, aggressionBias: 0.3, cohesionBias: 0.8, desireBias: 0.4 },
         { name: 'Missionário',sphere: 'religious',   fieldSensitivity: { n: 2.0, l: 1.2, r: 0.4 }, ideologyBias: -0.7, trustBias: 0.6, aggressionBias: 0.1, cohesionBias: 0.7, desireBias: 0.15 },
@@ -891,6 +911,108 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
       depositR(f, -0.40, 0.40, 0.30, 0.15);
       depositL(f, 0, -0.30, 0.40, 0.30);
       depositN(f, -0.50, -0.20, 0.35, 0.25);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'exodo_urbano', name: 'Êxodo Urbano', icon: '🚶', category: 'multi-field',
+    description: 'Centro colapsa em recursos; agentes migram para periferias e refazem laços',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 200; cfg.groupCount = 5; cfg.speed = 0.56;
+      cfg.spawnRelationMode = 'none'; cfg.startWithFamilies = false;
+      cfg.bondFormationRate = 0.11; cfg.birthMemoryStrength = 0.90;
+      cfg.mobility = 0.42; cfg.resourceScarcity = 0.22; cfg.cooperationBias = 0.22;
+      cfg.empathy = 0.46; cfg.contagion = 0.48; cfg.autoSymbols = true;
+      fcfg.regenR = 0.016; fcfg.decayR = 0.010;
+    },
+    setupWorld(f, s) {
+      for (let i = 0; i < f.r.length; i++) f.r[i] = 0.08;
+      depositR(f, -0.75, -0.65, 0.62, 0.26);
+      depositR(f,  0.78, -0.60, 0.58, 0.24);
+      depositR(f,  0.74,  0.66, 0.60, 0.24);
+      depositR(f, -0.72,  0.70, 0.56, 0.23);
+      depositN(f, 0, 0, -0.20, 0.50);
+      s.tabus.push(tabu('NO_ENTER', 0, 0, 0.22, 0.65));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'colonialismo', name: 'Colonialismo', icon: '🏴', category: 'economy',
+    description: 'Extração desigual + fronteiras simbólicas + memórias de origem em disputa',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 190; cfg.groupCount = 4; cfg.speed = 0.50;
+      cfg.spawnRelationMode = 'sparse'; cfg.startWithFamilies = false;
+      cfg.bondFormationRate = 0.06; cfg.birthMemoryStrength = 0.92;
+      cfg.hierarchyStrength = 0.80; cfg.cooperationBias = 0.08;
+      cfg.resourceScarcity = 0.30; cfg.panopticism = 0.62; cfg.autoSymbols = true;
+      fcfg.diffuseN = 0.08; fcfg.regenR = 0.015;
+    },
+    setupWorld(f, s) {
+      for (let i = 0; i < f.r.length; i++) f.r[i] = 0.11;
+      depositR(f, 0.15, -0.10, 0.92, 0.28);
+      s.totems.push(totem('PANOPTICON', 0.08, -0.02, 0.44, 0, 0.9));
+      s.tabus.push(tabu('NO_ENTER', 0.12, -0.04, 0.18, 0.82));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'formacao_tribal', name: 'Formação Tribal', icon: '🪶', category: 'genesis',
+    description: 'Sociedade nasce sem famílias; clãs emergem por vizinhança, memória e cooperação',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 170; cfg.groupCount = 5; cfg.speed = 0.46;
+      cfg.spawnRelationMode = 'none'; cfg.startWithFamilies = false;
+      cfg.bondFormationRate = 0.14; cfg.birthMemoryStrength = 0.74;
+      cfg.cohesion = 0.56; cfg.empathy = 0.52; cfg.cooperationBias = 0.42;
+      cfg.contagion = 0.34; cfg.autoSymbols = true;
+      fcfg.diffuseN = 0.10; fcfg.regenR = 0.022;
+    },
+    setupWorld(f, s) {
+      depositR(f, 0, -0.55, 0.45, 0.25);
+      depositR(f, 0.58, 0.32, 0.35, 0.20);
+      depositR(f, -0.58, 0.32, 0.35, 0.20);
+      s.totems.push(totem('BOND', 0, -0.50, 0.24, 0, 0.75));
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'novas_ferramentas', name: 'Novas Ferramentas', icon: '🛠️', category: 'culture',
+    description: 'Salto técnico aumenta mobilidade e contato; reconfigura laços e territórios sociais',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 180; cfg.groupCount = 4; cfg.speed = 0.58;
+      cfg.spawnRelationMode = 'sparse'; cfg.startWithFamilies = false;
+      cfg.bondFormationRate = 0.09; cfg.birthMemoryStrength = 0.58;
+      cfg.mobility = 0.50; cfg.innovationRate = 0.16; cfg.contagion = 0.62;
+      cfg.empathy = 0.38; cfg.culturalInertia = 0.20; cfg.autoSymbols = true;
+      fcfg.diffuseR = 0.08; fcfg.regenR = 0.024;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('ARCHIVE', -0.45, -0.25, 0.24, 0, 0.6));
+      s.totems.push(totem('ORACLE', 0.48, 0.22, 0.24, 1, 0.75));
+      depositR(f, 0.45, 0.20, 0.50, 0.25);
+      f.dirty = true;
+    },
+  },
+
+  {
+    id: 'descoberta_cientifica', name: 'Descoberta Científica', icon: '🔬', category: 'culture',
+    description: 'Alta compreensão e ética reduzem conflito e criam entanglement cooperativo estável',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 160; cfg.groupCount = 4; cfg.speed = 0.44;
+      cfg.spawnRelationMode = 'none'; cfg.startWithFamilies = false;
+      cfg.bondFormationRate = 0.12; cfg.birthMemoryStrength = 0.50;
+      cfg.empathy = 0.64; cfg.understandingGrowth = 0.28; cfg.ethicsGrowth = 0.26;
+      cfg.aggressionBase = 0.08; cfg.innovationRate = 0.14; cfg.autoSymbols = true;
+      fcfg.diffuseL = 0.11; fcfg.diffuseN = 0.10; fcfg.regenR = 0.020;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('ARCHIVE', 0, 0.35, 0.28, 0, 0.7));
+      s.rituals.push(ritual('GATHER', 0, 0, 0.38, 8));
+      depositL(f, 0, 0.35, 0.65, 0.35);
+      depositN(f, 0, 0, 0.42, 0.42);
       f.dirty = true;
     },
   },

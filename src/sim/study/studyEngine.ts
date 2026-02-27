@@ -20,6 +20,9 @@ import {
   stepAllFields,
 } from './socialFields';
 
+// Force of dynamics params (10x so sliders have visible effect in real time)
+const D = 10;
+
 // ── Spatial Grid ──────────────────────────────────────────────────────────────
 export type Grid = Map<number, number[]>;
 
@@ -167,6 +170,18 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       need:       Math.max(0, Math.min(1, cfg.needBase        + (rng() - 0.5) * 0.30)),
       goalX: cx, goalY: cy,
       memory: [], centrality: 0, hostileCount: 0,
+      birthX: clampPos(px),
+      birthY: clampPos(py),
+      originGroupId: g,
+      originFamilyId: 0,
+      birthMemory: 0.45 + rng() * 0.5,
+      entanglement: 0.05 + rng() * 0.12,
+      auditThreat: 0,
+      auditResource: 0,
+      auditSocial: 0,
+      auditTransgression: 0,
+      auditMemoryPull: 0,
+      auditReason: '',
       belief:   Math.max(0, Math.min(1, baseBelief)),
       fear:     Math.max(0, Math.min(1, baseFear)),
       desire:   Math.max(0, Math.min(1, baseDesire * (gp ? 0.5 + gp.desireBias : 1))),
@@ -197,6 +212,7 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
       ethics: 0.05 + rng() * 0.15,
       understanding: 0.05 + rng() * 0.15,
       ecoFootprint: 0,
+      currentActivity: '',
     };
     const k = computeArchetypeKey(a);
     a.archKeyMoment = k;
@@ -205,43 +221,70 @@ export function spawnStudyAgents(cfg: StudyConfig, rng: () => number, layout: St
     agents.push(a);
   }
 
-  // ── Form family structures: same group, clusters of 3–6, slightly pulled toward centroid ──
-  const byGroup = new Map<number, number[]>();
-  for (let i = 0; i < agents.length; i++) byGroup.set(agents[i].groupId, (byGroup.get(agents[i].groupId) ?? []).concat(i));
-  let nextFamId = 1;
-  const minFamilySize = 3;
-  const maxFamilySize = 6;
-  const pullTowardCentroid = 0.35;  // 0..1 — how much to pull members toward family center
-  byGroup.forEach((indices) => {
-    // Shuffle so families aren't just first N
-    for (let t = indices.length - 1; t > 0; t--) {
-      const j = (rng() * (t + 1)) | 0;
-      [indices[t], indices[j]] = [indices[j], indices[t]];
-    }
-    let idx = 0;
-    while (idx < indices.length) {
-      const size = Math.min(maxFamilySize, minFamilySize + (rng() * (maxFamilySize - minFamilySize + 1)) | 0);
-      const fam = indices.slice(idx, idx + size);
-      idx += size;
-      if (fam.length < 2) continue;
-      const fid = nextFamId++;
-      let cx = 0, cy = 0;
-      for (const i of fam) {
-        agents[i].familyId = fid;
-        cx += agents[i].x;
-        cy += agents[i].y;
+  // ── Initial relation topology (backward-compatible with startWithFamilies) ──
+  const relationMode = cfg.spawnRelationMode ?? (cfg.startWithFamilies ? 'families' : 'none');
+  if (relationMode === 'families') {
+    const byGroup = new Map<number, number[]>();
+    for (let i = 0; i < agents.length; i++) byGroup.set(agents[i].groupId, (byGroup.get(agents[i].groupId) ?? []).concat(i));
+    let nextFamId = 1;
+    const minFamilySize = 3;
+    const maxFamilySize = 6;
+    const pullTowardCentroid = 0.35;
+    byGroup.forEach((indices) => {
+      for (let t = indices.length - 1; t > 0; t--) {
+        const j = (rng() * (t + 1)) | 0;
+        [indices[t], indices[j]] = [indices[j], indices[t]];
       }
-      cx /= fam.length;
-      cy /= fam.length;
-      for (const i of fam) {
-        const a = agents[i];
-        a.x = clampPos(a.x + (cx - a.x) * pullTowardCentroid);
-        a.y = clampPos(a.y + (cy - a.y) * pullTowardCentroid);
-        a.trailX.fill(a.x);
-        a.trailY.fill(a.y);
+      let idx = 0;
+      while (idx < indices.length) {
+        const size = Math.min(maxFamilySize, minFamilySize + (rng() * (maxFamilySize - minFamilySize + 1)) | 0);
+        const fam = indices.slice(idx, idx + size);
+        idx += size;
+        if (fam.length < 2) continue;
+        const fid = nextFamId++;
+        let cxx = 0, cyy = 0;
+        for (const i of fam) {
+          agents[i].familyId = fid;
+          cxx += agents[i].x;
+          cyy += agents[i].y;
+        }
+        cxx /= fam.length;
+        cyy /= fam.length;
+        for (const i of fam) {
+          const a = agents[i];
+          a.x = clampPos(a.x + (cxx - a.x) * pullTowardCentroid);
+          a.y = clampPos(a.y + (cyy - a.y) * pullTowardCentroid);
+          a.trailX.fill(a.x);
+          a.trailY.fill(a.y);
+        }
       }
-    }
-  });
+    });
+  } else if (relationMode === 'sparse') {
+    // Few micro-families (1-2 pairs per group), preserving "society from near-zero ties"
+    const byGroup = new Map<number, number[]>();
+    for (let i = 0; i < agents.length; i++) byGroup.set(agents[i].groupId, (byGroup.get(agents[i].groupId) ?? []).concat(i));
+    let nextFamId = 1;
+    byGroup.forEach((indices) => {
+      for (let t = indices.length - 1; t > 0; t--) {
+        const j = (rng() * (t + 1)) | 0;
+        [indices[t], indices[j]] = [indices[j], indices[t]];
+      }
+      const pairFamilies = Math.min(2, Math.floor(indices.length / 2));
+      for (let k = 0; k < pairFamilies; k++) {
+        const i1 = indices[k * 2];
+        const i2 = indices[k * 2 + 1];
+        if (i1 === undefined || i2 === undefined) continue;
+        const fid = nextFamId++;
+        agents[i1].familyId = fid;
+        agents[i2].familyId = fid;
+      }
+    });
+  }
+
+  // Freeze initial social-state memory after initial topology is decided.
+  for (const a of agents) {
+    a.originFamilyId = a.familyId;
+  }
 
   return agents;
 }
@@ -315,22 +358,22 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws
     // Apply Boids
     if (alignN > 0) {
       alignX /= alignN; alignY /= alignN;
-      fx += (alignX - a.vx) * cfg.boidsAlignment * 1.5;
-      fy += (alignY - a.vy) * cfg.boidsAlignment * 1.5;
+      fx += (alignX - a.vx) * cfg.boidsAlignment * (0.55 * D);
+      fy += (alignY - a.vy) * cfg.boidsAlignment * (0.55 * D);
     }
     if (cohN > 0) {
       cohX /= cohN; cohY /= cohN;
       const dx = cohX - a.x; const dy = cohY - a.y;
       const d = Math.sqrt(dx * dx + dy * dy) + 0.001;
-      fx += (dx / d) * cfg.boidsCohesion * 1.2;
-      fy += (dy / d) * cfg.boidsCohesion * 1.2;
+      fx += (dx / d) * cfg.boidsCohesion * (0.42 * D);
+      fy += (dy / d) * cfg.boidsCohesion * (0.42 * D);
     }
 
     // Goal steering (with overshoot + zigzag for non-linearity)
     const gdx0 = a.goalX - a.x;
     const gdy0 = a.goalY - a.y;
     const gd0  = Math.sqrt(gdx0 * gdx0 + gdy0 * gdy0) + 0.001;
-    const og   = Math.max(0, cfg.goalOvershoot || 0);
+    const og   = Math.min(0.9, Math.max(0, (cfg.goalOvershoot || 0) * D));
     const gdx  = gdx0 * (1 + og);
     const gdy  = gdy0 * (1 + og);
     const gd   = Math.sqrt(gdx * gdx + gdy * gdy) + 0.001;
@@ -340,28 +383,28 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws
     fx += (gdx / gd) * autonomy * speed * 2.2 * steer * fearBoost;
     fy += (gdy / gd) * autonomy * speed * 2.2 * steer * fearBoost;
 
-    // Zigzag (perpendicular drift while steering) → "vai e volta" feel
+    // Zigzag (perpendicular drift while steering)
     const zz = Math.max(0, cfg.zigzag || 0);
     if (zz > 0.001) {
       const px = -gdy / gd;
       const py =  gdx / gd;
-      const z  = randSigned(ws) * zz * speed * 1.35 * (0.6 + steer * 0.8);
+      const z  = randSigned(ws) * zz * speed * (1.35 * D) * (0.6 + steer * 0.8);
       fx += px * z;
       fy += py * z;
     }
 
-    // Wander (small stochastic micro-forces) → less linear, more human
+    // Wander (stochastic micro-forces)
     const w = Math.max(0, cfg.wander || 0);
     if (w > 0.001) {
-      fx += randSigned(ws) * w * speed * 1.55;
-      fy += randSigned(ws) * w * speed * 1.55;
+      fx += randSigned(ws) * w * speed * (1.55 * D);
+      fy += randSigned(ws) * w * speed * (1.55 * D);
     }
 
-    // Impulses (rare kicks) → sudden non-linear changes of direction
+    // Impulses (kicks)
     const ir = Math.max(0, cfg.impulseRate || 0);
     const is = Math.max(0, cfg.impulseStrength || 0);
     if (ir > 0.001 && is > 0.001 && rand01(ws) < ir * dt) {
-      const kick = (0.35 + 0.65 * rand01(ws)) * is * speed * 2.2;
+      const kick = (0.35 + 0.65 * rand01(ws)) * is * speed * (2.2 * D);
       // Prefer sideways / backtracking, not always forward
       const px = -gdy0 / gd0;
       const py =  gdx0 / gd0;
@@ -424,7 +467,7 @@ export function microTick(agents: StudyAgent[], grid: Grid, cfg: StudyConfig, ws
 
 // ── 3. macroTick — social decisions ──────────────────────────────────────────
 const MAX_NEIGH  = 12;
-const MEMORY_CAP = 3;
+const MEMORY_CAP = 6;
 
 function rand01(ws: StudyWorldState): number {
   // LCG (Numerical Recipes). Deterministic per seed via ws.rngState.
@@ -517,10 +560,11 @@ export function macroTick(
     // Both forces must be balanced so perception is a meaningful, dynamic variable.
     const percBias = cfg.perceptionBias;
     const distortionPressure = Math.abs(a.ideology) * 0.3 + a.fear * 0.25 + a.hybris * 0.45;
-    const clarityDrift = 0.006 + a.ethics * 0.008; // ethics accelerate clarity
+    const clarityDrift = 0.003 + a.ethics * 0.004; // ethics accelerate clarity
     const distortionDrag = distortionPressure * percBias * 0.08;
+    const equilibration = (0.55 - a.perception) * 0.02;
     a.perception = clamp(
-      a.perception + (clarityDrift - distortionDrag) * dt,
+      a.perception + (clarityDrift - distortionDrag + equilibration) * dt,
       0.20, 1,
     );
     // Perceived fields: distortion blends real fields with agent's biases
@@ -601,7 +645,7 @@ export function macroTick(
     }
     if (ideologyW > 0) {
       const idealPull = ideologySum / ideologyW - a.ideology;
-      a.ideology = clamp(a.ideology + idealPull * cfg.ideologyPressure * dt, -1, 1);
+      a.ideology = clamp(a.ideology + idealPull * cfg.ideologyPressure * D * dt, -1, 1);
     }
     // Keep opinion in sync with ideology
     a.opinion = a.ideology;
@@ -614,12 +658,11 @@ export function macroTick(
     a.fatigue = clamp(a.fatigue + fatigueDelta, 0, 1);
 
     // ── Conformity pressure ────────────────────────────────────────────────
-    // Agent adjusts belief toward local N field proportional to conformity
-    const confPull = cfg.conformity * a.conformity * (n - a.belief) * 0.15;
+    const confPull = cfg.conformity * a.conformity * (n - a.belief) * (0.15 * D);
     a.belief = clamp(a.belief + confPull * dt, 0, 1);
 
     // ── Cultural inertia dampens ideology change ───────────────────────────
-    const inertiaFactor = 1.0 - cfg.culturalInertia * 0.7;
+    const inertiaFactor = Math.max(0, 1.0 - cfg.culturalInertia * (0.7 * D));
 
     // ── Neighbor analysis ──────────────────────────────────────────────────
     a.hostileCount = 0;
@@ -629,6 +672,7 @@ export function macroTick(
     let empFear = 0, empDesire = 0, empBelief = 0, empN2 = 0;
     let coercion = 0;   // coercive authority pressure from nearby high-status actors
     let legit = 0;      // legitimating authority pressure (belief/status/charisma)
+    let entanglementGain = 0;
 
     for (const j of neighbors) {
       const b = agents[j];
@@ -661,21 +705,24 @@ export function macroTick(
 
       if (b.groupId === a.groupId) {
         inGroupCount++;
-        const influenceW = 1 + (cfg.hierarchyStrength * b.status * b.charisma);
+        const influenceW = 1 + (cfg.hierarchyStrength * b.status * b.charisma * D);
         opSum += b.opinion * b.trust * influenceW;
         opN += influenceW;
         inGroupCx += b.x; inGroupCy += b.y;
         addMem(a, j, true, t);
+        entanglementGain += 0.015 + (a.familyId !== 0 && a.familyId === b.familyId ? 0.03 : 0);
       } else {
         const hostile = b.aggression > 0.5 || a.aggression > 0.5;
         if (hostile) {
           a.hostileCount++;
           addMem(a, j, false, t);
+          entanglementGain += 0.004;
         } else {
-          const influenceW = 0.1 + cfg.hierarchyStrength * b.status * 0.3;
+          const influenceW = 0.1 + cfg.hierarchyStrength * b.status * (0.3 * D);
           opSum += b.opinion * influenceW;
           opN += influenceW;
           addMem(a, j, true, t);
+          entanglementGain += 0.01 + a.empathy * 0.01;
         }
       }
       // Empathy: accumulate emotional states from ALL neighbors
@@ -686,6 +733,13 @@ export function macroTick(
       empN2++;
     }
     a.centrality = Math.min(1, centralN / MAX_NEIGH);
+    // Organic entanglement: grows with repeated encounters, decays slowly when isolated
+    const entInput = centralN > 0 ? entanglementGain / centralN : 0;
+    const entDecay = (0.028 + (1 - Math.min(1, centralN / 6)) * 0.018) * dt;
+    a.entanglement = clamp(
+      a.entanglement * (1 - entDecay) + entInput * (0.20 + a.birthMemory * 0.18) * dt,
+      0, 1,
+    );
 
     // ── Local authority effects (separate from fields) ─────────────────────
     if (centralN > 0) {
@@ -704,9 +758,9 @@ export function macroTick(
       a.fear = clamp(a.fear - legitLevel * a.belief * 0.05 * dt, 0, 1);
     }
 
-    // ── Empathy contagion (gentle — preserves individual variation) ──────
+    // ── Empathy contagion ──────
     if (empN2 > 0) {
-      const empScale = 0.025 * dt;
+      const empScale = (0.025 * D) * dt;
       a.fear   = clamp(a.fear   + (empFear / empN2 - a.fear)   * empScale, 0, 1);
       a.desire = clamp(a.desire + (empDesire / empN2 - a.desire) * empScale, 0, 1);
       a.belief = clamp(a.belief + (empBelief / empN2 - a.belief) * empScale * 0.4, 0, 1);
@@ -717,12 +771,13 @@ export function macroTick(
     const crossFriendlyMem = a.memory.filter(m =>
       m.agentIdx < agents.length && agents[m.agentIdx].groupId !== a.groupId && m.friendly
     ).length;
-    if (crossFriendlyMem >= 1) {
-      // Growth scales with number of friendly cross-group memories
-      const underGrowth = cfg.understandingGrowth * (0.10 + crossFriendlyMem * 0.04);
+    if (crossFriendlyMem >= 1 || (a.entanglement > 0.42 && centralN >= 3)) {
+      const underGrowth = cfg.understandingGrowth *
+        (0.03 + crossFriendlyMem * 0.02 + (a.entanglement > 0.50 ? 0.015 : 0)) *
+        (1 - a.understanding);
       a.understanding = clamp(a.understanding + underGrowth * dt, 0, 1);
     } else {
-      a.understanding = clamp(a.understanding - 0.004 * dt, 0, 1);
+      a.understanding = clamp(a.understanding - (0.003 + (crossFriendlyMem === 0 ? 0.001 : 0)) * dt, 0, 1);
     }
     if (a.understanding > 0.15) {
       a.aggression = clamp(a.aggression - a.understanding * 0.05 * dt, 0, 1);
@@ -732,11 +787,13 @@ export function macroTick(
     // ── Morin: Ética emergente (anthropo-ethics) ────────────────────────
     // Ethics emerge from understanding + diverse encounters + self-limitation.
     // High ethics reduce hybris and aggression, and accelerate perception clarity.
-    if (a.understanding > 0.10 && crossFriendlyMem >= 1) {
-      const ethicsRise = cfg.ethicsGrowth * (0.08 + a.understanding * 0.12) * dt;
+    if ((a.understanding > 0.08 && crossFriendlyMem >= 1) || a.understanding > 0.20) {
+      const ethicsRise = cfg.ethicsGrowth *
+        (0.02 + a.understanding * 0.05 + crossFriendlyMem * 0.01) *
+        (1 - a.ethics) * dt;
       a.ethics = clamp(a.ethics + ethicsRise, 0, 1);
     }
-    a.ethics = clamp(a.ethics - 0.003 * dt, 0, 1);
+    a.ethics = clamp(a.ethics - 0.0015 * dt, 0, 1);
     if (a.ethics > 0.15) {
       a.hybris = clamp(a.hybris - a.ethics * 0.06 * dt, 0, 1);
       a.aggression = clamp(a.aggression - a.ethics * 0.04 * dt, 0, 1);
@@ -747,19 +804,19 @@ export function macroTick(
       const memeCounts: number[] = [];
       for (const j of neighbors) {
         const bm = agents[j].memeId;
-        memeCounts[bm] = (memeCounts[bm] || 0) + 1 + agents[j].charisma * cfg.hierarchyStrength;
+        memeCounts[bm] = (memeCounts[bm] || 0) + 1 + agents[j].charisma * cfg.hierarchyStrength * D;
       }
       let bestMeme = a.memeId, bestCount = 0;
       for (let m = 0; m < memeCounts.length; m++) {
         if (memeCounts[m] > bestCount) { bestCount = memeCounts[m]; bestMeme = m; }
       }
-      if (bestMeme !== a.memeId && rand01(ws) < cfg.contagion * 0.12 * (1 - cfg.culturalInertia * 0.6)) {
+      if (bestMeme !== a.memeId && rand01(ws) < Math.min(1, cfg.contagion * (0.12 * D) * (1 - cfg.culturalInertia * 0.6))) {
         a.memeId = bestMeme;
       }
     }
 
     // ── Innovation (spontaneous ideology mutation) ─────────────────────────
-    if (cfg.innovationRate > 0 && rand01(ws) < cfg.innovationRate * 0.03) {
+    if (cfg.innovationRate > 0 && rand01(ws) < Math.min(1, cfg.innovationRate * (0.03 * D))) {
       a.ideology = clamp(a.ideology + randSigned(ws) * 0.4, -1, 1);
       a.desire = clamp(a.desire + 0.05, 0, 1);
     }
@@ -769,7 +826,7 @@ export function macroTick(
       for (const j of neighbors) {
         const b = agents[j];
         if (b.groupId === a.groupId && b.wealth < a.wealth - 0.1) {
-          const share = cfg.cooperationBias * 0.02 * dt;
+          const share = cfg.cooperationBias * (0.02 * D) * dt;
           a.wealth = clamp(a.wealth - share, 0, 1);
           b.wealth = clamp(b.wealth + share, 0, 1);
         }
@@ -778,7 +835,7 @@ export function macroTick(
 
     // Weak opinion pull from neighbours (modulated by cultural inertia)
     if (opN > 1) {
-      const delta = (opSum / opN - a.opinion) * cfg.pressure * 0.3 * inertiaFactor * dt / cfg.macroTickSec;
+      const delta = (opSum / opN - a.opinion) * cfg.pressure * (0.3 * D) * inertiaFactor * dt / cfg.macroTickSec;
       a.opinion = clamp(a.opinion + delta, -1, 1);
     }
 
@@ -787,6 +844,21 @@ export function macroTick(
     const [gcxG, gcyG] = centroid;
     const inAvgX = inGroupCount > 0 ? inGroupCx / (inGroupCount + 1) : gcxG;
     const inAvgY = inGroupCount > 0 ? inGroupCy / (inGroupCount + 1) : gcyG;
+    const threatDriver = clamp(
+      a.fear * 0.7 +
+      Math.min(1, a.hostileCount / 3) * 0.6 +
+      (ws.exceptionActive ? 0.2 : 0),
+      0, 1,
+    );
+    const resourceDriver = clamp(Math.max(0, 0.6 - a.wealth) * 1.2, 0, 1);
+    const socialDriver = clamp(a.need * 0.7 + cfg.cohesion * 0.4 + a.entanglement * 0.25, 0, 1);
+    const transgressionDriver = clamp(a.desire * (1 - a.fear * 0.7), 0, 1);
+    a.auditThreat = threatDriver;
+    a.auditResource = resourceDriver;
+    a.auditSocial = socialDriver;
+    a.auditTransgression = transgressionDriver;
+    a.auditMemoryPull = 0;
+    a.auditReason = '';
 
     // ── Ideological repulsion: strongly polarised agents actively flee from
     //    the opposing ideology cluster (creates spatial separation emergence)
@@ -805,9 +877,13 @@ export function macroTick(
       // Exception: high-belief agents rush to in-group; low-belief flee
       if (a.belief > 0.5) {
         a.goalX = inAvgX; a.goalY = inAvgY;
+        a.currentActivity = 'Exceção: proteção do grupo';
+        a.auditReason = `ameaça institucional ${threatDriver.toFixed(2)}`;
       } else {
         a.goalX = gcxG * 0.3 + gcx * 0.7;
         a.goalY = gcyG * 0.3 + gcy * 0.7;
+        a.currentActivity = 'Exceção: evasão territorial';
+        a.auditReason = `evasão por exceção ${threatDriver.toFixed(2)}`;
       }
     } else if (a.fear > 0.55) {
       // Flee hostile zone → toward in-group
@@ -822,8 +898,12 @@ export function macroTick(
         const fd = Math.sqrt(fleeX * fleeX + fleeY * fleeY) + 0.001;
         a.goalX = a.x + (fleeX / fd) * 0.3 + gcxG * 0.7;
         a.goalY = a.y + (fleeY / fd) * 0.3 + gcyG * 0.7;
+        a.currentActivity = 'Fuga tática (ameaça externa)';
+        a.auditReason = `hostilidade local ${threatDriver.toFixed(2)}`;
       } else {
         a.goalX = gcxG; a.goalY = gcyG;
+        a.currentActivity = 'Reagrupamento preventivo';
+        a.auditReason = `medo alto, sem alvo hostil claro (${threatDriver.toFixed(2)})`;
       }
     } else if (a.wealth < 0.25) {
       // Resource hunger → find R hotspot (simple: move toward high-R neighbor)
@@ -834,23 +914,119 @@ export function macroTick(
       }
       a.goalX = bestX * 0.6 + inAvgX * 0.4;
       a.goalY = bestY * 0.6 + inAvgY * 0.4;
+      a.currentActivity = 'Forrageando (escassez crítica)';
+      a.auditReason = `escassez crítica ${resourceDriver.toFixed(2)}`;
+    } else if (a.wealth < 0.42) {
+      // Actively seek resource (comida/energia): sample R in 4 directions, move toward highest
+      const step = 0.22;
+      const wh = cfg.worldHalf;
+      const rE = sampleR(fields, (a.x + step) / wh, a.y / wh);
+      const rW = sampleR(fields, (a.x - step) / wh, a.y / wh);
+      const rN = sampleR(fields, a.x / wh, (a.y + step) / wh);
+      const rS = sampleR(fields, a.x / wh, (a.y - step) / wh);
+      let dx = 0, dy = 0;
+      if (rE > r && rE >= rW && rE >= rN && rE >= rS) dx = 1;
+      else if (rW > r && rW >= rN && rW >= rS) dx = -1;
+      if (rN > r && rN >= rS && (dy === 0 || rN > Math.max(rE, rW))) dy = 1;
+      else if (rS > r && (dy === 0 || rS > Math.max(rE, rW))) dy = -1;
+      if (dx !== 0 || dy !== 0) {
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const reach = 0.5 * wh;
+        a.goalX = a.x + (dx / len) * reach;
+        a.goalY = a.y + (dy / len) * reach;
+        a.currentActivity = 'Forrageando (gradiente R)';
+        a.auditReason = `busca por gradiente R (${resourceDriver.toFixed(2)})`;
+      } else {
+        a.goalX = inAvgX * 0.5 + gcx * 0.5;
+        a.goalY = inAvgY * 0.5 + gcy * 0.5;
+        a.currentActivity = 'Coordenação local (sem hotspot)';
+        a.auditReason = `sem hotspot; social ${socialDriver.toFixed(2)}`;
+      }
+    } else if (a.wealth < 0.55 && (a.groupId % 2 === 0 || a.need < 0.4)) {
+      // Some agents (e.g. even group or low need) still drift toward R when moderately low wealth
+      const step = 0.18;
+      const wh = cfg.worldHalf;
+      const rE = sampleR(fields, (a.x + step) / wh, a.y / wh);
+      const rW = sampleR(fields, (a.x - step) / wh, a.y / wh);
+      const rN = sampleR(fields, a.x / wh, (a.y + step) / wh);
+      const rS = sampleR(fields, a.x / wh, (a.y - step) / wh);
+      const best = Math.max(r, rE, rW, rN, rS);
+      if (best > r + 0.05) {
+        let dx = 0, dy = 0;
+        if (rE === best) dx = 1; else if (rW === best) dx = -1;
+        if (rN === best) dy = 1; else if (rS === best) dy = -1;
+        if (dx !== 0 || dy !== 0) {
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          a.goalX = a.x + (dx / len) * 0.35 * wh;
+          a.goalY = a.y + (dy / len) * 0.35 * wh;
+          a.currentActivity = 'Busca oportunista de recurso';
+          a.auditReason = `escassez moderada ${resourceDriver.toFixed(2)}`;
+        } else {
+          a.goalX = inAvgX; a.goalY = inAvgY;
+          a.currentActivity = 'Coesão intra-grupo';
+          a.auditReason = `coesão ${socialDriver.toFixed(2)}`;
+        }
+      } else {
+        a.goalX = inAvgX; a.goalY = inAvgY;
+        a.currentActivity = 'Coesão intra-grupo';
+        a.auditReason = `coesão ${socialDriver.toFixed(2)}`;
+      }
     } else if (a.desire > 0.65 && a.fear < 0.3) {
       // Transgression drive → explore taboo edges
       const tabu = symbols.tabus[0];
       if (tabu) {
         a.goalX = tabu.x + (a.x - tabu.x) * 0.4;
         a.goalY = tabu.y + (a.y - tabu.y) * 0.4;
+        a.currentActivity = 'Transgressão: borda do tabu';
+        a.auditReason = `impulso transgressivo ${transgressionDriver.toFixed(2)}`;
       } else {
-        a.goalX = randSigned(ws) * 1.4;
-        a.goalY = randSigned(ws) * 1.4;
+        a.goalX = randSigned(ws) * cfg.worldHalf * 0.7;
+        a.goalY = randSigned(ws) * cfg.worldHalf * 0.7;
+        a.currentActivity = 'Exploração livre';
+        a.auditReason = `novidade/desejo ${transgressionDriver.toFixed(2)}`;
       }
-    } else if (a.need > 0.5 || cfg.cohesion > 0.5) {
+    } else if (a.need > 0.62 || cfg.cohesion > 0.68) {
       a.goalX = inAvgX; a.goalY = inAvgY;
+      a.currentActivity = a.need > 0.65 ? 'Busca de pertencimento' : 'Coesão intra-grupo';
+      a.auditReason = `força social ${socialDriver.toFixed(2)}`;
     } else {
       const driftX = gcxG * 0.5 + gcx * 0.5;
       const driftY = gcyG * 0.5 + gcy * 0.5;
       a.goalX = a.goalX * 0.7 + driftX * 0.3;
       a.goalY = a.goalY * 0.7 + driftY * 0.3;
+      a.currentActivity = 'Deriva social';
+      a.auditReason = `equilíbrio baixo de drivers`;
+    }
+
+    // Birthplace attractor: under stress/scarcity, agents remember and gravitate to origin
+    if (cfg.birthMemoryStrength > 0) {
+      const stress = Math.max(a.fear, a.fatigue);
+      const scarcity = Math.max(0, 0.18 - a.wealth) / 0.18; // only severe scarcity
+      const stressCrit = Math.max(0, stress - 0.62) / 0.38; // only high stress
+      const trigger = Math.max(stressCrit, scarcity);
+      const hdx = a.birthX - a.x;
+      const hdy = a.birthY - a.y;
+      const homeDist = Math.sqrt(hdx * hdx + hdy * hdy);
+      const softActivity =
+        a.currentActivity === 'Deriva social' ||
+        a.currentActivity === 'Coesão intra-grupo' ||
+        a.currentActivity === 'Busca de pertencimento' ||
+        a.currentActivity === 'Reagrupamento preventivo';
+      if (
+        trigger > 0.28 &&
+        homeDist > cfg.worldHalf * 0.24 &&
+        softActivity &&
+        rand01(ws) < (0.18 + 0.62 * trigger) * a.birthMemory
+      ) {
+        const homeGain = cfg.birthMemoryStrength * a.birthMemory * trigger * 0.7;
+        a.goalX = a.goalX * (1 - homeGain) + a.birthX * homeGain;
+        a.goalY = a.goalY * (1 - homeGain) + a.birthY * homeGain;
+        a.auditMemoryPull = homeGain;
+        if (homeGain > 0.10) {
+          a.currentActivity = 'Retorno à origem (memória profunda)';
+          a.auditReason = `memória de origem ${homeGain.toFixed(2)} (estresse/escassez)`;
+        }
+      }
     }
 
     // Tabu repulsion (physical boundary)
@@ -924,8 +1100,89 @@ export function macroTick(
       a.goalY = a.goalY * 0.65 + (a.y + (ideoFleeY / fd) * 0.45) * 0.35 * strength + a.goalY * (1 - strength) * 0.35;
     }
 
-    a.goalX = clamp(a.goalX, -0.95, 0.95);
-    a.goalY = clamp(a.goalY, -0.95, 0.95);
+    a.goalX = clamp(a.goalX, -cfg.worldHalf * 0.95, cfg.worldHalf * 0.95);
+    a.goalY = clamp(a.goalY, -cfg.worldHalf * 0.95, cfg.worldHalf * 0.95);
+  }
+
+  // 6b. Bond formation — dynamic and coherent over time
+  const bondRate = cfg.bondFormationRate ?? 0;
+  if (bondRate > 0) {
+    const candidates: Array<{ i: number; j: number; coh: number }> = [];
+    for (let i = 0; i < agents.length; i++) {
+      const a = agents[i];
+      const neighbors = getNeighbors(i, agents, grid, cfg.rMax, cfg.rMax * 1.1, MAX_NEIGH, cfg.worldHalf);
+      for (const j of neighbors) {
+        if (j <= i) continue;
+        const b = agents[j];
+        if (a.familyId !== 0 && b.familyId !== 0 && a.familyId === b.familyId) continue;
+
+        const friendly = a.memory.some(m => m.agentIdx === j && m.friendly) || b.memory.some(m => m.agentIdx === i && m.friendly);
+        const hostile = a.memory.some(m => m.agentIdx === j && !m.friendly) || b.memory.some(m => m.agentIdx === i && !m.friendly);
+        if (hostile) continue;
+
+        const ideologyCompat = 1 - Math.min(1, Math.abs(a.ideology - b.ideology) / 2);
+        const bdx = a.birthX - b.birthX;
+        const bdy = a.birthY - b.birthY;
+        const birthDist = Math.sqrt(bdx * bdx + bdy * bdy);
+        const birthCompat = 1 - Math.min(1, birthDist / (cfg.worldHalf * 1.2));
+        const originCompat = (a.originGroupId === b.originGroupId ? 0.14 : 0) + (a.originFamilyId !== 0 && a.originFamilyId === b.originFamilyId ? 0.16 : 0);
+        const entCompat = (a.entanglement + b.entanglement) * 0.5;
+
+        const coh =
+          ideologyCompat * 0.34 +
+          birthCompat * 0.24 +
+          entCompat * 0.22 +
+          (friendly ? 0.20 : 0.0) +
+          originCompat;
+
+        if (coh > 0.34) candidates.push({ i, j, coh: Math.min(1, coh) });
+      }
+    }
+
+    for (let k = candidates.length - 1; k > 0; k--) {
+      const swap = (rand01(ws) * (k + 1)) | 0;
+      [candidates[k], candidates[swap]] = [candidates[swap], candidates[k]];
+    }
+    candidates.sort((a, b) => b.coh - a.coh);
+
+    const maxNewLinks = Math.max(1, Math.min(6, Math.floor(agents.length / 120)));
+    let formed = 0;
+    for (const c of candidates) {
+      if (formed >= maxNewLinks) break;
+      const a = agents[c.i];
+      const b = agents[c.j];
+      if (a.familyId !== 0 && b.familyId !== 0 && a.familyId === b.familyId) continue;
+
+      const p = Math.min(0.95, bondRate * (0.75 + c.coh * 1.25));
+      if (rand01(ws) >= p) continue;
+
+      if (a.familyId === 0 && b.familyId === 0) {
+        const fid = ws.nextFamilyId ?? 1;
+        ws.nextFamilyId = fid + 1;
+        a.familyId = fid;
+        b.familyId = fid;
+      } else if (a.familyId !== 0 && b.familyId === 0) {
+        b.familyId = a.familyId;
+      } else if (a.familyId === 0 && b.familyId !== 0) {
+        a.familyId = b.familyId;
+      } else {
+        // both in different families: keep topology stable for now
+        continue;
+      }
+
+      a.entanglement = clamp(a.entanglement + 0.015, 0, 1);
+      b.entanglement = clamp(b.entanglement + 0.015, 0, 1);
+      formed++;
+    }
+    if (formed > 0) {
+      events.push({
+        time: t,
+        icon: '🔗',
+        message: formed > 1 ? `Laços formados ×${formed}` : 'Laço formado',
+        color: '#34d399',
+        cause: 'Entanglement orgânico por proximidade, memória social e coerência de origem.',
+      });
+    }
   }
 
   // 7. Taboo violation check
@@ -941,7 +1198,7 @@ export function macroTick(
   if (cfg.mobility > 0) {
     for (let i = 0; i < agents.length; i++) {
       const a = agents[i];
-      if (rand01(ws) > cfg.mobility * 0.02 * (1 - a.groupLoyalty)) continue;
+      if (rand01(ws) > cfg.mobility * (0.02 * D) * (1 - a.groupLoyalty)) continue;
       const neighbors2 = getNeighbors(i, agents, grid, cfg.rMax, cfg.rMax * 1.1, MAX_NEIGH, cfg.worldHalf);
       const neighborGroups: number[] = new Array(cfg.groupCount).fill(0);
       for (const j of neighbors2) neighborGroups[agents[j].groupId]++;
@@ -986,8 +1243,8 @@ export function macroTick(
   // 10. Economy metrics
   _computeEconomyMetrics(agents, ws);
 
-  // 11. General events (phase shift, coalition, etc.)
-  _generateEvents(agents, cfg, prevMetrics, ws, t, pings, events);
+  // 11. General events (phase shift, coalition, causes: guerra, anomia, filosofia)
+  _generateEvents(agents, cfg, prevMetrics, ws, t, pings, events, symbols);
 
   // 12. Autonomous symbol emergence (if enabled)
   if (cfg.autoSymbols) _tryAutoPlaceSymbols(agents, cfg, symbols, ws, t, pings, events);
@@ -1185,16 +1442,71 @@ function _generateEvents(
   agents: StudyAgent[], cfg: StudyConfig,
   prevMetrics: StudyMetrics, ws: StudyWorldState,
   t: number, pings: StudyPing[], events: StudyEvent[],
+  symbols: StudySymbols,
 ): void {
-  // Phase shift
   const newMetrics = computeStudyMetrics(agents, cfg);
+  const meanAgg = agents.length ? agents.reduce((s, a) => s + a.aggression, 0) / agents.length : 0;
+  const meanIdeology = agents.length ? agents.reduce((s, a) => s + a.ideology, 0) / agents.length : 0;
+  const riftCount = symbols.totems.filter(t => t.kind === 'RIFT').length;
+
+  // Phase shift + causas (guerra, filosofia emergente)
   if (newMetrics.phase !== prevMetrics.phase) {
     const pc: Record<string, string> = {
       SWARM: '#94a3b8', CLUSTERS: '#34d399', POLARIZED: '#fbd38d',
       CONFLICT: '#ef4444', CONSENSUS: '#a78bfa', EXCEPTION: '#ff6b6b',
       FERVOR: '#ff4500', ECO_CRISIS: '#8b4513', TRANSCENDENCE: '#00d4aa',
     };
-    events.push({ time: t, icon: '🔄', message: `Phase: ${prevMetrics.phase} → ${newMetrics.phase}`, color: pc[newMetrics.phase] || '#fff' });
+    let cause: string | undefined;
+    if (newMetrics.phase === 'CONFLICT') {
+      const parts: string[] = [];
+      if (newMetrics.polarization > 0.4) parts.push(`polarização ${(newMetrics.polarization * 100).toFixed(0)}%`);
+      parts.push(`hostilidade ${(newMetrics.conflict * 100).toFixed(0)}%`);
+      if (riftCount > 0) parts.push(`${riftCount} totem(ns) RIFT`);
+      parts.push(`agressão média ${meanAgg.toFixed(2)}`);
+      const filos = meanIdeology < -0.15 ? `Ordem (${meanIdeology.toFixed(2)})` : meanIdeology > 0.15 ? `Liberdade (${meanIdeology.toFixed(2)})` : `Centro (${meanIdeology.toFixed(2)})`;
+      cause = `Causas da GUERRA: ${parts.join(', ')}. Filosofia em jogo: ${filos}.`;
+    } else if (newMetrics.phase === 'POLARIZED') {
+      const filos = meanIdeology < -0.15 ? `Ordem (${meanIdeology.toFixed(2)})` : meanIdeology > 0.15 ? `Liberdade (${meanIdeology.toFixed(2)})` : `Centro (${meanIdeology.toFixed(2)})`;
+      cause = `Filosofia emergente: ${filos}.`;
+    }
+    events.push({
+      time: t, icon: '🔄',
+      message: `Phase: ${prevMetrics.phase} → ${newMetrics.phase}`,
+      color: pc[newMetrics.phase] || '#fff',
+      cause,
+    });
+  }
+
+  // Anomia — consenso e crença em colapso
+  if (newMetrics.consensus < 0.35 && newMetrics.meanBelief < 0.30 && newMetrics.phase !== 'CONFLICT' && rand01(ws) < 0.25) {
+    const parts: string[] = [];
+    if (newMetrics.consensus < 0.25) parts.push('consenso em colapso');
+    if (newMetrics.meanBelief < 0.25) parts.push('crença muito baixa');
+    parts.push(`entropia de opinião ${(newMetrics.entropy * 100).toFixed(0)}%`);
+    events.push({
+      time: t, icon: '〰', message: 'Anomia — normas em colapso', color: '#f97316',
+      cause: `Causas da anomia: ${parts.join(', ')}.`,
+    });
+  }
+
+  // Visibility of slow-burn emergences (ethics / understanding / entanglement)
+  if (prevMetrics.meanUnderstanding <= 0.22 && newMetrics.meanUnderstanding > 0.22) {
+    events.push({
+      time: t, icon: '🧭', message: 'Compreensão coletiva emergente', color: '#34d399',
+      cause: `Cruzamento de limiar: compreensão média ${newMetrics.meanUnderstanding.toFixed(2)}.`,
+    });
+  }
+  if (prevMetrics.meanEthics <= 0.18 && newMetrics.meanEthics > 0.18) {
+    events.push({
+      time: t, icon: '⚖️', message: 'Ética emergente consolidada', color: '#00d4aa',
+      cause: `Ética média ${newMetrics.meanEthics.toFixed(2)} com conflito ${(newMetrics.conflict * 100).toFixed(0)}%.`,
+    });
+  }
+  if (prevMetrics.meanEntanglement <= 0.32 && newMetrics.meanEntanglement > 0.32) {
+    events.push({
+      time: t, icon: '🕸️', message: 'Entanglement social em expansão', color: '#67e8f9',
+      cause: `Coerência relacional média ${newMetrics.meanEntanglement.toFixed(2)}.`,
+    });
   }
 
   // Wealth gap
@@ -1241,7 +1553,7 @@ export function computeStudyMetrics(agents: StudyAgent[], cfg: StudyConfig): Stu
     cohesion: 0, polarization: 0, conflict: 0, consensus: 0.5, phase: 'SWARM',
     leaderCount: 0, rebelCount: 0, meanFear: 0, meanBelief: 0, entropy: 0.5,
     meanPerception: 0.5, meanEthics: 0, meanHybris: 0, meanFervor: 0,
-    meanUnderstanding: 0, ecoHealth: 1,
+    meanUnderstanding: 0, meanEntanglement: 0, ecoHealth: 1,
   };
 
   const groupAgents: StudyAgent[][] = Array.from({ length: cfg.groupCount }, () => []);
@@ -1296,6 +1608,7 @@ export function computeStudyMetrics(agents: StudyAgent[], cfg: StudyConfig): Stu
   const meanHybris = agents.reduce((s, a) => s + a.hybris, 0) / agents.length;
   const meanFervor2 = agents.reduce((s, a) => s + a.fervor, 0) / agents.length;
   const meanUnderstanding = agents.reduce((s, a) => s + a.understanding, 0) / agents.length;
+  const meanEntanglement = agents.reduce((s, a) => s + a.entanglement, 0) / agents.length;
   const ecoHealth = 1 - (agents.reduce((s, a) => s + a.ecoFootprint, 0) / agents.length);
 
   let phase: StudyMetrics['phase'];
@@ -1313,7 +1626,7 @@ export function computeStudyMetrics(agents: StudyAgent[], cfg: StudyConfig): Stu
     cohesion, polarization, conflict, consensus, phase,
     leaderCount, rebelCount, meanFear, meanBelief, entropy,
     meanPerception, meanEthics, meanHybris, meanFervor: meanFervor2,
-    meanUnderstanding, ecoHealth,
+    meanUnderstanding, meanEntanglement, ecoHealth,
   };
 }
 
@@ -1332,43 +1645,63 @@ export type AgentRole =
   | 'innovator'
   | 'predator';
 
-export function computeAgentRoles(agents: StudyAgent[]): AgentRole[] {
+export function computeAgentRoles(agents: StudyAgent[], prevRoles?: AgentRole[]): AgentRole[] {
   const roles: AgentRole[] = new Array(agents.length).fill('normal');
   if (!agents.length) return roles;
 
-  // Leaders: top-5 centrality + status
-  const sorted = agents.map((a, i) => ({ i, c: a.centrality + a.status })).sort((a, b) => b.c - a.c);
-  for (let k = 0; k < Math.min(5, agents.length); k++) {
-    if (sorted[k].c > 0.5) roles[sorted[k].i] = 'leader';
+  // Leader score: centrality + status (for hysteresis: promote above 0.52, demote below 0.36)
+  const leaderScores = agents.map((a, i) => ({ i, c: a.centrality * 0.6 + a.status * 0.4 }));
+  const sorted = [...leaderScores].sort((a, b) => b.c - a.c);
+  const promoteLeaderThresh = 0.52;
+  const demoteLeaderThresh = 0.36;
+  const maxLeaders = 5;
+  let leaderCount = 0;
+  for (let k = 0; k < sorted.length && leaderCount < maxLeaders; k++) {
+    const { i, c } = sorted[k];
+    const wasLeader = prevRoles?.[i] === 'leader';
+    const thresh = wasLeader ? demoteLeaderThresh : promoteLeaderThresh;
+    if (c > thresh) { roles[i] = 'leader'; leaderCount++; }
   }
 
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
-    // Dictator: coercive high-status central figure (often also a leader)
+    const prev = prevRoles?.[i];
+    // Dictator: coercive high-status — hysteresis (hard to lose once established)
     const dictatorLike =
       a.status > 0.72 &&
       a.centrality > 0.28 &&
       a.aggression > 0.62 &&
       a.belief > 0.55 &&
       a.ideology < -0.15;
+    const wasDictator = prev === 'dictator';
     if (dictatorLike) { roles[i] = 'dictator'; continue; }
+    if (wasDictator && a.status > 0.55 && a.centrality > 0.20) { roles[i] = 'dictator'; continue; }
 
-    // Priest: high belief + status + charisma (legitimation)
+    // Priest: high belief + status + charisma — hysteresis
     const priestLike = a.belief > 0.70 && a.status > 0.45 && a.charisma > 0.4 && a.aggression < 0.55;
+    const wasPriest = prev === 'priest';
     if (priestLike)  { roles[i] = 'priest';  continue; }
+    if (wasPriest && a.belief > 0.55 && a.status > 0.35) { roles[i] = 'priest'; continue; }
 
-    // Rebel: high resistance or freedom ideology + desire + low fear
-    if (a.resistance > 0.7 || (a.ideology > 0.5 && a.desire > 0.65 && a.fear < 0.35)) { roles[i] = 'rebel'; continue; }
+    // Rebel: high resistance or freedom — slight hysteresis
+    const rebelLike = a.resistance > 0.7 || (a.ideology > 0.5 && a.desire > 0.65 && a.fear < 0.35);
+    const wasRebel = prev === 'rebel';
+    if (rebelLike) { roles[i] = 'rebel'; continue; }
+    if (wasRebel && (a.resistance > 0.5 || a.ideology > 0.35)) { roles[i] = 'rebel'; continue; }
 
-    // Authority: high status + high conformity/belief (institutional power)
+    // Authority: high status + conformity — hysteresis
     const authorityLike = a.status > 0.58 && (a.belief > 0.62 || a.conformity > 0.70) && a.charisma > 0.18;
+    const wasAuthority = prev === 'authority';
     if (authorityLike) { roles[i] = 'authority'; continue; }
+    if (wasAuthority && a.status > 0.42 && (a.belief > 0.50 || a.conformity > 0.55)) { roles[i] = 'authority'; continue; }
 
-    // Aggressor
+    // Aggressor — need sustained hostility
     if (a.aggression > 0.65 && a.hostileCount >= 2) { roles[i] = 'aggressor'; continue; }
+    if (prev === 'aggressor' && a.aggression > 0.50 && a.hostileCount >= 1) { roles[i] = 'aggressor'; continue; }
 
-    // Guardian (kept for backwards-compat semantics; overlaps with authority)
+    // Guardian
     if (a.belief > 0.65 && a.status > 0.40)         { roles[i] = 'guardian';  continue; }
+    if (prev === 'guardian' && a.belief > 0.52 && a.status > 0.30) { roles[i] = 'guardian'; continue; }
 
     // Mediator
     const crossFriendly = a.memory.filter(m =>
@@ -1376,11 +1709,9 @@ export function computeAgentRoles(agents: StudyAgent[]): AgentRole[] {
     ).length;
     if (a.trust > 0.7 && crossFriendly >= 2) { roles[i] = 'mediator'; continue; }
 
-    // Artist: high desire, low aggression, liberty or resistance (transgressão simbólica)
+    // Artist, Innovator, Predator — no hysteresis (more fluid)
     if (a.desire > 0.58 && a.aggression < 0.38 && (a.ideology > 0.2 || a.resistance > 0.4)) { roles[i] = 'artist'; continue; }
-    // Innovator: desire + status + liberty
     if (a.desire > 0.52 && a.status > 0.35 && a.ideology > 0.22) { roles[i] = 'innovator'; continue; }
-    // Predator: high aggression, low empathy, some status (psicopata social)
     if (a.aggression > 0.58 && a.empathy < 0.28 && a.status > 0.28) { roles[i] = 'predator'; continue; }
   }
   return roles;
@@ -1404,12 +1735,14 @@ export function _tryAutoPlaceSymbols(
   events:  StudyEvent[],
 ): void {
   const total = symbols.totems.length + symbols.tabus.length + symbols.rituals.length;
-  if (total >= 12) return; // raised cap for richer ecosystems
-  if (rand01(ws) > 0.12) return; // ~12% chance per macroTick (doubled)
+  if (total >= 12) return;
+  if (rand01(ws) > 0.08) return; // ~8% per macroTick — less frequent, more meaningful
 
-  // ── Emergent BOND: group cluster with high belief + high status ──
+  const rnd = () => rand01(ws);
+  const jitter = (cx: number, cy: number, amount: number) => ({ x: cx + (rnd() - 0.5) * amount, y: cy + (rnd() - 0.5) * amount });
+
+  // ── Emergent BOND: group cluster with high belief + high status (varied threshold) ──
   if (symbols.totems.length < 4) {
-    // Find group centroid with high mean belief
     const groups: { g: number; cx: number; cy: number; mb: number; ms: number; n: number }[] = [];
     for (let g = 0; g < cfg.groupCount; g++) groups.push({ g, cx: 0, cy: 0, mb: 0, ms: 0, n: 0 });
     for (const a of agents) {
@@ -1420,62 +1753,68 @@ export function _tryAutoPlaceSymbols(
     for (const d of groups) {
       if (d.n < 8) continue;
       d.cx /= d.n; d.cy /= d.n; d.mb /= d.n; d.ms /= d.n;
-      if (d.mb > 0.62 && d.ms > 0.25 && !_nearAny(d.cx, d.cy, symbols.totems, 0.4)) {
-        const t2: StudyTotem = { id: _aid(), kind: 'BOND', x: d.cx, y: d.cy, radius: 0.22, groupId: d.g, pulseStrength: 0.65, bornAt: t, emergent: true };
+      const thresh = 0.54 + rnd() * 0.14; // vary 0.54–0.68 so not always same moment
+      if (d.mb > thresh && d.ms > 0.22 + rnd() * 0.08 && !_nearAny(d.cx, d.cy, symbols.totems, 0.4)) {
+        const { x, y } = jitter(d.cx, d.cy, 0.06);
+        const t2: StudyTotem = { id: _aid(), kind: 'BOND', x, y, radius: 0.20 + rnd() * 0.06, groupId: d.g, pulseStrength: 0.55 + rnd() * 0.2, bornAt: t, emergent: true };
         symbols.totems.push(t2);
         events.push({ time: t, icon: '⊕', message: `Foundation — Group ${d.g} crystallised belief`, color: '#34d399' });
-        pings.push({ x: d.cx, y: d.cy, message: 'Foundation', color: '#34d399', bornAt: t, ttl: 5, age: 0 });
+        pings.push({ x, y, message: 'Foundation', color: '#34d399', bornAt: t, ttl: 5, age: 0 });
         return;
       }
     }
   }
 
-  // ── Emergent Taboo: violation spike → community closes the zone ──
+  // ── Emergent Taboo: violation spike → community closes the zone (varied) ──
   if (symbols.tabus.length < 3 && ws.violationsWindow >= 2) {
-    const transgressors = agents.filter(a => a.desire > 0.65);
+    const transgressors = agents.filter(a => a.desire > 0.55 + rnd() * 0.15);
     if (transgressors.length >= 3) {
       const cx = transgressors.slice(0, 6).reduce((s, a) => s + a.x, 0) / Math.min(6, transgressors.length);
       const cy = transgressors.slice(0, 6).reduce((s, a) => s + a.y, 0) / Math.min(6, transgressors.length);
-      if (!_nearAny(cx, cy, symbols.tabus, 0.25)) {
-        const tb: StudyTabu = { id: _aid(), kind: 'NO_ENTER', x: cx, y: cy, radius: 0.17, severity: 0.55, bornAt: t, violationCount: 0 };
+      const { x, y } = jitter(cx, cy, 0.05);
+      if (!_nearAny(x, y, symbols.tabus, 0.25)) {
+        const tb: StudyTabu = { id: _aid(), kind: 'NO_ENTER', x, y, radius: 0.15 + rnd() * 0.04, severity: 0.5 + rnd() * 0.1, bornAt: t, violationCount: 0 };
         symbols.tabus.push(tb);
         events.push({ time: t, icon: '⛔', message: 'Taboo sealed — community declares limit', color: '#ef4444' });
-        pings.push({ x: cx, y: cy, message: 'Sealed', color: '#ef4444', bornAt: t, ttl: 4, age: 0 });
+        pings.push({ x, y, message: 'Sealed', color: '#ef4444', bornAt: t, ttl: 4, age: 0 });
         return;
       }
     }
   }
 
-  // ── Emergent Ritual: ideological convergence → collective practice ──
+  // ── Emergent Ritual: ideological convergence → collective practice (varied) ──
   if (symbols.rituals.length < 3) {
     const meanBelief = agents.reduce((s, a) => s + a.belief, 0) / agents.length;
     const ideVar = agents.reduce((s, a) => s + a.ideology ** 2, 0) / agents.length;
-    if (meanBelief > 0.65 && ideVar < 0.18) {
+    const thresh = 0.58 + rnd() * 0.12;
+    if (meanBelief > thresh && ideVar < 0.20 + rnd() * 0.06) {
       const cx = agents.reduce((s, a) => s + a.x, 0) / agents.length;
       const cy = agents.reduce((s, a) => s + a.y, 0) / agents.length;
-      if (!_nearAny(cx, cy, symbols.rituals, 0.35)) {
-        const rt: StudyRitual = { id: _aid(), kind: 'GATHER', x: cx, y: cy, radius: 0.28, periodSec: 9, lastFired: t, active: false, bornAt: t };
+      const { x, y } = jitter(cx, cy, 0.08);
+      if (!_nearAny(x, y, symbols.rituals, 0.35)) {
+        const rt: StudyRitual = { id: _aid(), kind: 'GATHER', x, y, radius: 0.24 + rnd() * 0.08, periodSec: 7 + (rnd() * 5) | 0, lastFired: t, active: false, bornAt: t };
         symbols.rituals.push(rt);
         events.push({ time: t, icon: '◎', message: 'Ritual emerged — collective belief crystallised', color: '#a78bfa' });
-        pings.push({ x: cx, y: cy, message: 'Ritual', color: '#a78bfa', bornAt: t, ttl: 5, age: 0 });
+        pings.push({ x, y, message: 'Ritual', color: '#a78bfa', bornAt: t, ttl: 5, age: 0 });
         return;
       }
     }
   }
 
-  // ── Emergent RIFT: polarization spike → factional totem ──
+  // ── Emergent RIFT: polarization spike → factional totem (position jitter) ──
   if (symbols.totems.filter(t2 => t2.kind === 'RIFT').length < 2) {
     const meanIde = agents.reduce((s, a) => s + a.ideology, 0) / agents.length;
-    const riftGrp = agents.filter(a => a.ideology < meanIde - 0.55);
+    const riftGrp = agents.filter(a => a.ideology < meanIde - (0.45 + rnd() * 0.15));
     if (riftGrp.length >= 10) {
       const cx = riftGrp.reduce((s, a) => s + a.x, 0) / riftGrp.length;
       const cy = riftGrp.reduce((s, a) => s + a.y, 0) / riftGrp.length;
+      const { x, y } = jitter(cx, cy, 0.06);
       const gid = riftGrp[0].groupId;
-      if (!_nearAny(cx, cy, symbols.totems, 0.35)) {
-        const rt2: StudyTotem = { id: _aid(), kind: 'RIFT', x: cx, y: cy, radius: 0.22, groupId: gid, pulseStrength: 0.8, bornAt: t, emergent: true };
+      if (!_nearAny(x, y, symbols.totems, 0.35)) {
+        const rt2: StudyTotem = { id: _aid(), kind: 'RIFT', x, y, radius: 0.20 + rnd() * 0.06, groupId: gid, pulseStrength: 0.7 + rnd() * 0.2, bornAt: t, emergent: true };
         symbols.totems.push(rt2);
         events.push({ time: t, icon: '⊖', message: `Schism — faction ${gid} breaks from consensus`, color: '#ff6b6b' });
-        pings.push({ x: cx, y: cy, message: 'Schism', color: '#ff6b6b', bornAt: t, ttl: 5, age: 0 });
+        pings.push({ x, y, message: 'Schism', color: '#ff6b6b', bornAt: t, ttl: 5, age: 0 });
         return;
       }
     }

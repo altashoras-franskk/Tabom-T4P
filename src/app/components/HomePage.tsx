@@ -762,7 +762,8 @@ export function HomePage({
           onClose={() => setShowAuthModal(false)}
           onAuthChange={(u) => {
             onAuthChange?.(u);
-            setShowAuthModal(false);
+            // Defer close so parent state commits first (evita tela branca ao fazer login)
+            setTimeout(() => setShowAuthModal(false), 0);
           }}
         />
       )}
