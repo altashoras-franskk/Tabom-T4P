@@ -1,7 +1,7 @@
 // ─── Left Sidebar — Tool palette + simulation quick-controls ──────────────────
 // Swiss-brutalist identity · IBM Plex Mono · Doto · #ff0084 accent
 import React from 'react';
-import type { ToolState, AgentShape } from '../../sim/metaart/metaArtTypes';
+import type { ToolState, AgentShape, GuideLineType } from '../../sim/metaart/metaArtTypes';
 import { BRUSH_TEXTURE_PRESETS } from '../../sim/metaart/metaArtTypes';
 import { TOOL_DEFS } from '../../sim/metaart/metaArtTools';
 
@@ -38,6 +38,26 @@ export interface LeftSidebarProps {
   onGeoMode: (m: 'fluid' | 'geometric' | 'hybrid' | '3d') => void;
   geoPanelOpen: boolean;
   onToggleGeoPanel: () => void;
+  guideStroke: number;
+  onGuideStroke: (v: number) => void;
+  guideCurvature: number;
+  onGuideCurvature: (v: number) => void;
+  guideColor: string;
+  onGuideColor: (hex: string) => void;
+  guideLineMode: GuideLineType;
+  onGuideLineMode: (m: GuideLineType) => void;
+  guidePathMode: 'stream' | 'orbit' | 'shock';
+  onGuidePathMode: (m: 'stream' | 'orbit' | 'shock') => void;
+  autoGuidesPreset: boolean;
+  autoGuidesRandom: boolean;
+  onToggleAutoGuidesPreset: () => void;
+  onToggleAutoGuidesRandom: () => void;
+  onGuideGenerate: () => void;
+  onGuideClear: () => void;
+  onGuideStyleRandom: () => void;
+  onExplodeAll: () => void;
+  onBlackHoleAll: () => void;
+  onHarmonizeAll: () => void;
 }
 
 const CATEGORY_CONFIG = {
@@ -128,8 +148,23 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   linear, onLinear,
   geoMode, onGeoMode,
   geoPanelOpen, onToggleGeoPanel,
+  guideStroke, onGuideStroke,
+  guideCurvature, onGuideCurvature,
+  guideColor, onGuideColor,
+  guideLineMode, onGuideLineMode,
+  guidePathMode, onGuidePathMode,
+  autoGuidesPreset, autoGuidesRandom,
+  onToggleAutoGuidesPreset, onToggleAutoGuidesRandom,
+  onGuideGenerate, onGuideClear, onGuideStyleRandom,
+  onExplodeAll, onBlackHoleAll, onHarmonizeAll,
 }) => {
   const activeTool = TOOL_DEFS.find(t => t.id === toolState.activeToolId);
+  const activeCat = activeTool?.category as (typeof CATEGORY_ORDER)[number] | undefined;
+  const [openCat, setOpenCat] = React.useState<(typeof CATEGORY_ORDER)[number]>(() => activeCat ?? 'vida');
+  React.useEffect(() => {
+    // Auto-open follows the active tool, but should not fight user clicks.
+    if (activeCat) setOpenCat(activeCat);
+  }, [activeCat]);
   const isBrush = agentShape === 'brush';
 
   return (
@@ -145,84 +180,78 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         {CATEGORY_ORDER.map(cat => {
           const cfg   = CATEGORY_CONFIG[cat];
           const tools = TOOL_DEFS.filter(t => t.category === cat);
+          const isOpen = openCat === cat;
           return (
             <div key={cat}>
-              <div style={{
+              <button
+                onClick={() => setOpenCat(cat)}
+                style={{
                 padding: '5px 0 3px', textAlign: 'center', fontSize: 7,
                 letterSpacing: '0.16em', textTransform: 'uppercase',
                 color: DIM, fontFamily: MONO,
-                borderBottom: `1px dashed ${BORDER}`,
-                borderTop: `1px solid rgba(255,255,255,0.02)`,
+                border: 'none',
+                outline: 'none',
+                background: isOpen ? 'rgba(255,255,255,0.02)' : 'transparent',
+                width: '100%',
+                cursor: 'pointer',
+                borderLeft: isOpen ? `2px solid ${ACCENT}` : '2px solid transparent',
+                borderBottomStyle: 'dashed',
+                borderBottomColor: BORDER,
+                borderBottomWidth: 1,
+                borderTopStyle: 'solid',
+                borderTopColor: 'rgba(255,255,255,0.02)',
+                borderTopWidth: 1,
               }}>
-                {cfg.label}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-                {tools.map(tool => {
-                  const isActive = toolState.activeToolId === tool.id;
-                  return (
-                    <button
-                      key={tool.id}
-                      onClick={() => onToolChange({ activeToolId: tool.id })}
-                      title={`${tool.name} — ${tool.description}`}
-                      style={{
-                        padding: '7px 2px 5px', border: 'none', cursor: 'pointer',
-                        background: isActive ? 'rgba(255,0,132,0.08)' : 'transparent',
-                        borderBottom: isActive
-                          ? `1px solid ${ACCENT}` : `1px solid transparent`,
-                        display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', gap: 2, transition: 'all 0.1s',
-                        color: isActive ? ACCENT : DIM,
-                      }}
-                      onMouseEnter={e => {
-                        if (!isActive)
-                          (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
-                      }}
-                      onMouseLeave={e => {
-                        if (!isActive)
-                          (e.currentTarget as HTMLElement).style.background = 'transparent';
-                      }}
-                    >
-                      <span style={{ fontSize: 13, lineHeight: 1 }}>{tool.icon}</span>
-                      <span style={{
-                        fontSize: 6, lineHeight: 1.2, textAlign: 'center',
-                        letterSpacing: '0.06em', textTransform: 'uppercase',
-                        fontFamily: MONO,
-                        opacity: isActive ? 1 : 0.5,
-                        wordBreak: 'break-word', maxWidth: 32,
-                      }}>
-                        {tool.name.split(' ')[0]}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                {isOpen ? '▾ ' : '▸ '}{cfg.label}
+              </button>
+
+              {isOpen && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+                  {tools.map(tool => {
+                    const isActive = toolState.activeToolId === tool.id;
+                    return (
+                      <button
+                        key={tool.id}
+                        onClick={() => onToolChange({ activeToolId: tool.id })}
+                        title={`${tool.name} — ${tool.description}`}
+                        style={{
+                          padding: '7px 2px 5px', border: 'none', cursor: 'pointer',
+                          background: isActive ? 'rgba(255,0,132,0.08)' : 'transparent',
+                          borderBottom: isActive
+                            ? `1px solid ${ACCENT}` : `1px solid transparent`,
+                          display: 'flex', flexDirection: 'column',
+                          alignItems: 'center', gap: 2, transition: 'all 0.1s',
+                          color: isActive ? ACCENT : DIM,
+                        }}
+                        onMouseEnter={e => {
+                          if (!isActive)
+                            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
+                        }}
+                        onMouseLeave={e => {
+                          if (!isActive)
+                            (e.currentTarget as HTMLElement).style.background = 'transparent';
+                        }}
+                      >
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>{tool.icon}</span>
+                        <span style={{
+                          fontSize: 6, lineHeight: 1.2, textAlign: 'center',
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          fontFamily: MONO,
+                          opacity: isActive ? 1 : 0.5,
+                          wordBreak: 'break-word', maxWidth: 32,
+                        }}>
+                          {tool.name.split(' ')[0]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
 
-        {/* ── Color swatches ───────────────────────────────────────────────── */}
-        <div style={{ borderTop: `1px dashed ${BORDER}`, padding: '5px 5px' }}>
-          <div style={{
-            fontSize: 7, color: DIM, letterSpacing: '0.14em',
-            textTransform: 'uppercase', textAlign: 'center', marginBottom: 3,
-            fontFamily: MONO,
-          }}>COR</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
-            {palette.slice(0, 6).map((color, i) => (
-              <button key={i} onClick={() => onToolChange({ colorIndex: i })}
-                title={color}
-                style={{
-                  width: '100%', aspectRatio: '1', borderRadius: 1, background: color,
-                  border: 'none', cursor: 'pointer',
-                  outline: toolState.colorIndex === i
-                    ? `1.5px solid rgba(255,255,255,0.8)` : `1px solid ${BORDER}`,
-                  outlineOffset: 1,
-                }} />
-            ))}
-          </div>
-        </div>
-
-        {/* ── Active tool params ─────────────────────────────────────────────── */}
+        {/* ── Active tool params (keep close to tool selection) ─────────────── */}
         {activeTool && activeTool.params.length > 0 && (
           <div style={{
             borderTop: `1px dashed ${BORDER}`,
@@ -257,6 +286,92 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             ))}
           </div>
         )}
+
+        {/* ── Color swatches ───────────────────────────────────────────────── */}
+        <div style={{ borderTop: `1px dashed ${BORDER}`, padding: '5px 5px' }}>
+          <div style={{
+            fontSize: 7, color: DIM, letterSpacing: '0.14em',
+            textTransform: 'uppercase', textAlign: 'center', marginBottom: 3,
+            fontFamily: MONO,
+          }}>COR</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+            {palette.slice(0, 6).map((color, i) => (
+              <button key={i} onClick={() => onToolChange({ colorIndex: i })}
+                title={color}
+                style={{
+                  width: '100%', aspectRatio: '1', borderRadius: 1, background: color,
+                  border: 'none', cursor: 'pointer',
+                  outline: toolState.colorIndex === i
+                    ? `1.5px solid rgba(255,255,255,0.8)` : `1px solid ${BORDER}`,
+                  outlineOffset: 1,
+                }} />
+            ))}
+          </div>
+        </div>
+
+        <SectionLabel>Guias</SectionLabel>
+        <div style={{ padding: '4px 5px 6px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div style={{ display: 'flex', gap: 2 }}>
+            <button onClick={onGuideGenerate} style={{ flex: 1, padding: '4px 0', borderRadius: 1, border: `1px solid ${BORDER}`, background: 'rgba(96,176,255,0.08)', color: '#98d8ff', fontSize: 7, fontFamily: MONO, cursor: 'pointer' }}>Gerar</button>
+            <button onClick={onGuideClear} style={{ flex: 1, padding: '4px 0', borderRadius: 1, border: `1px solid ${BORDER}`, background: 'rgba(255,90,110,0.08)', color: '#ff9aa8', fontSize: 7, fontFamily: MONO, cursor: 'pointer' }}>Limpar</button>
+            <button onClick={onGuideStyleRandom} style={{ flex: 1, padding: '4px 0', borderRadius: 1, border: `1px solid ${BORDER}`, background: 'rgba(176,128,255,0.08)', color: '#d5b8ff', fontSize: 7, fontFamily: MONO, cursor: 'pointer' }}>Style</button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 6.5, color: DIM, fontFamily: MONO, letterSpacing: '0.08em' }}>COR</span>
+            <input type="color" value={guideColor} onChange={e => onGuideColor(e.target.value)}
+              style={{ width: 20, height: 16, padding: 0, border: `1px solid ${BORDER}`, background: 'none', cursor: 'pointer' }} />
+          </div>
+
+          <MiniSlider label="Linha" val={guideStroke} min={0.6} max={3.2} step={0.05} fmt={v => v.toFixed(2)} onChange={onGuideStroke} />
+          <MiniSlider label="Suave" val={guideCurvature} min={0} max={1} step={0.01} fmt={v => v.toFixed(2)} onChange={onGuideCurvature} />
+
+          <div style={{ fontSize: 6.5, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>Modo Linha</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 2 }}>
+            {([
+              ['flow', 'Flow'],
+              ['pinch', 'Pinch'],
+              ['shear', 'Shear'],
+              ['barrier', 'Barra'],
+              ['spiral', 'Spiral'],
+              ['funnel', 'Funil'],
+              ['repulsor', 'Repel'],
+              ['attractor', 'Atrai'],
+              ['wave', 'Onda'],
+              ['orbit_line', 'Orbita'],
+            ] as [GuideLineType, string][]).map(([id, label]) => (
+              <button key={id} onClick={() => onGuideLineMode(id)}
+                style={{
+                  padding: '3px 1px', borderRadius: 1, cursor: 'pointer',
+                  border: `1px solid ${guideLineMode === id ? 'rgba(255,0,132,0.32)' : BORDER}`,
+                  background: guideLineMode === id ? 'rgba(255,0,132,0.09)' : 'rgba(255,255,255,0.02)',
+                  color: guideLineMode === id ? ACCENT : DIM, fontSize: 5.8, fontFamily: MONO, textTransform: 'uppercase',
+                }}>{label}</button>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 6.5, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>Modo Canal</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
+            {([
+              ['stream', 'Fluxo'],
+              ['orbit', 'Orbita'],
+              ['shock', 'Pulso'],
+            ] as const).map(([id, label]) => (
+              <button key={id} onClick={() => onGuidePathMode(id)}
+                style={{
+                  padding: '4px 2px', borderRadius: 1, cursor: 'pointer',
+                  border: `1px solid ${guidePathMode === id ? 'rgba(255,0,132,0.32)' : BORDER}`,
+                  background: guidePathMode === id ? 'rgba(255,0,132,0.09)' : 'rgba(255,255,255,0.02)',
+                  color: guidePathMode === id ? ACCENT : DIM, fontSize: 6.5, fontFamily: MONO, textTransform: 'uppercase',
+                }}>{label}</button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 2 }}>
+            <SmallToggle label="Auto Pre" active={autoGuidesPreset} onClick={onToggleAutoGuidesPreset} />
+            <SmallToggle label="Auto Rand" active={autoGuidesRandom} onClick={onToggleAutoGuidesRandom} />
+          </div>
+        </div>
 
         {/* ── FORMA + BRUSH ───────────────────────────────────────────────── */}
         <SectionLabel>Forma</SectionLabel>
@@ -369,6 +484,19 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             fmt={v => v < 0.1 ? v.toFixed(2) + 'x' : v.toFixed(1) + 'x'} onChange={onSimSpeed} />
         </div>
 
+        <SectionLabel>Força Live</SectionLabel>
+        <div style={{ padding: '4px 5px 5px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <button onClick={onExplodeAll} style={{ padding: '4px 6px', borderRadius: 1, cursor: 'pointer', border: `1px solid ${BORDER}`, background: 'rgba(255,110,80,0.12)', color: '#ffb09a', fontSize: 7, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
+            Explodir
+          </button>
+          <button onClick={onBlackHoleAll} style={{ padding: '4px 6px', borderRadius: 1, cursor: 'pointer', border: `1px solid ${BORDER}`, background: 'rgba(160,80,255,0.14)', color: '#d3b2ff', fontSize: 7, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
+            Buraco Negro
+          </button>
+          <button onClick={onHarmonizeAll} style={{ padding: '4px 6px', borderRadius: 1, cursor: 'pointer', border: `1px solid ${BORDER}`, background: 'rgba(80,190,140,0.12)', color: '#a8e7c9', fontSize: 7, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
+            Harmonizar
+          </button>
+        </div>
+
         {/* ── Mode toggles ──────────────────────────────────────────────── */}
         <SectionLabel>Modos</SectionLabel>
         <div style={{ padding: '4px 5px 5px', display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -378,7 +506,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         </div>
 
         {/* ── Geo compositor ────────────────────────────────────────────── */}
-        <SectionLabel>Compositor</SectionLabel>
+        <SectionLabel>Geometria</SectionLabel>
         <div style={{ padding: '4px 5px 5px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {(['fluid', 'geometric', 'hybrid', '3d'] as const).map(m => {
@@ -412,7 +540,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
               color: geoPanelOpen ? ACCENT : DIM,
               transition: 'all 0.12s',
             }}>
-            PARAMS
+            {geoPanelOpen ? 'GEO PARAMS ▾' : 'GEO PARAMS ▸'}
           </button>
         </div>
 

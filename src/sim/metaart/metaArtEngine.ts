@@ -233,11 +233,12 @@ export function updateQuanta(
   // When isolation is high, only same-species forces survive; cross-species forces suppressed
   const crossSpeciesScale = isolation > 0.01 ? Math.max(0, 1 - isolation * 1.2) : 1;
 
-  // Precompute tool globals
+  // Precompute tool globals — radius scaled up (like Physics Sandbox) so powers have visible reach
   const tActive = toolState.isDragging;
   const tx = toolState.lastX / W;
   const ty = toolState.lastY / H;
-  const toolRadN = toolState.size / Math.max(W, H);
+  const POWER_RADIUS_MUL = 5;
+  const toolRadN = Math.max(0.06, (toolState.size / Math.max(W, H)) * POWER_RADIUS_MUL);
 
   for (let qi = 0; qi < len; qi++) {
     const q   = quanta[qi];
@@ -410,7 +411,7 @@ export function updateQuanta(
 
     depositDensity(fields, q.x, q.y, 0.008 * q.ink);
 
-    // ── 7. Live tool effects ───────────────────────────────────────────────
+    // ── 7. Live tool effects (Physics Sandbox–style forces) ─────────────────
     if (tActive) {
       const ddx  = tx - q.x;
       const ddy  = ty - q.y;
@@ -422,27 +423,30 @@ export function updateQuanta(
         const tid = toolState.activeToolId;
 
         if (tid === 'attract' || tid === 'attractor') {
-          q.vx += ddx * inv * f * 0.35;
-          q.vy += ddy * inv * f * 0.35;
+          const str = 1.6 / (dist * 8 + 1);
+          q.vx += ddx * inv * f * str;
+          q.vy += ddy * inv * f * str;
         } else if (tid === 'repel' || tid === 'repulsor') {
-          q.vx -= ddx * inv * f * 0.35;
-          q.vy -= ddy * inv * f * 0.35;
+          const str = 1.8 / (dist * 8 + 1);
+          q.vx -= ddx * inv * f * str;
+          q.vy -= ddy * inv * f * str;
         } else if (tid === 'vortex') {
-          q.vx += (-ddy * inv) * f * 0.45;
-          q.vy += ( ddx * inv) * f * 0.45;
+          const str = 1.5 / (dist * 6 + 1);
+          q.vx += (-ddy * inv) * f * str;
+          q.vy += ( ddx * inv) * f * str;
         } else if (tid === 'freeze') {
-          const damp = Math.max(0, 1 - f * 0.55);
+          const damp = Math.max(0, 1 - f * 0.85);
           q.vx *= damp; q.vy *= damp;
         } else if (tid === 'burst') {
           const ba = Math.random() * Math.PI * 2;
-          const bs = f * actualMax * 40;
+          const bs = f * actualMax * 120 / (dist * 4 + 1);
           q.vx += Math.cos(ba) * bs;
           q.vy += Math.sin(ba) * bs;
         } else if (tid === 'black_hole') {
-          const bhf = f * f * 1.2 / (dist + 0.005);
+          const bhf = f * f * 2.2 / (dist + 0.004);
           q.vx += ddx * inv * bhf;
           q.vy += ddy * inv * bhf;
-          if (dist < toolRadN * 0.08) {
+          if (dist < toolRadN * 0.12) {
             q.x = ((1 - q.x) + (Math.random() - 0.5) * 0.15 + 1) % 1;
             q.y = ((1 - q.y) + (Math.random() - 0.5) * 0.15 + 1) % 1;
           }
@@ -451,25 +455,26 @@ export function updateQuanta(
           if (col) {
             const [th, ts, tl] = hexToHSL(col);
             const hdiff = ((th - q.hue + 540) % 360) - 180;
-            q.hue = (q.hue + hdiff * f * 0.08 + 360) % 360;
-            q.sat = q.sat + (ts - q.sat) * f * 0.05;
-            q.lit = q.lit + (tl - q.lit) * f * 0.04;
+            q.hue = (q.hue + hdiff * f * 0.15 + 360) % 360;
+            q.sat = q.sat + (ts - q.sat) * f * 0.12;
+            q.lit = q.lit + (tl - q.lit) * f * 0.10;
           }
         } else if (tid === 'size_wave') {
-          q.size = Math.max(0.2, q.size + Math.sin(tick * 0.08 + q.age * 0.05) * f * 0.6);
+          q.size = Math.max(0.2, q.size + Math.sin(tick * 0.08 + q.age * 0.05) * f * 1.2);
         } else if (tid === 'ink_flood') {
-          q.ink = Math.min(1, q.ink + f * 0.06);
+          q.ink = Math.min(1, q.ink + f * 0.14);
         } else if (tid === 'species_shift') {
-          if (Math.random() < f * 0.018) q.species = Math.floor(Math.random() * 6);
+          if (Math.random() < f * 0.06) q.species = Math.floor(Math.random() * 6);
         } else if (tid === 'pinch') {
-          q.vy += (ty - q.y) * f * 0.18;
-          q.vx += (tx - q.x) * f * 0.05;
+          q.vx += (tx - q.x) * f * 0.35;
+          q.vy += (ty - q.y) * f * 0.35;
         } else if (tid === 'scatter_burst') {
-          q.vx -= ddx * inv * f * 0.40;
-          q.vy -= ddy * inv * f * 0.40;
+          const str = 1.4 / (dist * 6 + 1);
+          q.vx -= ddx * inv * f * str;
+          q.vy -= ddy * inv * f * str;
         } else if (tid === 'channel') {
-          q.vx += toolState.dragDX * f * 0.30;
-          q.vy += toolState.dragDY * f * 0.30;
+          q.vx += toolState.dragDX * f * 0.7;
+          q.vy += toolState.dragDY * f * 0.7;
         }
       }
     }
@@ -996,6 +1001,7 @@ export function applyGuideForces(
   quanta: Quantum[],
   guideLines: GuideLine[],
   channelPaths: ChannelPath[],
+  tick = 0,
 ): void {
   const GUIDE_REACH = 0.12;      // normalized distance at which guide line force fades to 0
   const CHANNEL_REACH = 0.06;    // narrower reach for pencil channels
@@ -1014,21 +1020,95 @@ export function applyGuideForces(
       if (d > GUIDE_REACH) continue;
       const falloff = 1 - d / GUIDE_REACH;
 
-      if (gl.type === 'flow') {
-        // Attract perpendicularly toward line + push along line direction
+      const lineLen = Math.sqrt(rlen2);
+      const ldx = rdx / lineLen, ldy = rdy / lineLen;
+      const nx = -ldy, ny = ldx;
+      const behavior = gl.type ?? 'flow';
+
+      if (behavior === 'flow') {
+        // Rail that captures and transports.
         const perpF = gl.strength * 0.08 * falloff * falloff / (d * 2 + 0.005);
         q.vx += (tox / d) * perpF;
         q.vy += (toy / d) * perpF;
-        // Push along line direction
-        const lineLen = Math.sqrt(rlen2);
-        const ldx = rdx / lineLen, ldy = rdy / lineLen;
-        q.vx += ldx * gl.strength * 0.012 * falloff;
-        q.vy += ldy * gl.strength * 0.012 * falloff;
-      } else {
-        // Pinch: pure perpendicular attraction (compress toward line)
-        const perpF = gl.strength * 0.12 * falloff * falloff / (d * 2 + 0.005);
+        q.vx += ldx * gl.strength * 0.014 * falloff;
+        q.vy += ldy * gl.strength * 0.014 * falloff;
+      } else if (behavior === 'pinch') {
+        // Compression rail with strong damping toward the line.
+        const perpF = gl.strength * 0.13 * falloff * falloff / (d * 2 + 0.005);
         q.vx += (tox / d) * perpF;
         q.vy += (toy / d) * perpF;
+        q.vx *= 0.996;
+        q.vy *= 0.996;
+      } else if (behavior === 'shear') {
+        // Shear rail: opposite sides slide in inverse directions.
+        const side = (q.x - px) * nx + (q.y - py) * ny;
+        const dir = side >= 0 ? 1 : -1;
+        const shear = gl.strength * 0.02 * falloff;
+        q.vx += ldx * shear * dir;
+        q.vy += ldy * shear * dir;
+        q.vx += (tox / d) * gl.strength * 0.03 * falloff;
+        q.vy += (toy / d) * gl.strength * 0.03 * falloff;
+      } else if (behavior === 'barrier') {
+        // Barrier rail: repels crossing and reflects trajectory softly.
+        const rep = gl.strength * 0.11 * falloff * falloff / (d + 0.004);
+        q.vx -= (tox / d) * rep;
+        q.vy -= (toy / d) * rep;
+        const vn = q.vx * nx + q.vy * ny;
+        if (Math.abs(vn) > 0.0001) {
+          q.vx -= vn * nx * 0.12;
+          q.vy -= vn * ny * 0.12;
+        }
+      } else if (behavior === 'spiral') {
+        // Spiral: pull toward line + strong orbital twist along line.
+        const perpF = gl.strength * 0.07 * falloff * falloff / (d * 2 + 0.005);
+        q.vx += (tox / d) * perpF;
+        q.vy += (toy / d) * perpF;
+        const side = (q.x - px) * nx + (q.y - py) * ny;
+        const spin = gl.strength * 0.04 * falloff * (side >= 0 ? 1 : -1);
+        q.vx += -ny * spin;
+        q.vy += nx * spin;
+        q.vx += ldx * gl.strength * 0.01 * falloff;
+        q.vy += ldy * gl.strength * 0.01 * falloff;
+      } else if (behavior === 'funnel') {
+        // Funnel: pull toward midpoint of segment, stronger near center.
+        const mx = (gl.x1 + gl.x2) / 2, my = (gl.y1 + gl.y2) / 2;
+        const toMx = mx - q.x, toMy = my - q.y;
+        const dm = Math.sqrt(toMx * toMx + toMy * toMy) + 0.0001;
+        if (dm < GUIDE_REACH * 1.2) {
+          const fm = gl.strength * 0.06 * (1 - dm / (GUIDE_REACH * 1.2)) / (dm + 0.003);
+          q.vx += (toMx / dm) * fm;
+          q.vy += (toMy / dm) * fm;
+        }
+        q.vx += ldx * gl.strength * 0.012 * falloff;
+        q.vy += ldy * gl.strength * 0.012 * falloff;
+      } else if (behavior === 'repulsor') {
+        // Repulsor line: push away from the segment.
+        const rep = gl.strength * 0.14 * falloff * falloff / (d + 0.004);
+        q.vx -= (tox / d) * rep;
+        q.vy -= (toy / d) * rep;
+      } else if (behavior === 'attractor') {
+        // Attractor line: strong pull toward the segment (like gravity rail).
+        const perpF = gl.strength * 0.15 * falloff * falloff / (d * 2 + 0.004);
+        q.vx += (tox / d) * perpF;
+        q.vy += (toy / d) * perpF;
+        q.vx += ldx * gl.strength * 0.018 * falloff;
+        q.vy += ldy * gl.strength * 0.018 * falloff;
+      } else if (behavior === 'wave') {
+        // Wave: sinusoidal push along normal (oscillates with tick).
+        const phase = Math.sin(tick * 0.06 + q.x * 20 + q.y * 20) * 0.5 + 0.5;
+        const waveF = gl.strength * (0.02 + phase * 0.03) * falloff;
+        q.vx += nx * waveF;
+        q.vy += ny * waveF;
+        q.vx += ldx * gl.strength * 0.008 * falloff;
+        q.vy += ldy * gl.strength * 0.008 * falloff;
+      } else if (behavior === 'orbit_line') {
+        // Orbit line: agents orbit around the segment (tangential force).
+        const side = (q.x - px) * nx + (q.y - py) * ny;
+        const tang = gl.strength * 0.035 * falloff * (side >= 0 ? 1 : -1);
+        q.vx += -ny * tang;
+        q.vy += nx * tang;
+        q.vx += (tox / d) * gl.strength * 0.025 * falloff;
+        q.vy += (toy / d) * gl.strength * 0.025 * falloff;
       }
     }
 
@@ -1057,13 +1137,30 @@ export function applyGuideForces(
       }
       if (bestDist > CHANNEL_REACH) continue;
       const falloff = 1 - bestDist / CHANNEL_REACH;
-      // Attract toward path + push along path direction
-      const perpF = ch.strength * 0.06 * falloff * falloff / (bestDist + 0.003);
-      q.vx += (bestTox / (bestDist + 0.0001)) * perpF;
-      q.vy += (bestToy / (bestDist + 0.0001)) * perpF;
-      // Along-path push
-      q.vx += bestDx * ch.strength * 0.02 * falloff;
-      q.vy += bestDy * ch.strength * 0.02 * falloff;
+      const behavior = ch.behavior ?? 'stream';
+      const dd = bestDist + 0.0001;
+      if (behavior === 'stream') {
+        const perpF = ch.strength * 0.06 * falloff * falloff / (bestDist + 0.003);
+        q.vx += (bestTox / dd) * perpF;
+        q.vy += (bestToy / dd) * perpF;
+        q.vx += bestDx * ch.strength * 0.022 * falloff;
+        q.vy += bestDy * ch.strength * 0.022 * falloff;
+      } else if (behavior === 'orbit') {
+        const tx = -bestDy, ty = bestDx;
+        const orbit = ch.strength * 0.03 * falloff;
+        q.vx += tx * orbit;
+        q.vy += ty * orbit;
+        q.vx += (bestTox / dd) * ch.strength * 0.035 * falloff;
+        q.vy += (bestToy / dd) * ch.strength * 0.035 * falloff;
+      } else {
+        // Shock channel: periodic pulse that ejects near-path quanta.
+        const pulse = 0.5 + 0.5 * Math.sin(tick * 0.09 + q.age * 0.02);
+        const outward = ch.strength * (0.018 + pulse * 0.04) * falloff;
+        q.vx -= (bestTox / dd) * outward;
+        q.vy -= (bestToy / dd) * outward;
+        q.vx += bestDx * ch.strength * 0.012 * falloff;
+        q.vy += bestDy * ch.strength * 0.012 * falloff;
+      }
     }
   }
 }
@@ -1076,6 +1173,26 @@ export function renderGuides(
   W: number, H: number,
   tick: number,
 ): void {
+  const drawSmoothPath = (ptsPx: [number, number][], smoothness: number) => {
+    if (ptsPx.length < 2) return;
+    const s = Math.max(0, Math.min(1, smoothness));
+    ctx.beginPath();
+    ctx.moveTo(ptsPx[0][0], ptsPx[0][1]);
+    if (s < 0.05 || ptsPx.length < 3) {
+      for (let i = 1; i < ptsPx.length; i++) ctx.lineTo(ptsPx[i][0], ptsPx[i][1]);
+      return;
+    }
+    for (let i = 1; i < ptsPx.length - 1; i++) {
+      const [cx, cy] = ptsPx[i];
+      const [nx, ny] = ptsPx[i + 1];
+      const mx = cx + (nx - cx) * (0.2 + s * 0.3);
+      const my = cy + (ny - cy) * (0.2 + s * 0.3);
+      ctx.quadraticCurveTo(cx, cy, mx, my);
+    }
+    const last = ptsPx[ptsPx.length - 1];
+    ctx.lineTo(last[0], last[1]);
+  };
+
   ctx.save();
   ctx.lineCap = 'round';
 
@@ -1084,13 +1201,25 @@ export function renderGuides(
     const x1 = gl.x1 * W, y1 = gl.y1 * H;
     const x2 = gl.x2 * W, y2 = gl.y2 * H;
     const col = gl.color;
+    const stroke = Math.max(0.6, gl.thickness ?? 1.4);
     // Outer glow
-    ctx.strokeStyle = col; ctx.lineWidth = 6 * gl.strength;
+    ctx.strokeStyle = col; ctx.lineWidth = stroke * 3.8 * gl.strength;
     ctx.globalAlpha = 0.06;
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-    // Inner dashed core
-    ctx.lineWidth = 1.4; ctx.globalAlpha = 0.65;
-    ctx.setLineDash(gl.type === 'pinch' ? [3, 5] : [6, 4]);
+    // Inner dashed core — distinct pattern per line type
+    ctx.lineWidth = stroke; ctx.globalAlpha = 0.65;
+    const dash =
+      gl.type === 'pinch' ? [3, 5]
+      : gl.type === 'shear' ? [10, 3]
+      : gl.type === 'barrier' ? [2, 2]
+      : gl.type === 'spiral' ? [4, 2, 1, 2]
+      : gl.type === 'funnel' ? [8, 4]
+      : gl.type === 'repulsor' ? [2, 4]
+      : gl.type === 'attractor' ? [12, 2]
+      : gl.type === 'wave' ? [3, 3, 1, 3]
+      : gl.type === 'orbit_line' ? [5, 5]
+      : [6, 4];
+    ctx.setLineDash(dash);
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     ctx.setLineDash([]);
     // Notch ticks (like Music Lab rails)
@@ -1126,25 +1255,21 @@ export function renderGuides(
   for (const ch of channelPaths) {
     if (ch.points.length < 2) continue;
     const col = ch.color;
+    const stroke = Math.max(0.6, ch.thickness ?? 1.2);
+    const smooth = Math.max(0, Math.min(1, ch.smoothness ?? 0.45));
+    const ptsPx: [number, number][] = ch.points.map(p => [p[0] * W, p[1] * H]);
     // Soft glow
-    ctx.strokeStyle = col; ctx.lineWidth = 4 * ch.strength;
+    ctx.strokeStyle = col; ctx.lineWidth = stroke * 3.2 * ch.strength;
     ctx.globalAlpha = 0.05;
-    ctx.beginPath();
-    ctx.moveTo(ch.points[0][0] * W, ch.points[0][1] * H);
-    for (let i = 1; i < ch.points.length; i++) {
-      ctx.lineTo(ch.points[i][0] * W, ch.points[i][1] * H);
-    }
+    drawSmoothPath(ptsPx, smooth);
     ctx.stroke();
     // Core pencil line
-    ctx.lineWidth = 1.2; ctx.globalAlpha = 0.55;
-    ctx.beginPath();
-    ctx.moveTo(ch.points[0][0] * W, ch.points[0][1] * H);
-    for (let i = 1; i < ch.points.length; i++) {
-      ctx.lineTo(ch.points[i][0] * W, ch.points[i][1] * H);
-    }
+    ctx.lineWidth = stroke; ctx.globalAlpha = 0.55;
+    drawSmoothPath(ptsPx, smooth);
     ctx.stroke();
     // Direction arrows every ~15 points
     ctx.globalAlpha = 0.45; ctx.fillStyle = col;
+    const chBehavior = ch.behavior ?? 'stream';
     for (let i = 8; i < ch.points.length - 1; i += 12) {
       const px = ch.points[i][0] * W, py = ch.points[i][1] * H;
       const nx = ch.points[i + 1][0] * W, ny = ch.points[i + 1][1] * H;
@@ -1152,7 +1277,8 @@ export function renderGuides(
       const dlen = Math.sqrt(ddx * ddx + ddy * ddy);
       if (dlen < 0.5) continue;
       const ux = ddx / dlen, uy = ddy / dlen;
-      const al = 7, aw = 3;
+      const al = chBehavior === 'orbit' ? 5 : 7;
+      const aw = chBehavior === 'shock' ? 4 : 3;
       ctx.beginPath();
       ctx.moveTo(px + ux * al, py + uy * al);
       ctx.lineTo(px - uy * aw, py + ux * aw);
@@ -1174,11 +1300,12 @@ export function renderToolCursor(
   if (!toolState.isDragging) return;
   const tid = toolState.activeToolId;
   // Only show for force and guide tools (not spawn/erase/mutation)
-  const forceTools = [
+  const showCursorTools = [
     'attract', 'attractor', 'repel', 'repulsor', 'vortex', 'freeze',
     'burst', 'black_hole', 'scatter_burst',
+    'flow_paint', 'pinch', 'channel',
   ];
-  if (!forceTools.includes(tid)) return;
+  if (!showCursorTools.includes(tid)) return;
 
   const x = toolState.lastX;
   const y = toolState.lastY;
@@ -1191,6 +1318,8 @@ export function renderToolCursor(
   ctx.strokeStyle = tid === 'freeze' ? '#80ddff'
     : tid === 'burst' || tid === 'scatter_burst' ? '#ff6040'
     : tid === 'black_hole' ? '#a040ff'
+    : tid === 'flow_paint' || tid === 'channel' ? '#40b0ff'
+    : tid === 'pinch' ? '#a060ff'
     : '#ffffff';
   ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();

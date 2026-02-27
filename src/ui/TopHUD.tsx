@@ -169,7 +169,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
   const accent = LAB_ACCENTS[activeLab] || '#ffd400';
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-10 pointer-events-none" style={{ fontFamily: MONO }}>
+    <div className="fixed top-0 left-0 right-0 z-[900] pointer-events-none" style={{ fontFamily: MONO }}>
       {/* ── Top bar: brand + lab tabs ────────────────────────────── */}
       <div className="flex items-stretch pointer-events-auto" style={{ borderBottom: '1px dashed rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.94)' }}>
         {/* Brand / Home button */}

@@ -305,9 +305,9 @@ const App: React.FC = () => {
   const canvasInnerRef = useRef<HTMLDivElement>(null); // inner canvas-only wrapper for zoom/pan
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
 
-  // Global semantic tooltips:
-  // - sliders: explain the functional effect in code dynamics
-  // - telemetry/readouts: explain what each metric means
+  // Global semantic tooltips (lightweight mode to avoid UI jank):
+  // - sliders: explain functional effect in dynamics
+  // - telemetry/readouts: explain metric meaning
   useEffect(() => {
     const clean = (s?: string | null) => (s ?? '').replace(/\s+/g, ' ').trim();
     const norm = (s?: string | null) =>
@@ -395,14 +395,7 @@ const App: React.FC = () => {
       return `${label}: ${meaning} v=${val} (${min}..${max}, step ${step})`;
     };
 
-    const applyTooltip = (el: HTMLInputElement) => {
-      el.title = buildTip(el);
-      el.dataset.sliderTooltip = '1';
-    };
-
-    const applyAll = () => {
-      document.querySelectorAll<HTMLInputElement>('input[type="range"]').forEach(applyTooltip);
-    };
+    const applyTooltip = (el: HTMLInputElement) => { el.title = buildTip(el); };
 
     const onPointerOver = (ev: Event) => {
       const t = ev.target as HTMLElement | null;
@@ -433,15 +426,13 @@ const App: React.FC = () => {
       }
     };
 
-    applyAll();
-    const obs = new MutationObserver(() => applyAll());
-    obs.observe(document.body, { childList: true, subtree: true });
+    // Prime currently mounted sliders once (no MutationObserver: cheaper).
+    document.querySelectorAll<HTMLInputElement>('input[type="range"]').forEach(applyTooltip);
     document.addEventListener('pointerover', onPointerOver, true);
-    document.addEventListener('input', onInput, true);
+    document.addEventListener('change', onInput, true);
     return () => {
-      obs.disconnect();
       document.removeEventListener('pointerover', onPointerOver, true);
-      document.removeEventListener('input', onInput, true);
+      document.removeEventListener('change', onInput, true);
     };
   }, []);
   
@@ -747,6 +738,23 @@ const App: React.FC = () => {
   // Keep an always-fresh activeLab value for global event listeners (keydown, etc.)
   useEffect(() => {
     activeLabRef.current = activeLab;
+  }, [activeLab]);
+
+  // UX safety: when entering MetaArtLab, ensure the global canvas is not capturing pointers.
+  useEffect(() => {
+    if (activeLab !== 'metaArtLab') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ids = new Set<number>();
+    if (typeof pointerRef.current.id === 'number' && pointerRef.current.id >= 0) ids.add(pointerRef.current.id);
+    ids.add(1); // mouse pointerId is typically 1
+    for (const id of ids) {
+      try {
+        if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
+      } catch { /* ignore */ }
+    }
+    pointerRef.current.down = false;
+    pointerRef.current.id = -1;
   }, [activeLab]);
 
   // ECONOMY-LITE
@@ -4146,13 +4154,23 @@ const App: React.FC = () => {
     <div className="w-full h-screen overflow-hidden flex" style={{ background }}>
       {/* Canvas container - takes remaining space, hidden on homepage */}
       <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden"
-        style={{ display: showHome ? 'none' : undefined }}>
+        style={{
+          display: showHome ? 'none' : undefined,
+          // MetaArtLab has its own full-screen fixed HUD/canvas; don't let the global canvas layer intercept UI.
+          pointerEvents: activeLab === 'metaArtLab' ? 'none' : 'auto',
+        }}>
         {/* Inner wrapper — only the canvases get CSS zoom/pan transform */}
         <div ref={canvasInnerRef} className="absolute inset-0" style={{ willChange: 'transform' }}>
         <canvas
           ref={canvasRef}
           className="absolute inset-0 cursor-crosshair"
-          style={{ width: '100%', height: '100%', touchAction: 'none' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            touchAction: 'none',
+            // Prevent the global canvas from stealing clicks in labs with their own HUD/canvas.
+            pointerEvents: activeLab === 'metaArtLab' ? 'none' : 'auto',
+          }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}

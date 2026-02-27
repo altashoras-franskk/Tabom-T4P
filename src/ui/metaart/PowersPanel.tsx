@@ -31,6 +31,20 @@ export interface PowersPanelProps {
   onSizeAll: (mul: number) => void;
   // Respawn with current DNA (new positions)
   onRespawn: () => void;
+  // Guide aesthetics and guide powers
+  guideStroke: number;
+  guideCurvature: number;
+  guideColor: string;
+  autoGuidesPreset: boolean;
+  autoGuidesRandom: boolean;
+  onGuideStroke: (v: number) => void;
+  onGuideCurvature: (v: number) => void;
+  onGuideColor: (hex: string) => void;
+  onGuideClear: () => void;
+  onGuideGenerate: () => void;
+  onGuideStyleRandom: () => void;
+  onToggleAutoGuidesPreset: () => void;
+  onToggleAutoGuidesRandom: () => void;
 }
 
 const SPECIES_NAMES = ['Luminoso', 'Sombra', 'Fluxo', 'Expansão', 'Magnético', 'Glitch'];
@@ -79,6 +93,9 @@ export const PowersPanel: React.FC<PowersPanelProps> = ({
   onSetAllShape, brushTextureId, onBrushTexture,
   onDNAGene, onChaosInject, onFreezeAll, onPulseAll, onScatterAll,
   onHueRotate, onSatShift, onLitShift, onSizeAll, onRespawn,
+  guideStroke, guideCurvature, guideColor, autoGuidesPreset, autoGuidesRandom,
+  onGuideStroke, onGuideCurvature, onGuideColor, onGuideClear, onGuideGenerate, onGuideStyleRandom,
+  onToggleAutoGuidesPreset, onToggleAutoGuidesRandom,
 }) => {
   const [hueRotDeg, setHueRotDeg] = useState(30);
 
@@ -264,6 +281,66 @@ export const PowersPanel: React.FC<PowersPanelProps> = ({
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── Injeções de Gene ─────────────────────────────────────────── */}
+      <div>
+        <div style={sectionLabel}>Guide Powers</div>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+          <ActionBtn icon="🧭" label="Gerar" color="#60b0ff" desc="Gera guias criativos automáticos" onClick={onGuideGenerate} />
+          <ActionBtn icon="✂" label="Limpar" color="#ff7070" desc="Remove todos os guias e canais" onClick={onGuideClear} />
+          <ActionBtn icon="🎛" label="Style" color="#b080ff" desc="Randomiza cor, espessura e curvatura dos guias" onClick={onGuideStyleRandom} />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+          <span style={{ ...sectionLabel, marginBottom: 0, minWidth: 66 }}>Cor</span>
+          <input
+            type="color"
+            value={guideColor}
+            onChange={e => onGuideColor(e.target.value)}
+            style={{ width: 28, height: 20, padding: 0, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 3, cursor: 'pointer', background: 'none' }}
+          />
+          <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>{guideColor}</span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <span style={{ ...sectionLabel, marginBottom: 0, minWidth: 66 }}>Espessura</span>
+          <input type="range" min={0.6} max={3.2} step={0.05} value={guideStroke}
+            onChange={e => onGuideStroke(parseFloat(e.target.value))}
+            style={{ flex: 1, cursor: 'pointer', accentColor: '#60b0ff' }} />
+          <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', minWidth: 30, fontFamily: 'monospace' }}>{guideStroke.toFixed(2)}</span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <span style={{ ...sectionLabel, marginBottom: 0, minWidth: 66 }}>Curvatura</span>
+          <input type="range" min={0} max={1} step={0.01} value={guideCurvature}
+            onChange={e => onGuideCurvature(parseFloat(e.target.value))}
+            style={{ flex: 1, cursor: 'pointer', accentColor: '#b080ff' }} />
+          <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', minWidth: 30, fontFamily: 'monospace' }}>{guideCurvature.toFixed(2)}</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: 5 }}>
+          <button onClick={onToggleAutoGuidesPreset}
+            style={{
+              flex: 1, padding: '4px 6px', borderRadius: 3, cursor: 'pointer', fontSize: 7,
+              border: `1px solid ${autoGuidesPreset ? 'rgba(96,176,255,0.45)' : 'rgba(255,255,255,0.1)'}`,
+              background: autoGuidesPreset ? 'rgba(96,176,255,0.12)' : 'rgba(255,255,255,0.03)',
+              color: autoGuidesPreset ? 'rgba(160,220,255,0.95)' : 'rgba(255,255,255,0.45)',
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>
+            Preset Auto {autoGuidesPreset ? 'ON' : 'OFF'}
+          </button>
+          <button onClick={onToggleAutoGuidesRandom}
+            style={{
+              flex: 1, padding: '4px 6px', borderRadius: 3, cursor: 'pointer', fontSize: 7,
+              border: `1px solid ${autoGuidesRandom ? 'rgba(176,128,255,0.45)' : 'rgba(255,255,255,0.1)'}`,
+              background: autoGuidesRandom ? 'rgba(176,128,255,0.12)' : 'rgba(255,255,255,0.03)',
+              color: autoGuidesRandom ? 'rgba(220,200,255,0.95)' : 'rgba(255,255,255,0.45)',
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>
+            Random Auto {autoGuidesRandom ? 'ON' : 'OFF'}
+          </button>
         </div>
       </div>
 

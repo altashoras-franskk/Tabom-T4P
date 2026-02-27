@@ -7,7 +7,7 @@ import {
 import type {
   DNA, LayerState, ToolState, ArchiveEntry, GrimoireEntry,
   VitrineCard, MetricsSnapshot, Quantum, GestureRecord,
-  OverlayFlags, SpawnPattern, GuideLine, ChannelPath,
+  OverlayFlags, SpawnPattern, GuideLine, ChannelPath, GuideLineType,
 } from '../../sim/metaart/metaArtTypes';
 import { PRESETS, EXTRA_PRESETS, GEO_PRESETS, generateRandomPalette, generateFullyRandomDNA } from '../../sim/metaart/metaArtDNA';
 import {
@@ -73,6 +73,83 @@ const BORDER = 'rgba(255,255,255,0.06)';
 const DIM = 'rgba(255,255,255,0.28)';
 const MID = 'rgba(255,255,255,0.5)';
 const BRIGHT = 'rgba(255,255,255,0.85)';
+
+type RitualKey = 'pulse' | 'order' | 'heat' | 'surrender' | 'memory' | 'gesture';
+type RitualAnswers = Record<RitualKey, number>;
+type RitualQuestion = {
+  key: RitualKey;
+  prompt: string;
+  options: Array<{ label: string; value: number }>;
+};
+
+const RITUAL_QUESTIONS: RitualQuestion[] = [
+  {
+    key: 'pulse',
+    prompt: 'Qual ritmo interno você quer para esta sessão?',
+    options: [
+      { label: 'Silêncio', value: 0.1 },
+      { label: 'Respiração lenta', value: 0.3 },
+      { label: 'Ritmo vivo', value: 0.55 },
+      { label: 'Pulsação intensa', value: 0.78 },
+      { label: 'Êxtase', value: 0.95 },
+    ],
+  },
+  {
+    key: 'order',
+    prompt: 'Hoje sua forma pede ordem ou caos?',
+    options: [
+      { label: 'Caos total', value: 0.05 },
+      { label: 'Ruptura', value: 0.25 },
+      { label: 'Equilíbrio', value: 0.5 },
+      { label: 'Arquitetura', value: 0.75 },
+      { label: 'Geometria rígida', value: 0.95 },
+    ],
+  },
+  {
+    key: 'heat',
+    prompt: 'Qual temperatura emocional da paleta?',
+    options: [
+      { label: 'Fria', value: 0.1 },
+      { label: 'Neutra-fria', value: 0.3 },
+      { label: 'Mista', value: 0.5 },
+      { label: 'Neutra-quente', value: 0.7 },
+      { label: 'Incandescente', value: 0.9 },
+    ],
+  },
+  {
+    key: 'surrender',
+    prompt: 'Quanto controle você quer manter?',
+    options: [
+      { label: 'Controle total', value: 0.1 },
+      { label: 'Direção firme', value: 0.3 },
+      { label: 'Coautoria', value: 0.55 },
+      { label: 'Fluxo livre', value: 0.78 },
+      { label: 'Entrega total', value: 0.95 },
+    ],
+  },
+  {
+    key: 'memory',
+    prompt: 'Você quer rastro/memória longa na composição?',
+    options: [
+      { label: 'Quase nenhum', value: 0.1 },
+      { label: 'Curto', value: 0.3 },
+      { label: 'Médio', value: 0.5 },
+      { label: 'Longo', value: 0.75 },
+      { label: 'Profundo', value: 0.95 },
+    ],
+  },
+  {
+    key: 'gesture',
+    prompt: 'O gesto deve ser mais traço ou massa?',
+    options: [
+      { label: 'Ponto/massa', value: 0.1 },
+      { label: 'Forma curta', value: 0.3 },
+      { label: 'Híbrido', value: 0.5 },
+      { label: 'Traço fluido', value: 0.75 },
+      { label: 'Caligrafia', value: 0.95 },
+    ],
+  },
+];
 
 // ── Geo Panel ─────────────────────────────────────────────────────────────────
 function GeoPanel({
@@ -502,15 +579,34 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   const [spawnPattern, setSpawnPattern] = useState<SpawnPattern>('scatter');
   const [staticAgents, setStaticAgents] = useState(false);
   const [isolatedSpecies, setIsolatedSpecies] = useState(false);
+  const [ritualOpen, setRitualOpen] = useState(true);
+  const [ritualStep, setRitualStep] = useState(0);
+  const [ritualAnswers, setRitualAnswers] = useState<RitualAnswers>({
+    pulse: 0.55, order: 0.5, heat: 0.5, surrender: 0.55, memory: 0.65, gesture: 0.6,
+  });
+  const ritualDoneRef = useRef(false);
 
   // ── Guide/Channel persistent structures ────────────────────────────────────
   const guideLinesRef     = useRef<GuideLine[]>([]);
   const channelPathsRef   = useRef<ChannelPath[]>([]);
-  const guideDrawingRef   = useRef<{ x1: number; y1: number; x2: number; y2: number; type: 'flow' | 'pinch' } | null>(null);
+  const guideDrawingRef   = useRef<{ x1: number; y1: number; x2: number; y2: number; type: GuideLineType } | null>(null);
   const channelPtsRef     = useRef<[number, number][]>([]);
   const [guideCount,      setGuideCount] = useState(0);  // for UI reactivity
+  const [guideStroke,     setGuideStroke] = useState(1.3);
+  const [guideCurvature,  setGuideCurvature] = useState(0.45);
+  const [guideColor,      setGuideColor] = useState('#40b0ff');
+  const [guideLineMode,   setGuideLineMode] = useState<GuideLineType>('flow');
+  const [guidePathMode,   setGuidePathMode] = useState<'stream' | 'orbit' | 'shock'>('stream');
+  const [autoGuidesPreset, setAutoGuidesPreset] = useState(true);
+  const [autoGuidesRandom, setAutoGuidesRandom] = useState(true);
+  const guideStrokeRef = useRef(1.3);
+  const guideCurvatureRef = useRef(0.45);
+  const guideColorRef = useRef('#40b0ff');
+  const guideLineModeRef = useRef<GuideLineType>('flow');
+  const guidePathModeRef = useRef<'stream' | 'orbit' | 'shock'>('stream');
 
   const toolRef      = useRef<ToolState>(createDefaultToolState());
+  const canvasPointerIdRef = useRef<number | null>(null);
   const pausedRef    = useRef(false);
   const overlaysRef  = useRef<OverlayFlags>({ connections: false, glow: false, pulse: false });
   const gesturesRef  = useRef<GestureRecord[]>([]);
@@ -543,6 +639,63 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   const spawnPatternRef = useRef<SpawnPattern>('scatter');
   const staticAgentsRef = useRef(false);
   const isolatedSpeciesRef = useRef(false);
+
+  const getPresetByName = useCallback((name: string): DNA => {
+    const all = [...PRESETS, ...EXTRA_PRESETS];
+    return all.find(p => p.name === name) ?? PRESETS[0];
+  }, []);
+
+  const buildRitualSeed = useCallback((a: RitualAnswers): {
+    dna: DNA; spawn: SpawnPattern; tool: ToolState['activeToolId']; speed: number; size: number;
+  } => {
+    const baseName =
+      a.order > 0.84 ? 'Mondrian Grid' :
+      a.order > 0.70 ? 'Blueprint' :
+      a.surrender > 0.82 && a.pulse > 0.70 ? 'Action Paint' :
+      a.memory > 0.82 && a.pulse < 0.35 ? 'Slow Fog' :
+      a.heat > 0.75 ? 'Chromatic Ecstasy' :
+      a.gesture > 0.78 ? 'Ink Calligraphy' :
+      a.surrender < 0.30 ? 'Signal' :
+      'Quadro Branco';
+    const base = getPresetByName(baseName);
+    const warm = ['#ff5d3d', '#ff9e2c', '#ffd166', '#ff3d8f', '#b13dff', '#592a20'];
+    const cool = ['#46c2ff', '#7ad3ff', '#6ef2d1', '#70a5ff', '#3457ff', '#173046'];
+    const temp = a.heat;
+    const pick = temp >= 0.5 ? warm : cool;
+    const blend = Math.abs(temp - 0.5) * 2;
+    const pal = base.palette.map((c, i) => (i % 2 === 0 && blend > 0.2) ? pick[i % pick.length] : c);
+    const genes = { ...base.genes };
+    genes.flow = Math.max(0.02, Math.min(0.98, (genes.flow ?? 0.5) * 0.55 + a.pulse * 0.45));
+    genes.entropy = Math.max(0.02, Math.min(0.98, (genes.entropy ?? 0.4) * 0.5 + (1 - a.order) * 0.5));
+    genes.memory = Math.max(0.02, Math.min(0.99, (genes.memory ?? 0.6) * 0.55 + a.memory * 0.45));
+    genes.coherence = Math.max(0.05, Math.min(0.98, (genes.coherence ?? 0.6) * 0.55 + a.order * 0.45));
+    genes.fragmentation = Math.max(0.02, Math.min(0.98, (genes.fragmentation ?? 0.4) * 0.6 + (1 - a.order) * 0.4));
+    genes.rhythm = Math.max(0.02, Math.min(0.98, (genes.rhythm ?? 0.5) * 0.55 + a.pulse * 0.45));
+    genes.linear = Math.max(0, Math.min(1, (genes.linear ?? 0.4) * 0.6 + a.order * 0.4));
+    const dnaSeed: DNA = {
+      ...base,
+      id: `${base.id}-ritual-${Date.now()}`,
+      name: `Ritual: ${base.name ?? 'Quadro Branco'}`,
+      palette: pal,
+      genes,
+      quantaCount: 0,
+      background: '#ffffff',
+      createdAt: Date.now(),
+    };
+    const spawn: SpawnPattern =
+      a.order > 0.75 ? 'grid' :
+      a.surrender > 0.8 ? 'explosion' :
+      a.gesture > 0.72 ? 'flow_lines' :
+      'scatter';
+    const tool: ToolState['activeToolId'] =
+      a.gesture > 0.72 ? 'flow_paint' :
+      a.surrender > 0.8 ? 'spawn_brush' :
+      a.order > 0.72 ? 'channel' :
+      'spawn_brush';
+    const speed = Math.max(0.35, Math.min(1.45, 0.45 + a.pulse * 0.95));
+    const size = Math.max(0.55, Math.min(1.8, 0.75 + a.gesture * 0.8));
+    return { dna: dnaSeed, spawn, tool, speed, size };
+  }, [getPresetByName]);
 
   // ── Recording ─────────────────────────────────────────────────────────────
   const recorderRef  = useRef<CanvasRecorder | null>(null);
@@ -637,6 +790,11 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   useEffect(() => { isolatedSpeciesRef.current = isolatedSpecies; }, [isolatedSpecies]);
   useEffect(() => { geoParamsRef.current = geoParams; }, [geoParams]);
   useEffect(() => { physicsConfigRef.current = physicsConfig; }, [physicsConfig]);
+  useEffect(() => { guideStrokeRef.current = guideStroke; }, [guideStroke]);
+  useEffect(() => { guideCurvatureRef.current = guideCurvature; }, [guideCurvature]);
+  useEffect(() => { guideColorRef.current = guideColor; }, [guideColor]);
+  useEffect(() => { guideLineModeRef.current = guideLineMode; }, [guideLineMode]);
+  useEffect(() => { guidePathModeRef.current = guidePathMode; }, [guidePathMode]);
   useEffect(() => {
     const preset = BRUSH_TEXTURE_PRESETS.find(p => p.id === brushTextureId) ?? BRUSH_TEXTURE_PRESETS[0];
     brushTextureRef.current = preset;
@@ -673,6 +831,14 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   useEffect(() => {
     if (active) initSim(dnaRef.current, Date.now());
   }, [active]); // eslint-disable-line
+
+  useEffect(() => {
+    if (!active) return;
+    if (!ritualDoneRef.current) {
+      setRitualStep(0);
+      setRitualOpen(true);
+    }
+  }, [active]);
 
   // ── Main loop — dt-based slow motion + controller polling ─────────────────
   useEffect(() => {
@@ -843,7 +1009,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           );
           // Apply persistent guide/channel forces
           if (guideLinesRef.current.length > 0 || channelPathsRef.current.length > 0) {
-            applyGuideForces(quantaRef.current, guideLinesRef.current, channelPathsRef.current);
+            applyGuideForces(quantaRef.current, guideLinesRef.current, channelPathsRef.current, tickRef.current);
           }
           // Geo forces (only in geo/hybrid mode)
           if (gMode !== 'fluid') {
@@ -1008,11 +1174,20 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
       // ── Guide drawing preview (dashed line while dragging) ────────────────
       if (guideDrawingRef.current) {
         const d = guideDrawingRef.current;
+        const mode = guideLineModeRef.current ?? d.type;
+        const previewColor =
+          mode === 'barrier' ? '#ff7070' :
+          mode === 'shear' ? '#ffd060' :
+          mode === 'pinch' ? '#a060ff' : '#40b0ff';
+        const previewDash =
+          mode === 'barrier' ? [2, 2] :
+          mode === 'shear' ? [10, 3] :
+          mode === 'pinch' ? [3, 5] : [5, 4];
         ctx.save();
-        ctx.strokeStyle = d.type === 'pinch' ? '#a060ff' : '#40b0ff';
+        ctx.strokeStyle = previewColor;
         ctx.lineWidth = 1.2;
         ctx.globalAlpha = 0.6;
-        ctx.setLineDash([5, 4]);
+        ctx.setLineDash(previewDash);
         ctx.beginPath();
         ctx.moveTo(d.x1 * W, d.y1 * H);
         ctx.lineTo(d.x2 * W, d.y2 * H);
@@ -1095,14 +1270,17 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     }
   }, []);
 
-  // ── Canvas pointer events ─────────────────────────────────────────────────
+  // ── Canvas pointer events (coords in canvas buffer space to fix cursor offset) ─
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
+    canvasPointerIdRef.current = e.pointerId;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
     const W = e.currentTarget.width  || canvasSize.w;
     const H = e.currentTarget.height || canvasSize.h;
+    const scaleX = rect.width > 0 ? W / rect.width : 1;
+    const scaleY = rect.height > 0 ? H / rect.height : 1;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
     setToolState(ts => {
       const next = { ...ts, isDragging: true, lastX: x, lastY: y };
@@ -1150,12 +1328,14 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!toolRef.current.isDragging) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x  = e.clientX - rect.left;
-    const y  = e.clientY - rect.top;
-    const lx = toolRef.current.lastX;
-    const ly = toolRef.current.lastY;
     const W  = e.currentTarget.width  || canvasSize.w;
     const H  = e.currentTarget.height || canvasSize.h;
+    const scaleX = rect.width > 0 ? W / rect.width : 1;
+    const scaleY = rect.height > 0 ? H / rect.height : 1;
+    const x  = (e.clientX - rect.left) * scaleX;
+    const y  = (e.clientY - rect.top) * scaleY;
+    const lx = toolRef.current.lastX;
+    const ly = toolRef.current.lastY;
 
     setToolState(ts => {
       const ddx = x - lx, ddy = y - ly;
@@ -1198,7 +1378,17 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     });
   }, [canvasSize.w, canvasSize.h, applyAgentTool]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e?: React.PointerEvent<HTMLCanvasElement>) => {
+    const el = e?.currentTarget ?? mainCanvasRef.current;
+    const pid = (e?.pointerId ?? canvasPointerIdRef.current);
+    if (el && pid !== null && pid !== undefined) {
+      try {
+        if (typeof (el as any).hasPointerCapture === 'function' && (el as any).hasPointerCapture(pid)) {
+          (el as any).releasePointerCapture(pid);
+        }
+      } catch { /* ignore */ }
+    }
+    canvasPointerIdRef.current = null;
     const ts = toolRef.current;
 
     // Finalize guide line
@@ -1206,11 +1396,12 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
       const d = guideDrawingRef.current;
       const dx = d.x2 - d.x1, dy = d.y2 - d.y1;
       if (dx * dx + dy * dy > 0.001) {
-        const color = dnaRef.current.palette[toolRef.current.colorIndex % dnaRef.current.palette.length] ?? '#40b0ff';
+        const color = guideColorRef.current || (dnaRef.current.palette[toolRef.current.colorIndex % dnaRef.current.palette.length] ?? '#40b0ff');
         guideLinesRef.current.push({
           id: `gl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2,
-          type: d.type, color, strength: ts.pressure,
+          type: guideLineModeRef.current || d.type, color, strength: ts.pressure,
+          thickness: guideStrokeRef.current,
         });
         setGuideCount(guideLinesRef.current.length + channelPathsRef.current.length);
       }
@@ -1219,10 +1410,13 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
 
     // Finalize channel path
     if (ts.activeToolId === 'channel' && channelPtsRef.current.length > 2) {
-      const color = dnaRef.current.palette[toolRef.current.colorIndex % dnaRef.current.palette.length] ?? '#40b0ff';
+      const color = guideColorRef.current || (dnaRef.current.palette[toolRef.current.colorIndex % dnaRef.current.palette.length] ?? '#40b0ff');
       channelPathsRef.current.push({
         id: `ch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         points: [...channelPtsRef.current], color, strength: ts.pressure,
+        thickness: guideStrokeRef.current,
+        smoothness: guideCurvatureRef.current,
+        behavior: guidePathModeRef.current,
       });
       setGuideCount(guideLinesRef.current.length + channelPathsRef.current.length);
     }
@@ -1265,8 +1459,12 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     const mat = buildInteractionMatrix(newDNA, seedRef.current);
     fieldsRef.current.interactionMatrix = mat;
     setMatrixValues(Array.from(mat));
+    if (autoGuidesPreset) {
+      clearGuides();
+      spawnAutoGuides('preset', newDNA);
+    }
     setGrimoire(prev => addGrimoireEntry(prev, `DNA: ${preset.name ?? '?'}`, 'milestone'));
-  }, [handleDNAChange]);
+  }, [handleDNAChange, autoGuidesPreset]);
 
   // ── Geo param helpers ─────────────────────────────────────────────────────
   const handleGeoParamChange = useCallback((key: keyof GeoParams, val: GeoParams[keyof GeoParams]) => {
@@ -1293,6 +1491,34 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
       }
       return next;
     });
+  }, []);
+
+  const handleGeoModeSelect = useCallback((m: GeoParams['mode']) => {
+    handleGeoParamChange('mode', m);
+    // UX: entering Geo/Hybrid/3D should reveal its params automatically.
+    if (m !== 'fluid') {
+      setRightPanel('geo');
+    } else {
+      // UX: returning to fluid should bring DNA/genes back by default.
+      setRightPanel('dna');
+    }
+  }, [handleGeoParamChange]);
+
+  const handleGeoPanelParamChange = useCallback((key: keyof GeoParams, val: GeoParams[keyof GeoParams]) => {
+    if (key === 'mode') {
+      handleGeoModeSelect(val as GeoParams['mode']);
+      return;
+    }
+    handleGeoParamChange(key, val);
+  }, [handleGeoModeSelect, handleGeoParamChange]);
+
+  // UX safety: always allow exiting cinematic with Escape.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCinematic(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   const applyGeoPresetByKey = useCallback((key: string, dnaPreset?: DNA) => {
@@ -1381,6 +1607,109 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     setGrimoire(prev => addGrimoireEntry(prev, 'snapshot capturado', 'milestone'));
   }, []);
 
+  const clearGuides = useCallback(() => {
+    guideLinesRef.current = [];
+    channelPathsRef.current = [];
+    guideDrawingRef.current = null;
+    channelPtsRef.current = [];
+    setGuideCount(0);
+  }, []);
+
+  const retuneGuidesLive = useCallback((patch: {
+    color?: string;
+    thickness?: number;
+    smoothness?: number;
+    lineMode?: GuideLineType;
+    pathMode?: 'stream' | 'orbit' | 'shock';
+  }) => {
+    if (guideLinesRef.current.length > 0) {
+      guideLinesRef.current = guideLinesRef.current.map(g => ({
+        ...g,
+        color: patch.color ?? g.color,
+        thickness: patch.thickness ?? g.thickness,
+        type: patch.lineMode ?? g.type,
+      }));
+    }
+    if (channelPathsRef.current.length > 0) {
+      channelPathsRef.current = channelPathsRef.current.map(c => ({
+        ...c,
+        color: patch.color ?? c.color,
+        thickness: patch.thickness ?? c.thickness,
+        smoothness: patch.smoothness ?? c.smoothness,
+        behavior: patch.pathMode ?? c.behavior,
+      }));
+    }
+  }, []);
+
+  const spawnAutoGuides = useCallback((mode: 'preset' | 'random', dnaSrc?: DNA) => {
+    const baseDNA = dnaSrc ?? dnaRef.current;
+    const colA = guideColorRef.current || (baseDNA.palette[0] ?? '#40b0ff');
+    const colB = baseDNA.palette[Math.floor(Math.random() * Math.max(1, baseDNA.palette.length))] ?? colA;
+    const stroke = Math.max(0.6, guideStrokeRef.current);
+    const smoothness = Math.max(0, Math.min(1, guideCurvatureRef.current));
+    const guideN = mode === 'random' ? 3 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 2);
+    const channelN = mode === 'random' ? 1 + Math.floor(Math.random() * 2) : 1;
+
+    const newGuides: GuideLine[] = [];
+    const lineModes: GuideLineType[] = ['flow', 'pinch', 'shear', 'barrier', 'spiral', 'funnel', 'repulsor', 'attractor', 'wave', 'orbit_line'];
+    const pathModes: Array<'stream' | 'orbit' | 'shock'> = ['stream', 'orbit', 'shock'];
+    for (let i = 0; i < guideN; i++) {
+      const side = Math.floor(Math.random() * 4);
+      const inward = 0.16 + Math.random() * 0.22;
+      let x1 = Math.random(), y1 = Math.random();
+      if (side === 0) { x1 = 0.02; y1 = Math.random(); }
+      if (side === 1) { x1 = 0.98; y1 = Math.random(); }
+      if (side === 2) { x1 = Math.random(); y1 = 0.02; }
+      if (side === 3) { x1 = Math.random(); y1 = 0.98; }
+      const x2 = Math.max(0.03, Math.min(0.97, x1 + (0.5 - x1) * inward + (Math.random() - 0.5) * 0.45));
+      const y2 = Math.max(0.03, Math.min(0.97, y1 + (0.5 - y1) * inward + (Math.random() - 0.5) * 0.45));
+      newGuides.push({
+        id: `agl-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        x1, y1, x2, y2,
+        type: mode === 'random'
+          ? lineModes[Math.floor(Math.random() * lineModes.length)]
+          : (guideLineModeRef.current ?? 'flow'),
+        color: i % 2 === 0 ? colA : colB,
+        strength: 0.5 + Math.random() * 0.45,
+        thickness: stroke * (0.8 + Math.random() * 0.55),
+      });
+    }
+
+    const newChannels: ChannelPath[] = [];
+    for (let i = 0; i < channelN; i++) {
+      const pts: [number, number][] = [];
+      const sx = 0.08 + Math.random() * 0.84;
+      const sy = 0.08 + Math.random() * 0.84;
+      const ang = Math.random() * Math.PI * 2;
+      const segs = 10 + Math.floor(Math.random() * 10);
+      const amp = 0.04 + smoothness * 0.12;
+      for (let p = 0; p < segs; p++) {
+        const t = p / (segs - 1);
+        const baseX = sx + Math.cos(ang) * (t - 0.5) * (0.45 + Math.random() * 0.18);
+        const baseY = sy + Math.sin(ang) * (t - 0.5) * (0.45 + Math.random() * 0.18);
+        const wig = Math.sin(t * Math.PI * 2.0 + i) * amp;
+        const nx = Math.max(0.02, Math.min(0.98, baseX + Math.cos(ang + Math.PI / 2) * wig));
+        const ny = Math.max(0.02, Math.min(0.98, baseY + Math.sin(ang + Math.PI / 2) * wig));
+        pts.push([nx, ny]);
+      }
+      newChannels.push({
+        id: `ach-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        points: pts,
+        color: i % 2 === 0 ? colB : colA,
+        strength: 0.46 + Math.random() * 0.4,
+        thickness: stroke * (0.85 + Math.random() * 0.5),
+        smoothness,
+        behavior: mode === 'random'
+          ? pathModes[Math.floor(Math.random() * pathModes.length)]
+          : (guidePathModeRef.current ?? 'stream'),
+      });
+    }
+
+    guideLinesRef.current = [...guideLinesRef.current, ...newGuides];
+    channelPathsRef.current = [...channelPathsRef.current, ...newChannels];
+    setGuideCount(guideLinesRef.current.length + channelPathsRef.current.length);
+  }, []);
+
   const handleClearAll = useCallback(() => {
     // Clear the "board": persistent layers + live agents + fields.
     for (const layer of layersRef.current) {
@@ -1401,7 +1730,11 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     setGrimoire(prev => addGrimoireEntry(prev, 'tela limpa — reinício do gesto', 'observation'));
   }, []);
 
-  const handleBlankCanvas = useCallback(() => {
+  const primeWhiteCanvas = useCallback((dnaOverride?: DNA, note?: string) => {
+    if (dnaOverride) {
+      setDNA(dnaOverride);
+      dnaRef.current = dnaOverride;
+    }
     for (const layer of layersRef.current) {
       if (!layer.canvas) continue;
       const ctx = layer.canvas.getContext('2d')!;
@@ -1415,10 +1748,34 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
     fields.interactionMatrix = buildInteractionMatrix(dnaRef.current, seedRef.current);
     fieldsRef.current = fields;
     setMatrixValues(Array.from(fields.interactionMatrix));
-    setPaused(true);
-    pausedRef.current = true;
-    setGrimoire(prev => addGrimoireEntry(prev, 'blank canvas — modo pintura livre', 'milestone'));
-  }, []);
+    clearGuides();
+    // White board should remain live: no forced pause.
+    setPaused(false);
+    pausedRef.current = false;
+    setGrimoire(prev => addGrimoireEntry(prev, note ?? 'blank canvas — tela viva para pintura em tempo real', 'milestone'));
+  }, [clearGuides]);
+
+  const handleBlankCanvas = useCallback(() => {
+    primeWhiteCanvas(undefined, 'blank canvas — tela viva para pintura em tempo real');
+  }, [primeWhiteCanvas]);
+
+  const handleApplyRitual = useCallback(() => {
+    const seed = buildRitualSeed(ritualAnswers);
+    setSpawnPattern(seed.spawn);
+    spawnPatternRef.current = seed.spawn;
+    setToolState(prev => {
+      const next = { ...prev, activeToolId: seed.tool };
+      toolRef.current = next;
+      return next;
+    });
+    setSimSpeed(seed.speed);
+    simSpeedRef.current = seed.speed;
+    setSizeMul(seed.size);
+    sizeMulRef.current = seed.size;
+    primeWhiteCanvas(seed.dna, `ritual aplicado — ${seed.dna.name ?? 'preset espiritual'}`);
+    ritualDoneRef.current = true;
+    setRitualOpen(false);
+  }, [buildRitualSeed, ritualAnswers, primeWhiteCanvas]);
 
   const handleLayerChange = useCallback((id: string, patch: Partial<LayerState>) => {
     layersRef.current = layersRef.current.map(l => l.id === id ? { ...l, ...patch } : l);
@@ -1464,9 +1821,12 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   const handleRandomCanvas = useCallback(() => {
     const newDNA = generateFullyRandomDNA();
     setDNA(newDNA);
+    dnaRef.current = newDNA;
+    clearGuides();
     initSim(newDNA, Date.now());
+    if (autoGuidesRandom) spawnAutoGuides('random', newDNA);
     setGrimoire(prev => addGrimoireEntry(prev, 'DNA completamente aleatorio gerado', 'milestone'));
-  }, [initSim]);
+  }, [initSim, autoGuidesRandom, clearGuides, spawnAutoGuides]);
 
   // ── Spawn singleton big agent ─────────────────────────────────────────────
   const handleSpawnSingleton = useCallback(() => {
@@ -1559,6 +1919,61 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
   const handleScatterAll = useCallback(() => {
     for (const q of quantaRef.current) {
       q.vx -= (0.5 - q.x) * 0.04; q.vy -= (0.5 - q.y) * 0.04;
+    }
+  }, []);
+
+  const handleExplodeAll = useCallback(() => {
+    for (const q of quantaRef.current) {
+      const dx = q.x - 0.5;
+      const dy = q.y - 0.5;
+      const d = Math.sqrt(dx * dx + dy * dy) + 0.0001;
+      const f = 0.010 + Math.random() * 0.020;
+      q.vx += (dx / d) * f;
+      q.vy += (dy / d) * f;
+    }
+  }, []);
+
+  const handleBlackHoleAll = useCallback(() => {
+    for (const q of quantaRef.current) {
+      const dx = 0.5 - q.x;
+      const dy = 0.5 - q.y;
+      const d = Math.sqrt(dx * dx + dy * dy) + 0.0001;
+      const pull = 0.012 / (d + 0.03);
+      q.vx += (dx / d) * pull;
+      q.vy += (dy / d) * pull;
+      // Orbital component
+      q.vx += (-dy / d) * 0.004;
+      q.vy += (dx / d) * 0.004;
+      if (d < 0.035) {
+        q.x = ((1 - q.x) + (Math.random() - 0.5) * 0.08 + 1) % 1;
+        q.y = ((1 - q.y) + (Math.random() - 0.5) * 0.08 + 1) % 1;
+      }
+    }
+  }, []);
+
+  const handleHarmonizeAll = useCallback(() => {
+    const nextDNA = {
+      ...dnaRef.current,
+      genes: {
+        ...dnaRef.current.genes,
+        coherence: Math.min(1, (dnaRef.current.genes.coherence ?? 0.5) + 0.22),
+        entropy: Math.max(0, (dnaRef.current.genes.entropy ?? 0.5) - 0.20),
+        flow: Math.min(1, (dnaRef.current.genes.flow ?? 0.5) + 0.12),
+      },
+    };
+    setDNA(nextDNA);
+    dnaRef.current = nextDNA;
+    const mat = new Float32Array(36);
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 6; j++) {
+        mat[i * 6 + j] = 0.25 + Math.random() * 0.40;
+      }
+    }
+    fieldsRef.current.interactionMatrix = mat;
+    setMatrixValues(Array.from(mat));
+    for (const q of quantaRef.current) {
+      q.vx *= 0.86;
+      q.vy *= 0.86;
     }
   }, []);
 
@@ -1710,7 +2125,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 5,
+      position: 'fixed', inset: 0, zIndex: 250,
       display: 'flex', flexDirection: 'column',
       paddingTop: cinematic ? 0 : 36,
       background: BG, fontFamily: MONO,
@@ -1804,8 +2219,8 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             {paused ? <Play size={12} strokeWidth={1.5} /> : <Pause size={12} strokeWidth={1.5} />}
           </button>
 
-          {/* Blank Canvas — clears everything, pauses, ready for manual painting */}
-          <button onClick={handleBlankCanvas} title="Tela em branco (limpa tudo, pausa, modo pintura)"
+          {/* Blank Canvas — clears everything and keeps simulation live */}
+          <button onClick={handleBlankCanvas} title="Tela em branco viva (limpa tudo e continua em tempo real)"
             style={{ ...topBtnSty, color: '#fff', fontSize: 8, letterSpacing: '0.08em', fontFamily: MONO }}>
             BLANK
           </button>
@@ -1818,11 +2233,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           {/* Clear Guides */}
           {guideCount > 0 && (
             <button
-              onClick={() => {
-                guideLinesRef.current = [];
-                channelPathsRef.current = [];
-                setGuideCount(0);
-              }}
+              onClick={clearGuides}
               title="Limpar guias e canais"
               style={{
                 ...topBtnSty,
@@ -1985,17 +2396,17 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
 
           {/* Panel toggles */}
           {([
-            ['layers',  <Layers  key="l" size={11} strokeWidth={1.2} />, 'LYR'],
-            ['dna',     <Dna     key="d" size={11} strokeWidth={1.2} />, 'DNA'],
-            ['archive', <Archive key="a" size={11} strokeWidth={1.2} />, 'ARC'],
-            ['vitrine', null, 'VIT'],
-            ['matrix',  <Grid3X3 key="m" size={11} strokeWidth={1.2} />, 'MTX'],
-            ['physics', null, 'PHY'],
-            ['powers',  null, 'PWR'],
-            ['geo',     null, 'GEO'],
-            ['hub',     null, 'HUB'],
-          ] as [RightPanel, React.ReactNode | null, string][]).map(([panel, icon, label]) => (
-            <button title={panel} key={panel}
+            ['layers',  <Layers  key="l" size={11} strokeWidth={1.2} />, 'LYR', 'Camadas · Render / blend'],
+            ['dna',     <Dna     key="d" size={11} strokeWidth={1.2} />, 'DNA', 'DNA · Paleta · Estilo'],
+            ['archive', <Archive key="a" size={11} strokeWidth={1.2} />, 'ARC', 'Arquivo · Capturas / presets'],
+            ['vitrine', null, 'VIT', 'Vitrine · Curadoria / cenas'],
+            ['matrix',  <Grid3X3 key="m" size={11} strokeWidth={1.2} />, 'MTX', 'Matriz · Interações / espécies'],
+            ['physics', null, 'FIS', 'Física · Integração / estabilidade'],
+            ['powers',  null, 'PWR', 'Poderes · Biblioteca / ações'],
+            ['geo',     null, 'GEO', 'Geometria · Compositor / parâmetros'],
+            ['hub',     null, 'HUB', 'Hub · Visão geral'],
+          ] as [RightPanel, React.ReactNode | null, string, string][]).map(([panel, icon, label, hint]) => (
+            <button title={hint} key={panel}
               onClick={() => setRightPanel(prev => prev === panel ? null : panel)}
               style={{
                 ...topBtnSty,
@@ -2018,23 +2429,25 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
 
       {/* Cinematic exit */}
       {cinematic && (
-        <button title="Sair modo cinema" onClick={() => setCinematic(false)}
+        <button title="Sair modo cinema (ESC)" onClick={() => setCinematic(false)}
           style={{
-            position: 'absolute', top: 10, right: 10, zIndex: 100,
-            background: 'rgba(0,0,0,0.7)', border: `1px solid ${BORDER}`,
-            borderRadius: 2, padding: '4px 10px', cursor: 'pointer',
-            color: DIM, display: 'flex', alignItems: 'center', gap: 4,
-            fontSize: 8, fontFamily: MONO, letterSpacing: '0.12em', textTransform: 'uppercase',
+            position: 'fixed', top: 10, right: 10, zIndex: 1000,
+            background: 'rgba(0,0,0,0.82)', border: `1px solid rgba(255,255,255,0.14)`,
+            borderRadius: 2, padding: '6px 12px', cursor: 'pointer',
+            color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 9, fontFamily: MONO, letterSpacing: '0.14em', textTransform: 'uppercase',
+            boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
           }}>
-          <X size={10} strokeWidth={1.2} /> EXIT
+          <X size={11} strokeWidth={1.6} /> VOLTAR <span style={{ opacity: 0.55, fontSize: 8 }}>ESC</span>
         </button>
       )}
 
       {/* ── Body ── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Left Sidebar */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+        {/* Left Sidebar — always on top so controls work with any canvas background */}
         {!cinematic && (
-          <LeftSidebar
+          <div style={{ position: 'relative', zIndex: 15 }}>
+            <LeftSidebar
             toolState={toolState}
             palette={dna.palette}
             onToolChange={patch => setToolState(ts => {
@@ -2074,14 +2487,72 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
               setDNA(next); dnaRef.current = next;
             }}
             geoMode={geoParams.mode}
-            onGeoMode={m => handleGeoParamChange('mode', m)}
+            onGeoMode={handleGeoModeSelect}
             geoPanelOpen={rightPanel === 'geo'}
             onToggleGeoPanel={() => setRightPanel(prev => prev === 'geo' ? null : 'geo')}
+            guideStroke={guideStroke}
+            onGuideStroke={v => {
+              setGuideStroke(v);
+              guideStrokeRef.current = v;
+              retuneGuidesLive({ thickness: v });
+            }}
+            guideCurvature={guideCurvature}
+            onGuideCurvature={v => {
+              setGuideCurvature(v);
+              guideCurvatureRef.current = v;
+              retuneGuidesLive({ smoothness: v });
+            }}
+            guideColor={guideColor}
+            onGuideColor={hex => {
+              setGuideColor(hex);
+              guideColorRef.current = hex;
+              retuneGuidesLive({ color: hex });
+            }}
+            guideLineMode={guideLineMode}
+            onGuideLineMode={m => {
+              setGuideLineMode(m);
+              guideLineModeRef.current = m;
+              retuneGuidesLive({ lineMode: m });
+            }}
+            guidePathMode={guidePathMode}
+            onGuidePathMode={m => {
+              setGuidePathMode(m);
+              guidePathModeRef.current = m;
+              retuneGuidesLive({ pathMode: m });
+            }}
+            autoGuidesPreset={autoGuidesPreset}
+            autoGuidesRandom={autoGuidesRandom}
+            onToggleAutoGuidesPreset={() => setAutoGuidesPreset(v => !v)}
+            onToggleAutoGuidesRandom={() => setAutoGuidesRandom(v => !v)}
+            onGuideGenerate={() => spawnAutoGuides('random')}
+            onGuideClear={clearGuides}
+            onGuideStyleRandom={() => {
+              const col = dnaRef.current.palette[Math.floor(Math.random() * Math.max(1, dnaRef.current.palette.length))] ?? '#40b0ff';
+              const stroke = 0.8 + Math.random() * 2.3;
+              const smooth = Math.random();
+              const lineMode: GuideLineType = (['flow', 'pinch', 'shear', 'barrier', 'spiral', 'funnel', 'repulsor', 'attractor', 'wave', 'orbit_line'] as const)[Math.floor(Math.random() * 10)];
+              const pathMode = (['stream', 'orbit', 'shock'] as const)[Math.floor(Math.random() * 3)];
+              setGuideColor(col);
+              setGuideStroke(stroke);
+              setGuideCurvature(smooth);
+              setGuideLineMode(lineMode);
+              setGuidePathMode(pathMode);
+              guideColorRef.current = col;
+              guideStrokeRef.current = stroke;
+              guideCurvatureRef.current = smooth;
+              guideLineModeRef.current = lineMode;
+              guidePathModeRef.current = pathMode;
+              retuneGuidesLive({ color: col, thickness: stroke, smoothness: smooth, lineMode, pathMode });
+            }}
+            onExplodeAll={handleExplodeAll}
+            onBlackHoleAll={handleBlackHoleAll}
+            onHarmonizeAll={handleHarmonizeAll}
           />
+          </div>
         )}
 
-        {/* Canvas Area — overflow hidden so stable canvas size doesn't clear when panel opens */}
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minWidth: 0 }}>
+        {/* Canvas Area — overflow hidden so stable canvas size doesn't clear when panel opens; z-index below panels */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minWidth: 0, zIndex: 1 }}>
           {/* 2D simulation canvas (always present, hidden behind 3D canvas when in 3D mode) */}
           <canvas
             key="meta-art-main-canvas"
@@ -2098,6 +2569,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onPointerLeave={handlePointerUp}
           />
 
@@ -2347,12 +2819,13 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           )}
         </div>
 
-        {/* ── Right Panel ── */}
+        {/* ── Right Panel — always on top so sliders/params work with any canvas background */}
         {!cinematic && rightPanel !== null && (
           <div style={{
             width: rightWidth, flexShrink: 0, display: 'flex', flexDirection: 'column',
             borderLeft: `1px solid ${BORDER}`,
             background: BG, overflowY: 'auto',
+            position: 'relative', zIndex: 15,
           }}>
             {rightPanel === 'layers' && (
               <LayerPanel
@@ -2383,7 +2856,7 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
             {rightPanel === 'geo' && (
               <GeoPanel
                 geoParams={geoParams}
-                onParamChange={handleGeoParamChange}
+                onParamChange={handleGeoPanelParamChange}
                 onApplyPreset={applyGeoPresetByKey}
               />
             )}
@@ -2452,6 +2925,24 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
                 onLitShift={handleLitShift}
                 onSizeAll={handleSizeAll}
                 onRespawn={() => initSim(dnaRef.current, Date.now())}
+                guideStroke={guideStroke}
+                guideCurvature={guideCurvature}
+                guideColor={guideColor}
+                autoGuidesPreset={autoGuidesPreset}
+                autoGuidesRandom={autoGuidesRandom}
+                onGuideStroke={setGuideStroke}
+                onGuideCurvature={setGuideCurvature}
+                onGuideColor={setGuideColor}
+                onGuideClear={clearGuides}
+                onGuideGenerate={() => spawnAutoGuides('random')}
+                onGuideStyleRandom={() => {
+                  const col = dnaRef.current.palette[Math.floor(Math.random() * Math.max(1, dnaRef.current.palette.length))] ?? '#40b0ff';
+                  setGuideColor(col);
+                  setGuideStroke(0.8 + Math.random() * 2.3);
+                  setGuideCurvature(Math.random());
+                }}
+                onToggleAutoGuidesPreset={() => setAutoGuidesPreset(v => !v)}
+                onToggleAutoGuidesRandom={() => setAutoGuidesRandom(v => !v)}
               />
             )}
             {rightPanel === 'hub' && (
@@ -2465,6 +2956,111 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           </div>
         )}
       </div>
+
+      {/* Ritual onboarding — spiritual questionnaire that seeds DNA/palette/tools */}
+      {ritualOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 120,
+            background: 'radial-gradient(circle at 50% 30%, rgba(24,18,36,0.92), rgba(0,0,0,0.96))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}>
+          <div style={{
+            width: 'min(640px, 94vw)',
+            border: `1px solid ${BORDER}`,
+            background: 'rgba(0,0,0,0.76)',
+            borderRadius: 4,
+            padding: '16px 16px 14px',
+            fontFamily: MONO,
+          }}>
+            <div style={{ fontSize: 8, letterSpacing: '0.18em', color: ACCENT, textTransform: 'uppercase' }}>
+              Ritual de Entrada
+            </div>
+            <div style={{ fontSize: 11, color: BRIGHT, marginTop: 8, lineHeight: 1.5 }}>
+              {RITUAL_QUESTIONS[ritualStep]?.prompt}
+            </div>
+            <div style={{ fontSize: 8, color: DIM, marginTop: 4 }}>
+              Etapa {ritualStep + 1}/{RITUAL_QUESTIONS.length} · define preset inicial, DNA e paleta sobre quadro branco.
+            </div>
+
+            <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr', gap: 6 }}>
+              {RITUAL_QUESTIONS[ritualStep]?.options.map(opt => (
+                <button
+                  key={`${RITUAL_QUESTIONS[ritualStep].key}-${opt.label}`}
+                  onClick={() => {
+                    const key = RITUAL_QUESTIONS[ritualStep].key;
+                    setRitualAnswers(prev => ({ ...prev, [key]: opt.value }));
+                  }}
+                  style={{
+                    textAlign: 'left',
+                    padding: '7px 10px',
+                    borderRadius: 2,
+                    border: `1px solid ${Math.abs(ritualAnswers[RITUAL_QUESTIONS[ritualStep].key] - opt.value) < 0.001 ? 'rgba(255,0,132,0.45)' : BORDER}`,
+                    background: Math.abs(ritualAnswers[RITUAL_QUESTIONS[ritualStep].key] - opt.value) < 0.001
+                      ? 'rgba(255,0,132,0.09)' : 'rgba(255,255,255,0.02)',
+                    color: Math.abs(ritualAnswers[RITUAL_QUESTIONS[ritualStep].key] - opt.value) < 0.001 ? BRIGHT : MID,
+                    cursor: 'pointer',
+                    fontSize: 9,
+                    letterSpacing: '0.04em',
+                    fontFamily: MONO,
+                  }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <button
+                onClick={() => {
+                  ritualDoneRef.current = true;
+                  setRitualOpen(false);
+                }}
+                style={{
+                  border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,0.02)',
+                  color: DIM, padding: '6px 10px', fontSize: 8, letterSpacing: '0.12em',
+                  textTransform: 'uppercase', cursor: 'pointer', fontFamily: MONO,
+                }}>
+                Pular ritual
+              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setRitualStep(s => Math.max(0, s - 1))}
+                  disabled={ritualStep === 0}
+                  style={{
+                    border: `1px solid ${BORDER}`, background: ritualStep === 0 ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.02)',
+                    color: ritualStep === 0 ? 'rgba(255,255,255,0.2)' : MID,
+                    padding: '6px 10px', fontSize: 8, letterSpacing: '0.12em',
+                    textTransform: 'uppercase', cursor: ritualStep === 0 ? 'default' : 'pointer', fontFamily: MONO,
+                  }}>
+                  Voltar
+                </button>
+                {ritualStep < RITUAL_QUESTIONS.length - 1 ? (
+                  <button
+                    onClick={() => setRitualStep(s => Math.min(RITUAL_QUESTIONS.length - 1, s + 1))}
+                    style={{
+                      border: `1px solid rgba(255,0,132,0.35)`, background: 'rgba(255,0,132,0.08)',
+                      color: ACCENT, padding: '6px 10px', fontSize: 8, letterSpacing: '0.12em',
+                      textTransform: 'uppercase', cursor: 'pointer', fontFamily: MONO,
+                    }}>
+                    Continuar
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleApplyRitual}
+                    style={{
+                      border: `1px solid rgba(255,0,132,0.45)`, background: 'rgba(255,0,132,0.15)',
+                      color: BRIGHT, padding: '6px 10px', fontSize: 8, letterSpacing: '0.12em',
+                      textTransform: 'uppercase', cursor: 'pointer', fontFamily: MONO,
+                    }}>
+                    Iniciar quadro vivo
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Controller Quick Menu — full-screen overlay */}
       <QuickMenu

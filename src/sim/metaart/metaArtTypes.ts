@@ -248,13 +248,18 @@ export interface VitrineCard {
 }
 
 // ── Persistent Guide Structures ──────────────────────────────────────────────
+export type GuideLineType =
+  | 'flow' | 'pinch' | 'shear' | 'barrier'
+  | 'spiral' | 'funnel' | 'repulsor' | 'attractor' | 'wave' | 'orbit_line';
+
 export interface GuideLine {
   id: string;
   x1: number; y1: number;  // normalized 0..1
   x2: number; y2: number;
-  type: 'flow' | 'pinch';
+  type: GuideLineType;
   color: string;
   strength: number;
+  thickness?: number;      // visual stroke width multiplier
 }
 
 export interface ChannelPath {
@@ -262,6 +267,9 @@ export interface ChannelPath {
   points: [number, number][];  // normalized coords
   color: string;
   strength: number;
+  thickness?: number;      // visual stroke width multiplier
+  smoothness?: number;     // 0..1 curvature interpolation for rendering
+  behavior?: 'stream' | 'orbit' | 'shock';
 }
 
 // ── Physics Config — direct physics overrides ─────────────────────────────────
