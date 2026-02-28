@@ -166,3 +166,31 @@ export function removeHubEntry<T extends { id?: string }>(
   const next = existing.filter((e: T) => (e as T & { id: string }).id !== entryId);
   setHubData(labId, kind, next, userId);
 }
+
+// ── OpenAI API key (local persistence only, no backend) ───────────────────────
+const OPENAI_API_KEY_STORAGE_KEY = 't4p_openai_api_key';
+
+export function loadOpenAIApiKey(): string {
+  try {
+    if (typeof window === 'undefined') return '';
+    const v = localStorage.getItem(OPENAI_API_KEY_STORAGE_KEY);
+    return typeof v === 'string' ? v : '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveOpenAIApiKey(key: string): void {
+  try {
+    if (key) localStorage.setItem(OPENAI_API_KEY_STORAGE_KEY, key);
+    else localStorage.removeItem(OPENAI_API_KEY_STORAGE_KEY);
+  } catch (e) {
+    console.warn('[userStorage] saveOpenAIApiKey failed:', e);
+  }
+}
+
+export function clearOpenAIApiKey(): void {
+  try {
+    localStorage.removeItem(OPENAI_API_KEY_STORAGE_KEY);
+  } catch {}
+}

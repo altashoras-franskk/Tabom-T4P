@@ -5,6 +5,8 @@ import { MAP_SIZE_NODE_COUNT } from './types';
 import { RHIZOME_SEARCH_SYSTEM_PROMPT, buildUserPrompt, validateKnowledgeMap } from './schema';
 
 // ── API Key Resolution ────────────────────────────────────────────────────────
+import { loadOpenAIApiKey } from '../storage/userStorage';
+
 function getAPIKey(providedKey?: string): string | null {
   // Priority order:
   // 1. Provided key
@@ -24,6 +26,9 @@ function getAPIKey(providedKey?: string): string | null {
   if (typeof window !== 'undefined') {
     const cfg = (window as any).__APP_CONFIG__;
     if (cfg?.OPENAI_API_KEY) return cfg.OPENAI_API_KEY;
+    // 5. localStorage (saved in Rhizome Lab)
+    const k = loadOpenAIApiKey();
+    if (k) return k;
   }
 
   return null;

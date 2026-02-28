@@ -52,6 +52,8 @@ import type { NodeScore } from '../../sim/rhizome/graphMetrics';
 import { AuthModal, useAuth } from '../../app/components/AuthModal';
 import type { AuthUser } from '../../app/components/AuthModal';
 import { setStoredToken } from '../../sim/rhizome/rhizomeBackend';
+import { loadOpenAIApiKey, saveOpenAIApiKey } from '../../storage/userStorage';
+import { useTr } from '../../i18n/context';
 
 interface Props { active: boolean; }
 
@@ -386,6 +388,7 @@ function LLMPanel({
   modelId:     string;      setModelId:  (v: string) => void;
   llmMode:     LLMMode;     setLlmMode:  (v: LLMMode) => void;
 }) {
+  const tr = useTr();
   const [topic,    setTopic]    = useState('');
   const [depth,    setDepth]    = useState<LLMDepth>('medium');
   const [count,    setCount]    = useState(22);
@@ -495,22 +498,22 @@ function LLMPanel({
       {/* ── Depth + node count ────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 6 }}>
         <div style={{ flex: 1 }}>
-          <span style={lblSty}>Profundidade</span>
+          <span style={lblSty}>{tr('Profundidade', 'Depth')}</span>
           <div style={{ display: 'flex', gap: 2 }}>
             {(['shallow','medium','deep'] as LLMDepth[]).map(d => (
-              <button title={`Profundidade ${d}`} key={d} onClick={() => setDepth(d)}
+              <button title={`${tr('Profundidade', 'Depth')} ${d}`} key={d} onClick={() => setDepth(d)}
                 style={{ flex: 1, padding: '3px 0', borderRadius: 3, fontSize: 8, cursor: 'pointer', fontFamily: 'monospace',
                   background: depth===d ? 'rgba(124,58,237,0.25)' : 'rgba(255,255,255,0.03)',
                   border: `1px solid ${depth===d ? 'rgba(124,58,237,0.45)' : 'rgba(255,255,255,0.07)'}`,
                   color: depth===d ? 'rgba(196,181,253,0.9)' : 'rgba(255,255,255,0.28)',
                   transition: 'all 0.1s' }}>
-                {d === 'shallow' ? 'Raso' : d === 'medium' ? 'Med.' : 'Fundo'}
+                {d === 'shallow' ? tr('Raso', 'Shallow') : d === 'medium' ? tr('Médio', 'Medium') : tr('Fundo', 'Deep')}
               </button>
             ))}
           </div>
         </div>
         <div style={{ width: 60 }}>
-          <span style={lblSty}>Nós</span>
+          <span style={lblSty}>{tr('Nós', 'Nodes')}</span>
           <input type="number" min={8} max={60} value={count}
             onChange={e => setCount(Math.max(8, Math.min(60, parseInt(e.target.value)||18)))}
             style={{ ...inputSty, width: '100%', padding: '3px 6px', textAlign: 'center' }}
@@ -822,7 +825,7 @@ function NodeCard({
         }}
       >
         <Bookmark size={9} strokeWidth={1.5} />
-        Salvar em Coleção
+        {tr('Salvar em Coleção', 'Save to Collection')}
       </button>
 
       {/* Bibliography note */}
@@ -831,7 +834,8 @@ function NodeCard({
         borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8,
         fontStyle: 'italic',
       }}>
-        ⚠ Descrições geradas pela LLM — <b style={{ color: 'rgba(251,191,36,0.45)' }}>verifique fontes primárias</b>.
+        {tr('⚠ Descrições geradas pela LLM — ', '⚠ LLM-generated descriptions — ')}
+        <b style={{ color: 'rgba(251,191,36,0.45)' }}>{tr('verifique fontes primárias', 'verify primary sources')}</b>.
       </div>
     </div>
   );
@@ -839,6 +843,8 @@ function NodeCard({
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export const RhizomeLab: React.FC<Props> = ({ active }) => {
+  const tr = useTr();
+
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const rafRef       = useRef(0);
   const stateRef     = useRef<RhizomeState | null>(null);
@@ -907,6 +913,14 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
   const [llmProvider, setLlmProvider] = useState<LLMProvider>('openai');
   const [llmApiKey,   setLlmApiKey]   = useState('');
   const [llmModelId,  setLlmModelId]  = useState('gpt-4.1-mini');
+  // Persist OpenAI API key in localStorage (load on mount)
+  useEffect(() => {
+    const stored = loadOpenAIApiKey();
+    if (stored) {
+      setLlmApiKey(stored);
+      llmApiKeyRef.current = stored;
+    }
+  }, []);
   const [llmMode,     setLlmMode]     = useState<LLMMode>('concepts');
 
   const paramsRef     = useRef(params);
@@ -2090,7 +2104,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
           </div>
 
           {/* ── LLM Epistêmico (TOP — highlight) ────────────────────────── */}
-          <Section title="Pesquisa Epistêmica" open={secLLM} onToggle={() => setSecLLM(v=>!v)} accent="rgba(16,212,91,0.65)">
+          <Section title={tr('Pesquisa Epistêmica', 'Epistemic Search')} open={secLLM} onToggle={() => setSecLLM(v=>!v)} accent="rgba(16,212,91,0.65)">
             <LLMPanel
               onGenerate={handleLLMGenerate}
               onClear={handleLLMClear}
@@ -2099,7 +2113,7 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
               provider={llmProvider}
               setProvider={v => { setLlmProvider(v); llmProviderRef.current = v; }}
               apiKey={llmApiKey}
-              setApiKey={v => { setLlmApiKey(v); llmApiKeyRef.current = v; }}
+              setApiKey={v => { setLlmApiKey(v); llmApiKeyRef.current = v; saveOpenAIApiKey(v); }}
               modelId={llmModelId}
               setModelId={v => { setLlmModelId(v); llmModelIdRef.current = v; }}
               llmMode={llmMode}
@@ -2117,34 +2131,34 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
 
           {/* ── Interaction mode ─────────────────────────────────────────── */}
           <div style={{ display:'flex', gap:4, marginBottom:0 }}>
-            <button title="Visualizar" onClick={() => setAddMode(false)}
+            <button title={tr('Visualizar', 'View')} onClick={() => setAddMode(false)}
               style={{ flex:1, padding:'5px 0', borderRadius:1, fontSize:8, cursor:'pointer', fontFamily: MONO,
                 background: !addMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
                 border: `1px dashed ${!addMode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}`,
                 color: !addMode ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.25)',
                 display:'flex', alignItems:'center', justifyContent:'center', gap:4, transition:'all 0.15s',
                 letterSpacing:'0.06em', textTransform:'uppercase' }}>
-              <Eye size={9} strokeWidth={1.5} /> Observar
+              <Eye size={9} strokeWidth={1.5} /> {tr('Observar', 'Observe')}
             </button>
-            <button title="Adicionar" onClick={() => setAddMode(true)}
+            <button title={tr('Adicionar', 'Add')} onClick={() => setAddMode(true)}
               style={{ flex:1, padding:'5px 0', borderRadius:1, fontSize:8, cursor:'pointer', fontFamily: MONO,
                 background: addMode ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.02)',
                 border: `1px dashed ${addMode ? 'rgba(124,58,237,0.35)' : 'rgba(255,255,255,0.06)'}`,
                 color: addMode ? 'rgba(196,181,253,0.80)' : 'rgba(255,255,255,0.25)',
                 display:'flex', alignItems:'center', justifyContent:'center', gap:4, transition:'all 0.15s',
                 letterSpacing:'0.06em', textTransform:'uppercase' }}>
-              <Plus size={9} strokeWidth={1.5} /> Nó
+              <Plus size={9} strokeWidth={1.5} /> {tr('Nó', 'Node')}
             </button>
             <select value="" onChange={e => { const i = parseInt(e.target.value,10); if(!isNaN(i)) handlePreset(i); }}
               style={{ ...inputSty, flex: 1.4, fontSize: 8, padding: '4px 4px' }}>
-              <option value="">Preset…</option>
+              <option value="">{tr('Preset…', 'Preset…')}</option>
               {RHIZOME_PRESETS.map((p,i) => <option key={p.name} value={i}>{p.name}</option>)}
             </select>
           </div>
 
           {/* ── Physics ─────────────────────────────────────────────────── */}
           <Section
-            title={isSearchMode ? 'Dinâmica do Mapa' : 'Física'}
+            title={isSearchMode ? tr('Dinâmica do Mapa', 'Map Dynamics') : tr('Física', 'Physics')}
             open={secPhysics} onToggle={() => setSecPhysics(v=>!v)} accent={accentGreen}
           >
             {(isSearchMode ? SEARCH_PARAM_METAS : PARAM_METAS).map(pm => (

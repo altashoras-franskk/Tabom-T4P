@@ -97,6 +97,7 @@ import { SociogenesisPanel } from '../ui/SociogenesisPanel';
 import { applyEmergenceLens, applyTribeEffects } from '../sim/sociogenesis/sociogenesisAdaptation';
 import { detectLeaders, applyLeaderInfluence, renderLeaders, type Leader } from '../sim/sociogenesis/leaderSystem';
 import type { LabId } from '../ui/TopHUD';
+import { useI18n } from '../i18n/context';
 import { SociogenesisStudyMode } from './SociogenesisStudyMode';
 import { PsycheLab } from './PsycheLab';
 import { MusicLab } from './MusicLab';
@@ -226,6 +227,7 @@ function AdminGate({
   onUnlock: () => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const [pw, setPw] = React.useState('');
   const [error, setError] = React.useState(false);
   const handleSubmit = (e: React.FormEvent) => {
@@ -254,17 +256,17 @@ function AdminGate({
         boxShadow: '0 24px 90px rgba(0,0,0,0.7)',
       }}>
         <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(245,158,11,0.9)', marginBottom: 8, fontFamily: 'monospace' }}>
-          Admin Mode
+          {t('adminGate_title')}
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, marginBottom: 14 }}>
-          Libera acesso a tools trancadas/“em breve”. (Gate de UI — não é segurança real.)
+          {t('adminGate_desc')}
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8 }}>
           <input
             type="password"
             value={pw}
             onChange={e => setPw(e.target.value)}
-            placeholder="Senha..."
+            placeholder={t('adminGate_placeholder')}
             autoFocus
             style={{
               flex: 1, padding: '9px 12px', borderRadius: 10,
@@ -280,7 +282,7 @@ function AdminGate({
             color: 'rgba(245,158,11,0.92)', fontSize: 11, letterSpacing: '0.10em', textTransform: 'uppercase',
             fontFamily: 'monospace',
           }}>
-            Entrar
+            {t('adminGate_submit')}
           </button>
         </form>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
@@ -290,7 +292,7 @@ function AdminGate({
             color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: '0.10em', textTransform: 'uppercase',
             fontFamily: 'monospace',
           }}>
-            Cancelar
+            {t('adminGate_close')}
           </button>
         </div>
       </div>
@@ -299,6 +301,7 @@ function AdminGate({
 }
 
 const App: React.FC = () => {
+  const { t } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -5165,7 +5168,7 @@ const App: React.FC = () => {
             setAdminMode(true);
             try { localStorage.setItem(ADMIN_MODE_KEY, '1'); } catch { /* ignore */ }
             setShowAdminGate(false);
-            toast.success('Admin Mode ativado', { description: 'Acesso liberado.', duration: 2000 });
+            toast.success(t('toast_adminActivated'), { description: t('toast_adminDesc'), duration: 2000 });
           }}
         />
       )}

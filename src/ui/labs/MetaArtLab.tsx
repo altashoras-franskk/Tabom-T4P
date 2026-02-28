@@ -4,6 +4,7 @@ import {
   Camera, Download, RefreshCw, Play, Pause, Maximize2, X,
   Layers, Dna, Archive, Heart, Pin, Trash2, RotateCcw, Link2, Zap, Box, Grid3X3,
 } from 'lucide-react';
+import { useTr } from '../../i18n/context';
 import type {
   DNA, LayerState, ToolState, ArchiveEntry, GrimoireEntry,
   VitrineCard, MetricsSnapshot, Quantum, GestureRecord,
@@ -158,6 +159,7 @@ function GeoPanel({
   onParamChange: (key: keyof GeoParams, val: GeoParams[keyof GeoParams]) => void;
   onApplyPreset: (key: string) => void;
 }) {
+  const tr = useTr();
   const [advOpen, setAdvOpen] = React.useState(false);
   const p = geoParams;
 
@@ -210,7 +212,7 @@ function GeoPanel({
 
       {/* Mode selector */}
       <div>
-        <div style={label}>Modo</div>
+        <div style={label}>{tr('Modo', 'Mode')}</div>
         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
           {(['fluid', 'geometric', 'hybrid', '3d'] as const).map(m => (
             <button title={m} key={m}
@@ -232,14 +234,14 @@ function GeoPanel({
       {p.mode === '3d' && (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ ...label, marginBottom: 3, color: 'rgba(200,130,255,0.75)' }}>⬡ Câmera & Espaço</div>
+            <div style={{ ...label, marginBottom: 3, color: 'rgba(200,130,255,0.75)' }}>{tr('⬡ Câmera & Espaço', '⬡ Camera & Space')}</div>
             {sliderRow('zDepth',    'Z-Depth',  '#c080ff')}
             {sliderRow('orbitSpeed','Órbita',   '#a060ff')}
             {sliderRow('camFOV',    'FOV°',     '#8060ff')}
             {sliderRow('depthFog',  'Fog',      '#607090')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ ...label, marginBottom: 3, color: 'rgba(200,130,255,0.75)' }}>⬡ Luz & Glow</div>
+            <div style={{ ...label, marginBottom: 3, color: 'rgba(200,130,255,0.75)' }}>{tr('⬡ Luz & Glow', '⬡ Light & Glow')}</div>
             {sliderRow('light3D',         'Luz',        '#ffd060')}
             {sliderRow('particleSize3D',  'Pt Size',    '#a0ffa0')}
             {sliderRow('glowIntensity3D', 'Glow',       '#80c0ff')}
@@ -248,12 +250,12 @@ function GeoPanel({
             {sliderRow('shapeScale',      'Scale',      '#a0ffa0')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ ...label, marginBottom: 3, color: 'rgba(200,130,255,0.75)' }}>⬡ Conexões & Overlays</div>
+            <div style={{ ...label, marginBottom: 3, color: 'rgba(200,130,255,0.75)' }}>{tr('⬡ Conexões & Overlays', '⬡ Connections & Overlays')}</div>
             {sliderRow('macroAtmosphere', 'Conexões', '#ff80c0')}
             {sliderRow('macroGesture',    'Flow',     '#60c0ff')}
             {/* Trails toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-              <span style={{ ...label, marginBottom: 0, width: 60 }}>Rastros</span>
+              <span style={{ ...label, marginBottom: 0, width: 60 }}>{tr('Rastros', 'Trails')}</span>
               <button title={`Trails 3D: ${p.trails3D ? "ON" : "OFF"}`}
                 onClick={() => onParamChange('trails3D', !p.trails3D)}
                 style={{
@@ -303,7 +305,7 @@ function GeoPanel({
             </div>
             {/* Solid fill toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-              <span style={{ ...label, marginBottom: 0, width: 60 }}>Sólido 3D</span>
+              <span style={{ ...label, marginBottom: 0, width: 60 }}>{tr('Sólido 3D', '3D Solid')}</span>
               <button title={`Solid 3D: ${p.solidShapes3D ? "ON" : "OFF"}`}
                 onClick={() => onParamChange('solidShapes3D', !p.solidShapes3D)}
                 style={{
@@ -327,7 +329,7 @@ function GeoPanel({
 
           {/* 3D Presets */}
           <div>
-            <div style={{ ...label, marginBottom: 5, color: 'rgba(200,130,255,0.6)' }}>Presets 3D</div>
+            <div style={{ ...label, marginBottom: 5, color: 'rgba(200,130,255,0.6)' }}>{tr('Presets 3D', '3D Presets')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {([
                 { key: 'nebula_drift',    name: 'Nebula Drift',    desc: 'Órbita lenta · glow volumétrico · névoa' },

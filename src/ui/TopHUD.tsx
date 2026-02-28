@@ -1,4 +1,6 @@
+import React from 'react';
 import { Play, Pause, RotateCcw, Undo2, BookOpen, Trophy, FileText, BookText, Eye, EyeOff, Layers, Box, LayoutGrid, KeyRound } from 'lucide-react';
+import { useI18n } from '../i18n/context';
 
 export type LabId =
   | 'complexityLife'
@@ -60,11 +62,11 @@ interface TopHUDProps {
   onViewModeToggle?: () => void;
 }
 
-const FIELD_LAYERS = [
-  { id: 'tension', label: 'T', title: 'Tensao',   color: '#ff4444' },
-  { id: 'cohesion', label: 'C', title: 'Coesao',   color: '#4488ff' },
-  { id: 'scarcity', label: 'N', title: 'Nutricao', color: '#44ff88' },
-  { id: 'novelty',  label: 'E', title: 'Entropia', color: '#ffaa44' },
+const FIELD_LAYER_KEYS = [
+  { id: 'tension', label: 'T', titleKey: 'layer_tension' as const, color: '#ff4444' },
+  { id: 'cohesion', label: 'C', titleKey: 'layer_cohesion' as const, color: '#4488ff' },
+  { id: 'scarcity', label: 'N', titleKey: 'layer_scarcity' as const, color: '#44ff88' },
+  { id: 'novelty',  label: 'E', titleKey: 'layer_novelty' as const, color: '#ffaa44' },
 ];
 
 const DOTO = "'Doto', monospace";
@@ -147,23 +149,24 @@ export const TopHUD: React.FC<TopHUDProps> = ({
   onToggleHideUI,
   onViewModeToggle,
 }) => {
-  const ALL_LAB_TABS: { id: LabId; label: string }[] = [
-    { id: 'complexityLife', label: 'Complexity Life' },
-    { id: 'metaArtLab',     label: 'Meta-Gen-Art' },
-    { id: 'musicLab',       label: 'Music Lab' },
-    { id: 'rhizomeLab',     label: 'Rhizome' },
-    { id: 'alchemyLab',     label: 'Alchemy' },
-    { id: 'treeOfLife',     label: 'Tree of Life' },
-    { id: 'sociogenesis',   label: 'Sociogenesis' },
-    { id: 'psycheLab',      label: 'Psyche' },
-    { id: 'milPlatos',     label: 'Mil Platôs' },
-    { id: 'languageLab',    label: 'Language' },
-    { id: 'asimovTheater',  label: 'Asimov' },
-    { id: 'physicsSandbox', label: 'Physics' },
+  const { t, locale, setLocale } = useI18n();
+  const ALL_LAB_TABS: { id: LabId; labelKey: string }[] = [
+    { id: 'complexityLife', labelKey: 'tab_complexityLife' },
+    { id: 'metaArtLab',     labelKey: 'tab_metaArtLab' },
+    { id: 'musicLab',       labelKey: 'tab_musicLab' },
+    { id: 'rhizomeLab',     labelKey: 'tab_rhizomeLab' },
+    { id: 'alchemyLab',     labelKey: 'tab_alchemyLab' },
+    { id: 'treeOfLife',     labelKey: 'tab_treeOfLife' },
+    { id: 'sociogenesis',   labelKey: 'tab_sociogenesis' },
+    { id: 'psycheLab',      labelKey: 'tab_psycheLab' },
+    { id: 'milPlatos',      labelKey: 'tab_milPlatos' },
+    { id: 'languageLab',    labelKey: 'tab_languageLab' },
+    { id: 'asimovTheater',  labelKey: 'tab_asimovTheater' },
+    { id: 'physicsSandbox', labelKey: 'tab_physicsSandbox' },
   ];
 
   const LAB_TABS = availableLabs && availableLabs.length
-    ? ALL_LAB_TABS.filter(t => availableLabs.includes(t.id))
+    ? ALL_LAB_TABS.filter((tab) => availableLabs.includes(tab.id))
     : ALL_LAB_TABS;
 
   const accent = LAB_ACCENTS[activeLab] || '#ffd400';
@@ -176,7 +179,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
         {onGoHome && (
           <button
             onClick={onGoHome}
-            title="Voltar para Labs"
+            title={t('topHud_goHome')}
             className="flex items-center gap-2 px-4 py-2 transition-all shrink-0"
             style={{
               background: 'transparent',
@@ -190,7 +193,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
             }}
           >
             <LayoutGrid size={10} strokeWidth={1.5} />
-            <span className="hidden sm:inline">TOOLS</span>
+            <span className="hidden sm:inline">{t('topHud_tools')}</span>
           </button>
         )}
 
@@ -203,7 +206,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
               <button
                 key={tab.id}
                 onClick={() => onLabChange(tab.id)}
-                title={tab.label}
+                title={t(tab.labelKey as import('../i18n/strings').StringKey)}
                 className="flex items-center gap-1.5 px-3 py-2 transition-all whitespace-nowrap shrink-0 relative"
                 style={{
                   color: isActive ? tabAccent : 'rgba(255,255,255,0.25)',
@@ -217,7 +220,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
                 }}
               >
                 <span style={{ fontSize: '13px', lineHeight: 1 }}>{LAB_SYMBOLS[tab.id]}</span>
-                <span className="hidden lg:inline">{tab.label}</span>
+                <span className="hidden lg:inline">{t(tab.labelKey as import('../i18n/strings').StringKey)}</span>
                 {isActive && (
                   <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: tabAccent + '55' }} />
                 )}
@@ -226,11 +229,36 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           })}
         </div>
 
+        {/* Language EN / PT-BR */}
+        <div className="flex items-center shrink-0" style={{ borderLeft: '1px dashed rgba(255,255,255,0.06)' }}>
+          <select
+            value={locale}
+            onChange={(e) => setLocale(e.target.value as 'en' | 'pt-BR')}
+            title={locale === 'en' ? 'English' : 'Português (Brasil)'}
+            className="cursor-pointer transition-colors focus:outline-none"
+            style={{
+              fontFamily: MONO,
+              fontSize: '9px',
+              fontWeight: 300,
+              color: 'rgba(255,255,255,0.55)',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px dashed rgba(255,255,255,0.08)',
+              padding: '2px 6px',
+              margin: '0 8px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.6px',
+            }}
+          >
+            <option value="pt-BR" style={{ background: '#000', color: '#fff' }}>PT</option>
+            <option value="en" style={{ background: '#000', color: '#fff' }}>EN</option>
+          </select>
+        </div>
+
         {/* Admin mode */}
         {onOpenAdmin && (
           <button
             onClick={onOpenAdmin}
-            title={adminMode ? 'Admin Mode (ativado)' : 'Admin Mode (senha)'}
+            title={adminMode ? t('topHud_admin_title') : t('topHud_admin_title_off')}
             className="flex items-center gap-1 px-3 py-2 transition-all shrink-0"
             style={{
               borderLeft: '1px dashed rgba(255,255,255,0.06)',
@@ -244,7 +272,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
             }}
           >
             <KeyRound size={10} strokeWidth={1.5} />
-            <span className="hidden sm:inline">ADMIN</span>
+            <span className="hidden sm:inline">{t('topHud_admin')}</span>
           </button>
         )}
 
@@ -252,7 +280,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
         {onViewModeToggle && (
           <button
             onClick={onViewModeToggle}
-            title={viewMode === '3D' ? 'Voltar para 2D' : 'Modo 3D'}
+            title={viewMode === '3D' ? t('topHud_3d_title') : t('topHud_3d_title_off')}
             className="flex items-center gap-1 px-3 py-2 transition-all shrink-0"
             style={{
               borderLeft: '1px dashed rgba(255,255,255,0.06)',
@@ -284,7 +312,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           <button
             onClick={onTogglePlay}
             className="p-1.5 transition-all"
-            title={running ? 'Pausar' : 'Reproduzir'}
+            title={running ? t('topHud_pause') : t('topHud_play')}
             data-guide="play-button"
             style={{
               color: running ? accent : 'rgba(255,255,255,0.7)',
@@ -323,11 +351,11 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           <div className="w-px h-3" style={{ borderLeft: '1px dashed rgba(255,255,255,0.12)' }} />
 
           {/* Reset + Undo */}
-          <button onClick={onReset} className="p-1.5 transition-colors" title="Reiniciar"
+          <button onClick={onReset} className="p-1.5 transition-colors" title={t('topHud_reset')}
             style={{ color: 'rgba(255,255,255,0.45)' }}>
             <RotateCcw size={11} strokeWidth={1.5} />
           </button>
-          <button onClick={onUndo} className="p-1.5 transition-colors disabled:opacity-20" title="Desfazer" disabled={!canUndo}
+          <button onClick={onUndo} className="p-1.5 transition-colors disabled:opacity-20" title={t('topHud_undo')} disabled={!canUndo}
             style={{ color: 'rgba(255,255,255,0.45)' }}>
             <Undo2 size={11} strokeWidth={1.5} />
           </button>
@@ -339,7 +367,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
               <button
                 onClick={onToggleFieldHeatmap}
                 className="flex items-center gap-1 p-1.5 transition-all"
-                title="Campo de Energia"
+                title={t('topHud_field_title')}
                 style={{
                   color: fieldHeatmap ? '#ffaa44' : 'rgba(255,255,255,0.30)',
                   background: fieldHeatmap ? 'rgba(255,170,68,0.06)' : 'transparent',
@@ -352,15 +380,15 @@ export const TopHUD: React.FC<TopHUDProps> = ({
                 }}
               >
                 <Layers size={10} strokeWidth={1.5} />
-                <span className="hidden sm:inline">CAMPO</span>
+                <span className="hidden sm:inline">{t('topHud_field')}</span>
               </button>
               {fieldHeatmap && onFieldLayerChange && (
                 <div className="flex items-center gap-0.5">
-                  {FIELD_LAYERS.map(fl => (
+                  {FIELD_LAYER_KEYS.map(fl => (
                     <button
                       key={fl.id}
                       onClick={() => onFieldLayerChange(fl.id)}
-                      title={fl.title}
+                      title={t(fl.titleKey)}
                       className="w-5 h-5 transition-all flex items-center justify-center"
                       style={{
                         fontSize: '8px',
@@ -383,7 +411,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           {onOpenGuide && (
             <>
               <div className="w-px h-3" style={{ borderLeft: '1px dashed rgba(255,255,255,0.12)' }} />
-              <button onClick={onOpenGuide} className="p-1.5 transition-colors" title="Tour Guiado" data-guide-button
+              <button onClick={onOpenGuide} className="p-1.5 transition-colors" title={t('topHud_guide')} data-guide-button
                 style={{ color: '#ffd400' }}>
                 <BookOpen size={11} strokeWidth={1.5} />
               </button>
@@ -391,7 +419,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           )}
 
           {onOpenAchievements && (
-            <button onClick={onOpenAchievements} className="relative p-1.5 transition-colors" title="Conquistas"
+            <button onClick={onOpenAchievements} className="relative p-1.5 transition-colors" title={t('topHud_achievements')}
               style={{ color: '#ffd400' }}>
               <Trophy size={11} strokeWidth={1.5} />
               {achievementCount > 0 && (
@@ -423,7 +451,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
               <button
                 onClick={onToggleHideUI}
                 className="p-1.5 transition-colors"
-                title="Modo Cinematico (H)"
+                title={t('topHud_cinematic')}
                 style={{ color: hideUI ? '#37b2da' : 'rgba(255,255,255,0.30)' }}
               >
                 {hideUI ? <EyeOff size={11} strokeWidth={1.5} /> : <Eye size={11} strokeWidth={1.5} />}

@@ -1,7 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // OpenAI Client — thin fetch wrapper, no SDK dependency
-// Reads key from process.env.OPENAI_API_KEY or window.__APP_CONFIG__
+// Reads key: env → __APP_CONFIG__ → localStorage (saved in Rhizome Lab)
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { loadOpenAIApiKey } from '../storage/userStorage';
 
 declare global {
   interface Window {
@@ -12,8 +14,11 @@ declare global {
 function getApiKey(): string | null {
   if (typeof process !== 'undefined' && process.env?.OPENAI_API_KEY)
     return process.env.OPENAI_API_KEY;
-  if (typeof window !== 'undefined' && window.__APP_CONFIG__?.OPENAI_API_KEY)
-    return window.__APP_CONFIG__.OPENAI_API_KEY;
+  if (typeof window !== 'undefined') {
+    if (window.__APP_CONFIG__?.OPENAI_API_KEY) return window.__APP_CONFIG__.OPENAI_API_KEY;
+    const k = loadOpenAIApiKey();
+    if (k) return k;
+  }
   return null;
 }
 

@@ -1,32 +1,33 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { LabId } from '../../ui/TopHUD';
 import logoDevicesForIntuition from '../../assets/devices-for-intuition-logo-transparent.png';
 import { AuthModal, type AuthUser } from './AuthModal';
+import { useI18n } from '../../i18n/context';
+import type { StringKey } from '../../i18n/strings';
 
 const MONO = "'IBM Plex Mono', monospace";
 const DOTO = "'Doto', monospace";
 
-// ── Lab Data ──────────────────────────────────────────────────────────────────
-interface LabEntry {
-  id: LabId; num: string; symbol: string; name: string;
-  tag: string; tagColor: string; statusLabel: string;
-  description: string; enabled: boolean;
+// ── Lab Data (names/descriptions/status from i18n) ─────────────────────────────
+interface LabConfig {
+  id: LabId; num: string; symbol: string; tag: string; tagColor: string;
+  statusKey: 'lab_status_alpha' | 'lab_status_experimental' | ''; enabled: boolean;
 }
 
-const LABS: LabEntry[] = [
-  { id: 'complexityLife', num: '01.', symbol: '\u{1F71B}', name: 'Complexity Lab', tag: 'FOUNDATION', tagColor: '#ffd400', statusLabel: 'ALPHA V0', description: 'APRENDA A OPERAR COM O ALGORITMO DA VIDA ARTIFICIAL ATRAVÉS DE EXPERIMENTOS, PRESETS E PARÂMETROS VARIÁVEIS INTERATIVOS.', enabled: true },
-  { id: 'metaArtLab', num: '02.', symbol: '\u{1F762}', name: 'Meta-Gen-Art', tag: 'GENERATIVE ART', tagColor: '#ff0084', statusLabel: 'EXPERIMENTAL BUILD', description: 'LABORATÓRIO DE CRIAÇÃO VIVA. EXPERIMENTE FAZER ARTE GENERATIVA ATRAVÉS DE "TINTA" COM VIDA PRÓPRIA.', enabled: true },
-  { id: 'psycheLab', num: '03.', symbol: '\u25C8', name: 'Psyche Lab', tag: 'NEURAL FIELDS', tagColor: '#8b5cf6', statusLabel: 'ALPHA V0', description: 'CAMPOS NEURAIS E DINÂMICAS DE CONSCIÊNCIA. EXPERIMENTE FLUXOS PSÍQUICOS EMERGENTES ATRAVÉS DE AGENTES ARQUETÍPICOS.', enabled: true },
-  { id: 'musicLab', num: '04.', symbol: '\u{1F770}', name: 'Complex Music Lab', tag: 'INSTRUMENT', tagColor: '#37b2da', statusLabel: 'ALPHA V0', description: 'INSTRUMENTO MUSICAL DIGITAL COMPLEXO. USE PARTÍCULAS COM VIDA PRÓPRIA PRA FAZER MÚSICA EXPERIMENTAL.', enabled: true },
-  { id: 'rhizomeLab', num: '05.', symbol: '\u{1F709}', name: 'Rhizome Search', tag: 'EPISTEMIC SEARCH', tagColor: '#10d45b', statusLabel: 'ALPHA V0', description: 'FERRAMENTA PARA PESQUISAS EPISTEMOLÓGICAS NÃO-LINEARES. VEJA CONCEITOS/NOMES/BIBLIOGRAFIAS ATRAVÉS DE RIZOMAS EXPANSÍVEIS.', enabled: true },
-  { id: 'alchemyLab', num: '06.', symbol: '\u{1F701}', name: 'Alchemy Table', tag: 'ALCHEMY + CHEMISTRY', tagColor: '#d6552d', statusLabel: 'ALPHA V0', description: 'APRENDA O CONCEITO BÁSICO DE EMERGÊNCIA, TRANSMUTAÇÃO E COMPLEXIDADE DE ELEMENTOS QUÍMICOS E METAFÓRICOS.', enabled: true },
-  { id: 'treeOfLife', num: '07.', symbol: '\u{1F739}', name: 'Tree of Life', tag: 'HERMETIC QABALAH', tagColor: '#601480', statusLabel: 'ALPHA V0', description: 'HERMETIC QABALAH SIMULATOR. EXPLORE THE 10 SEPHIROTH, 22 PATHS, TAROT ARCANA, RITUAL TOOLS AND THE GREAT WORK. GOLDEN DAWN TRADITION.', enabled: true },
-  { id: 'sociogenesis', num: '08.', symbol: '\u{1F755}', name: 'Sociogenesis', tag: 'SOCIOLOGIA', tagColor: '#9f1111', statusLabel: 'EXPERIMENTAL BUILD', description: 'DESCUBRA A EMERGÊNCIA DE SÍMBOLOS, INSTITUIÇÕES, MITOS, TOTENS E TABUS ENTRE AGENTES E COMO ISSO ALTERA O CAMPO.', enabled: true },
-  { id: 'milPlatos', num: '09.', symbol: '\u22C6', name: 'Mil Platôs', tag: 'CsO LENS', tagColor: '#6366f1', statusLabel: 'EXPERIMENTAL BUILD', description: 'LENTE OPERACIONAL DELEUZE & GUATTARI. SIMULE ESTRATIFICAÇÃO ↔ CORPO SEM ÓRGÃOS, PLATÔS, RIZOMA E LINHAS DE FUGA.', enabled: true },
-  { id: 'languageLab', num: '10.', symbol: '\u{1F714}', name: 'Recursive Language', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
-  { id: 'asimovTheater', num: '11.', symbol: '\u{1F733}', name: 'Psico-history Theater', tag: '', tagColor: '#191919', statusLabel: '', description: 'EM BREVE', enabled: false },
-  { id: 'physicsSandbox', num: '12.', symbol: '\u{1F719}', name: 'Physics Sandbox', tag: '', tagColor: '#141414', statusLabel: '', description: 'EM BREVE', enabled: false },
+const LABS_CONFIG: LabConfig[] = [
+  { id: 'complexityLife', num: '01.', symbol: '\u{1F71B}', tag: 'FOUNDATION', tagColor: '#ffd400', statusKey: 'lab_status_alpha', enabled: true },
+  { id: 'metaArtLab', num: '02.', symbol: '\u{1F762}', tag: 'GENERATIVE ART', tagColor: '#ff0084', statusKey: 'lab_status_experimental', enabled: true },
+  { id: 'psycheLab', num: '03.', symbol: '\u25C8', tag: 'NEURAL FIELDS', tagColor: '#8b5cf6', statusKey: 'lab_status_alpha', enabled: true },
+  { id: 'musicLab', num: '04.', symbol: '\u{1F770}', tag: 'INSTRUMENT', tagColor: '#37b2da', statusKey: 'lab_status_alpha', enabled: true },
+  { id: 'rhizomeLab', num: '05.', symbol: '\u{1F709}', tag: 'EPISTEMIC SEARCH', tagColor: '#10d45b', statusKey: 'lab_status_alpha', enabled: true },
+  { id: 'alchemyLab', num: '06.', symbol: '\u{1F701}', tag: 'ALCHEMY + CHEMISTRY', tagColor: '#d6552d', statusKey: 'lab_status_alpha', enabled: true },
+  { id: 'treeOfLife', num: '07.', symbol: '\u{1F739}', tag: 'HERMETIC QABALAH', tagColor: '#601480', statusKey: 'lab_status_alpha', enabled: true },
+  { id: 'sociogenesis', num: '08.', symbol: '\u{1F755}', tag: 'SOCIOLOGIA', tagColor: '#9f1111', statusKey: 'lab_status_experimental', enabled: true },
+  { id: 'milPlatos', num: '09.', symbol: '\u22C6', tag: 'CsO LENS', tagColor: '#6366f1', statusKey: 'lab_status_experimental', enabled: true },
+  { id: 'languageLab', num: '10.', symbol: '\u{1F714}', tag: '', tagColor: '#191919', statusKey: '', enabled: false },
+  { id: 'asimovTheater', num: '11.', symbol: '\u{1F733}', tag: '', tagColor: '#191919', statusKey: '', enabled: false },
+  { id: 'physicsSandbox', num: '12.', symbol: '\u{1F719}', tag: '', tagColor: '#141414', statusKey: '', enabled: false },
 ];
 
 // ── T4P Intro ─────────────────────────────────────────────────────────────────
@@ -515,11 +516,19 @@ export function HomePage({
   onOpenAdmin?: () => void;
   adminMode?: boolean;
 }) {
+  const { t, locale, setLocale } = useI18n();
   const [introFinished, setIntroFinished] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTarget = useRef(0);
   const diagRef = useRef<HTMLElement>(null);
+
+  const LABS = useMemo(() => LABS_CONFIG.map((c) => ({
+    ...c,
+    name: t(`lab_${c.id}_name` as StringKey),
+    description: t(`lab_${c.id}_desc` as StringKey),
+    statusLabel: c.statusKey ? t(c.statusKey) : '',
+  })), [t]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -539,14 +548,25 @@ export function HomePage({
         if (!hasAdmin && !showEntrar) return null;
         return (
           <div className="fixed top-3 right-3 z-20 flex items-center gap-2">
+            {/* Language EN | PT */}
+            <select
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as 'en' | 'pt-BR')}
+              title={locale === 'en' ? 'English' : 'Português (Brasil)'}
+              className="px-2 py-2 rounded-xl border border-dashed border-white/15 bg-black/60 hover:bg-white/5 transition-colors cursor-pointer focus:outline-none"
+              style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}
+            >
+              <option value="pt-BR" style={{ background: '#000', color: '#fff' }}>PT</option>
+              <option value="en" style={{ background: '#000', color: '#fff' }}>EN</option>
+            </select>
             {showEntrar && (
               <button
                 onClick={() => setShowAuthModal(true)}
                 className="px-3 py-2 rounded-xl border border-dashed border-white/15 bg-black/60 hover:bg-white/5 transition-colors"
                 style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}
-                title="Entrar ou cadastrar"
+                title={t('home_entrar_title')}
               >
-                Entrar
+                {t('home_entrar')}
               </button>
             )}
             {hasAdmin && (
@@ -554,9 +574,9 @@ export function HomePage({
                 onClick={onOpenAdmin}
                 className="px-3 py-2 rounded-xl border border-dashed border-white/15 bg-black/60 hover:bg-white/5 transition-colors"
                 style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: adminMode ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}
-                title={adminMode ? 'Admin Mode (ativado)' : 'Admin Mode (senha)'}
+                title={adminMode ? t('home_admin_title') : t('home_admin_title_off')}
               >
-                {adminMode ? 'ADMIN ON' : 'ADMIN'}
+                {adminMode ? t('home_admin_on') : t('home_admin')}
               </button>
             )}
           </div>
@@ -598,7 +618,7 @@ export function HomePage({
 
           <motion.p className="mt-5 text-zinc-500 text-[10px] md:text-xs tracking-[0.5em] text-center" style={{ fontFamily: MONO }}
             initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.45, duration: 0.7 }}>
-            ALPHA TEST
+            {t('home_alphaTest')}
           </motion.p>
 
           {/* Logged in: greeting + nav; not logged in: just nav so they scroll down */}
@@ -606,7 +626,7 @@ export function HomePage({
             <>
               <motion.p style={{ marginTop: 16, fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: MONO }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-                Olá, {user.name || user.email.split('@')[0]}
+                {t('home_hello')} {user.name || user.email.split('@')[0]}
               </motion.p>
               <motion.div className="mt-8"
                 initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.55, duration: 0.6 }}>
@@ -628,21 +648,44 @@ export function HomePage({
           <motion.div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 lg:gap-16 items-center"
             initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ amount: 0.4 }} transition={{ duration: 1 }}>
             <div className="space-y-5 text-center lg:text-left">
-              <p className="text-zinc-500 text-[10px] tracking-[0.35em] uppercase" style={{ fontFamily: MONO }}>devices for intuition</p>
+              <p className="text-zinc-500 text-[10px] tracking-[0.35em] uppercase" style={{ fontFamily: MONO }}>{t('home_devicesTag')}</p>
               <h2 className="text-[clamp(30px,5.6vw,72px)] leading-[0.92] uppercase" style={{ fontFamily: DOTO }}>
-                Um laboratório vivo para pensar com o corpo — e percepção.
+                {t('home_projectTitle')}
               </h2>
               <p className="text-zinc-400 text-[11px] md:text-xs leading-relaxed uppercase max-w-lg mx-auto lg:mx-0" style={{ fontFamily: MONO }}>
-                Criamos ferramentas para perceber e estudar, de forma heurística, visual e não linear, dinâmicas complexas: sistemas que mudam, se organizam, entram em crise, se reinventam.
+                {t('home_projectDesc')}
               </p>
+              <div
+                className="text-zinc-500 text-[10px] md:text-[11px] leading-relaxed uppercase max-w-lg mx-auto lg:mx-0"
+                style={{ fontFamily: MONO }}
+              >
+                <a
+                  href="https://www.are.na/luiz-murara/recursividade"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline decoration-white/15 hover:decoration-white/40 transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.55)' }}
+                >
+                  {t('home_biblio_thesis')}
+                </a>
+                <span style={{ margin: '0 10px', color: 'rgba(255,255,255,0.18)' }}>·</span>
+                <a
+                  href="https://www.are.na/luiz-murara/devices-for-intuition"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline decoration-white/15 hover:decoration-white/40 transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.55)' }}
+                >
+                  {t('home_biblio_bibliography')}
+                </a>
+              </div>
               <p className="text-zinc-500 text-[10px] md:text-[11px] leading-relaxed uppercase max-w-lg mx-auto lg:mx-0 pt-2" style={{ fontFamily: MONO }}>
-                Construímos lentes pra testar hipóteses em tempo real.<br />
-                É uma máquina de gerar perguntas. Não buscamos &quot;verdade final.&quot;
+                {t('home_projectDesc2')}
               </p>
             </div>
             <div className="text-center lg:text-right space-y-2 lg:pr-4">
-              <p className="text-zinc-500 text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: MONO }}>as ferramentas são</p>
-              <p className="text-white text-[clamp(32px,5vw,64px)] uppercase leading-none" style={{ fontFamily: DOTO }}>"LENTES"</p>
+              <p className="text-zinc-500 text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: MONO }}>{t('home_toolsAre')}</p>
+              <p className="text-white text-[clamp(32px,5vw,64px)] uppercase leading-none" style={{ fontFamily: DOTO }}>{t('home_lenses')}</p>
             </div>
           </motion.div>
         </section>
@@ -654,26 +697,26 @@ export function HomePage({
             initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ amount: 0.35 }} transition={{ duration: 1 }}>
 
             <div className="space-y-4 text-center lg:text-left">
-              <h3 className="text-[clamp(24px,4vw,42px)] uppercase" style={{ fontFamily: DOTO }}>Algoritmo</h3>
+              <h3 className="text-[clamp(24px,4vw,42px)] uppercase" style={{ fontFamily: DOTO }}>{t('home_algorithm')}</h3>
               <p className="text-zinc-400 text-[11px] md:text-xs leading-relaxed uppercase max-w-sm mx-auto lg:mx-0" style={{ fontFamily: MONO }}>
-                Todas as nossas ferramentas utilizam o mesmo princípio e algoritmo de vida artificial customizado (ALife), baseado em partículas com arquétipos variáveis, mutáveis e influenciáveis.
+                {t('home_algorithmDesc')}
               </p>
               <p className="text-zinc-600 text-[9px] tracking-[0.2em] uppercase pt-1" style={{ fontFamily: MONO }}>
-                simulação rodando em tempo real no background
+                {t('home_simBackground')}
               </p>
             </div>
 
             <div className="flex flex-col items-center lg:items-end gap-2" style={{ fontFamily: DOTO }}>
-              <span className="text-[#FFD500] text-[clamp(14px,2vw,22px)] uppercase">[ Campo ]</span>
+              <span className="text-[#FFD500] text-[clamp(14px,2vw,22px)] uppercase">{t('home_field')}</span>
               <span className="text-zinc-500 text-[clamp(14px,2vw,22px)]">↓</span>
               <div className="flex items-center gap-2 whitespace-nowrap flex-wrap justify-center lg:justify-end">
-                <span className="text-[#14801A] text-[clamp(14px,2vw,22px)] uppercase">[ Agentes ]</span>
+                <span className="text-[#14801A] text-[clamp(14px,2vw,22px)] uppercase">{t('home_agents')}</span>
                 <span className="text-zinc-500 text-[clamp(14px,2vw,22px)]">←→</span>
-                <span className="text-[#FF0084] text-[clamp(14px,2vw,22px)] uppercase">[ Interações ]</span>
+                <span className="text-[#FF0084] text-[clamp(14px,2vw,22px)] uppercase">{t('home_interactions')}</span>
               </div>
               <span className="text-zinc-500 text-[clamp(14px,2vw,22px)]">↓</span>
-              <span className="text-[#FFD500] text-[clamp(14px,2vw,22px)] uppercase">[ Campo ]</span>
-              <span className="text-zinc-400 text-[clamp(11px,1.5vw,16px)] normal-case mt-1">↺ (recursividade)</span>
+              <span className="text-[#FFD500] text-[clamp(14px,2vw,22px)] uppercase">{t('home_field')}</span>
+              <span className="text-zinc-400 text-[clamp(11px,1.5vw,16px)] normal-case mt-1">{t('home_recursivity')}</span>
             </div>
           </motion.div>
         </section>
@@ -683,15 +726,15 @@ export function HomePage({
           <motion.div className="max-w-5xl w-full text-center space-y-10"
             initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ amount: 0.45 }} transition={{ duration: 1 }}>
             <p className="text-zinc-300 text-[clamp(15px,2.5vw,34px)] leading-[1.4] uppercase tracking-[0.1em]" style={{ fontFamily: DOTO }}>
-              Acreditamos que o processo de construir uma hipótese deve ser livre, variável, contínuo, visual e meta-linguístico.
+              {t('home_manifesto1')}
             </p>
             <p className="text-zinc-300 text-[clamp(15px,2.5vw,34px)] leading-[1.4] uppercase tracking-[0.1em]" style={{ fontFamily: DOTO }}>
-              A ideia não é achar verdade definitiva, e sim propor uma lente que é antítese a equações lineares e "fechadas".
+              {t('home_manifesto2')}
             </p>
             <div className="pt-6 flex flex-col items-center gap-5">
               <ToolsNav onClick={scrollToLabs} />
-              <p className="text-zinc-600 text-[10px] tracking-[0.25em] uppercase" style={{ fontFamily: MONO }}>9 ferramentas disponíveis + 3 em breve.</p>
-              <p className="text-zinc-700 text-[9px] tracking-[0.15em] uppercase" style={{ fontFamily: MONO }}>(grátis durante alpha test)</p>
+              <p className="text-zinc-600 text-[10px] tracking-[0.25em] uppercase" style={{ fontFamily: MONO }}>{t('home_toolsAvailable')}</p>
+              <p className="text-zinc-700 text-[9px] tracking-[0.15em] uppercase" style={{ fontFamily: MONO }}>{t('home_freeAlpha')}</p>
             </div>
           </motion.div>
         </section>
@@ -699,10 +742,10 @@ export function HomePage({
         {/* ═══ S5 — LABS LIST ═══ */}
         <section id="labs-section" className="snap-start pb-24 pt-16 px-4 md:px-12 max-w-[1600px] mx-auto w-full">
           <div className="mb-16 border-b border-dashed border-white/10 pb-4">
-            <h3 className="text-zinc-500 text-sm tracking-widest" style={{ fontFamily: MONO }}>AVAILABLE TOOLS (9) + SOON (3)</h3>
+            <h3 className="text-zinc-500 text-sm tracking-widest" style={{ fontFamily: MONO }}>{t('home_availableTools')}</h3>
             {!user && (
               <p style={{ marginTop: 8, fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
-                Entrar (canto superior) para acessar as ferramentas.
+                {t('home_entrarToAccess')}
               </p>
             )}
           </div>
@@ -726,7 +769,7 @@ export function HomePage({
                 <div className="col-span-1 md:col-span-3 flex flex-col gap-2">
                   {lab.tag && <span className="text-[10px] tracking-widest uppercase font-bold" style={{ color: lab.tagColor, fontFamily: MONO }}>[{lab.tag}]</span>}
                   <span className="text-[10px] text-zinc-600 tracking-widest uppercase" style={{ fontFamily: MONO }}>
-                    {(!lab.enabled && !adminMode) ? (lab.statusLabel || 'TRANCADO') : (lab.statusLabel || '')}
+                    {(!lab.enabled && !adminMode) ? (lab.statusLabel || t('home_locked')) : (lab.statusLabel || '')}
                   </span>
                 </div>
                 <div className="col-span-1 md:col-span-4">
@@ -744,7 +787,7 @@ export function HomePage({
               <div key={i} className="w-6 h-6 rounded-full bg-zinc-900 text-zinc-600 flex items-center justify-center text-[10px] font-bold" style={{ fontFamily: MONO }}>{l}</div>
             ))}
           </div>
-          <p className="text-zinc-700 text-[10px] tracking-widest uppercase" style={{ fontFamily: MONO }}>Devices for Intuition © 2026</p>
+          <p className="text-zinc-700 text-[10px] tracking-widest uppercase" style={{ fontFamily: MONO }}>{t('home_footer')}</p>
           <a
             href="mailto:frans@radical.vision"
             className="inline-block mt-3 text-zinc-500 text-[10px] tracking-widest uppercase hover:text-zinc-300 transition-colors"

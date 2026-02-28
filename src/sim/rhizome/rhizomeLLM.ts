@@ -14,6 +14,7 @@ import type {
 import type { RhizomeState } from './rhizomeTypes';
 import { CANVAS_PAD, MAX_NODES } from './rhizomeTypes';
 import type { RhizomeNode } from './rhizomeTypes';
+import { loadOpenAIApiKey } from '../../storage/userStorage';
 
 // ── Prompt Templates per Mode ────────────────────────────────────────────────
 
@@ -331,6 +332,8 @@ function resolveApiKey(request: LLMRhizomeRequest): string | null {
   if (typeof window !== 'undefined') {
     const cfg = (window as any).__APP_CONFIG__;
     if (cfg?.OPENAI_API_KEY) return cfg.OPENAI_API_KEY;
+    const k = loadOpenAIApiKey();
+    if (k) return k;
   }
   return null;
 }
