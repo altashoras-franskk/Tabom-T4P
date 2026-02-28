@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { GuideState, hasCompletedGuide, markGuideCompleted, resetGuideCompletion } from './GuideSystem';
 import { AppAdapter } from './adapters/metalifelabAdapter';
 import { createGuideJourney } from './guideJourney';
+import type { GuideStep } from './GuideSystem';
 
 export type GuideMode = 'welcome' | 'active' | 'hidden';
 
@@ -16,7 +17,11 @@ export interface UseGuideResult {
   hideGuide: () => void;
 }
 
-export const useGuide = (adapter: AppAdapter): UseGuideResult => {
+/** Optional: return steps from a factory (e.g. createEmergenceGuideJourney) so the guide uses translated 3-step experiment. */
+export const useGuide = (
+  adapter: AppAdapter,
+  stepFactory?: (adapter: AppAdapter) => GuideStep[]
+): UseGuideResult => {
   const [mode, setMode] = useState<GuideMode>('hidden');
   const guideStateRef = useRef<GuideState | null>(null);
 
@@ -25,13 +30,23 @@ export const useGuide = (adapter: AppAdapter): UseGuideResult => {
   }, []);
 
   const startGuide = () => {
-    if (!guideStateRef.current) {
-      const steps = createGuideJourney(adapter);
-      guideStateRef.current = new GuideState(steps);
-    } else {
-      guideStateRef.current.reset();
+    try {
+      const steps = stepFactory ? stepFactory(adapter) : createGuideJourney(adapter);
+      if (!Array.isArray(steps) || steps.length === 0) {
+        guideStateRef.current = new GuideState([{ id: 'noop', title: 'Guide', copy: '', targetSelector: null, actionType: 'finish' }]);
+      } else {
+        guideStateRef.current = new GuideState(steps);
+      }
+      setMode('active');
+    } catch (err) {
+      console.error('[Guide] startGuide failed', err);
+      try {
+        guideStateRef.current = new GuideState(createGuideJourney(adapter));
+        setMode('active');
+      } catch (e2) {
+        console.error('[Guide] fallback createGuideJourney failed', e2);
+      }
     }
-    setMode('active');
   };
 
   const skipGuide = () => {

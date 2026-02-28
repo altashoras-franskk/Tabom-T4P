@@ -246,26 +246,28 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
 
     if (collapsed) {
       return (
-        <div className="fixed left-0 right-0 bottom-3 z-20 pointer-events-none" style={{ fontFamily: MONO }}>
-          <div className="flex justify-center">
-            <button
-              onClick={() => setCollapsed(false)}
-              className="pointer-events-auto flex items-center gap-2 px-4 py-2 transition-all"
-              style={{
-                background: 'rgba(0,0,0,0.92)',
-                border: '1px dashed rgba(255,255,255,0.10)',
-                color: 'rgba(255,255,255,0.55)',
-                borderRadius: 12,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                fontSize: 10,
-                paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
-              }}
-            >
-              <ChevronUp size={14} strokeWidth={1.5} />
-              Painel
-            </button>
-          </div>
+        <div className="fixed left-0 right-0 z-20 pointer-events-none flex justify-center" style={{ bottom: 'max(16px, env(safe-area-inset-bottom))', fontFamily: MONO }}>
+          <button
+            onClick={() => setCollapsed(false)}
+            aria-label="Abrir painel de controles"
+            className="pointer-events-auto flex items-center justify-center gap-2 transition-all rounded-2xl shadow-lg active:scale-95"
+            style={{
+              minWidth: 56,
+              minHeight: 56,
+              padding: '14px 20px',
+              background: 'rgba(0,0,0,0.94)',
+              border: '2px dashed rgba(255,212,0,0.35)',
+              color: '#ffd400',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              fontSize: 12,
+              fontWeight: 500,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+            }}
+          >
+            <ChevronUp size={20} strokeWidth={2} />
+            Painel
+          </button>
         </div>
       );
     }
@@ -281,28 +283,31 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
         >
-          {/* Header row: tabs + collapse */}
+          {/* Header row: tabs + collapse — touch targets ≥44px */}
           <div
-            className="flex items-center gap-2 px-3 py-2"
+            className="flex items-center gap-2 px-3 py-3"
             style={{ borderBottom: '1px dashed rgba(255,255,255,0.08)' }}
           >
             <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 {tabs.map((t) => {
                   const isActive = tab === t.id;
                   return (
                     <button
                       key={t.id}
                       onClick={() => setTab(t.id)}
-                      className="px-3 py-2 transition-all shrink-0"
+                      aria-label={`Aba ${t.label}`}
+                      className="transition-all shrink-0 rounded-xl active:opacity-80"
                       style={{
-                        fontSize: 10,
+                        minHeight: 44,
+                        minWidth: 44,
+                        padding: '10px 14px',
+                        fontSize: 11,
                         letterSpacing: '0.10em',
                         textTransform: 'uppercase',
-                        borderRadius: 10,
-                        color: isActive ? '#ffd400' : 'rgba(255,255,255,0.32)',
-                        background: isActive ? 'rgba(255,212,0,0.06)' : 'transparent',
-                        border: isActive ? '1px dashed rgba(255,212,0,0.25)' : '1px dashed rgba(255,255,255,0.06)',
+                        color: isActive ? '#ffd400' : 'rgba(255,255,255,0.35)',
+                        background: isActive ? 'rgba(255,212,0,0.08)' : 'rgba(255,255,255,0.04)',
+                        border: isActive ? '1px dashed rgba(255,212,0,0.35)' : '1px dashed rgba(255,255,255,0.08)',
                       }}
                     >
                       {t.label}
@@ -317,16 +322,17 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
 
             <button
               onClick={() => setCollapsed(true)}
-              title="Fechar painel"
-              className="p-2 transition-all"
+              aria-label="Fechar painel"
+              className="flex items-center justify-center rounded-xl transition-all active:opacity-80"
               style={{
-                background: 'transparent',
-                border: '1px dashed rgba(255,255,255,0.08)',
-                color: 'rgba(255,255,255,0.35)',
-                borderRadius: 10,
+                minWidth: 44,
+                minHeight: 44,
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px dashed rgba(255,255,255,0.12)',
+                color: 'rgba(255,255,255,0.5)',
               }}
             >
-              <ChevronDown size={14} strokeWidth={1.5} />
+              <ChevronDown size={20} strokeWidth={1.8} />
             </button>
           </div>
 
@@ -588,9 +594,12 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
     );
   }
 
+  // Start below TopHUD (brand + lab tabs + controls bar ≈ 72px)
+  const TOP_HUD_OFFSET = 72;
+
   if (collapsed) {
     return (
-      <div className="fixed right-0 top-0 bottom-0 z-10 pointer-events-none">
+      <div className="fixed right-0 bottom-0 z-10 pointer-events-none" style={{ top: TOP_HUD_OFFSET }}>
         <div className="h-full flex items-center">
           <button
             onClick={() => setCollapsed(false)}
@@ -623,7 +632,7 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
   ];
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 z-10 pointer-events-none" style={{ width: '320px', fontFamily: MONO }} data-right-dock>
+    <div className="fixed right-0 bottom-0 z-10 pointer-events-none" style={{ width: '320px', top: TOP_HUD_OFFSET, fontFamily: MONO }} data-right-dock>
       <div className="h-full flex pointer-events-auto">
         {/* ── Collapse button ──────────────────────────────────── */}
         <div className="flex items-center">

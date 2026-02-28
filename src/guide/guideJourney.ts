@@ -1,5 +1,43 @@
 import { GuideStep } from './GuideSystem';
 import { AppAdapter } from './adapters/metalifelabAdapter';
+import type { StringKey } from '../i18n/strings';
+
+/** 3-step emergence experiment: observe → one change (speed) → what you saw. For all ages, with breathing room. */
+export const createEmergenceGuideJourney = (
+  adapter: AppAdapter,
+  t: (key: StringKey) => string
+): GuideStep[] => {
+  const steps: GuideStep[] = [];
+
+  steps.push({
+    id: 'emergence-1-observe',
+    title: t('guide_emergence_1_title'),
+    copy: t('guide_emergence_1_copy'),
+    targetSelector: adapter.selectors.canvas,
+    actionType: 'observe',
+    rewardBadge: 'observer',
+    waitDuration: 6000,
+  });
+
+  steps.push({
+    id: 'emergence-2-adjust',
+    title: t('guide_emergence_2_title'),
+    copy: t('guide_emergence_2_copy'),
+    targetSelector: adapter.selectors.speedControl ?? null,
+    actionType: 'observe',
+  });
+
+  steps.push({
+    id: 'emergence-3-what-you-saw',
+    title: t('guide_emergence_3_title'),
+    copy: t('guide_emergence_3_copy'),
+    targetSelector: null,
+    actionType: 'finish',
+    rewardBadge: 'pattern_hunter',
+  });
+
+  return steps;
+};
 
 export const createGuideJourney = (adapter: AppAdapter): GuideStep[] => {
   const steps: GuideStep[] = [];

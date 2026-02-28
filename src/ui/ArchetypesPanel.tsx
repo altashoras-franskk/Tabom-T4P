@@ -112,9 +112,12 @@ export const ArchetypesPanel: React.FC<ArchetypesPanelProps> = ({
                     <div className="text-white/80 text-[10px] font-medium truncate">
                       {arch.name}
                     </div>
-                    {arch.notes.length > 0 && (
-                      <div className="text-white/50 text-[8px] mt-0.5">
-                        {arch.notes[0]}
+                    <div className="text-white/55 text-[8px] mt-0.5 leading-snug">
+                      {arch.notes.length > 0 ? arch.notes.join(' · ') : '⚖️ Condições balanceadas'}
+                    </div>
+                    {arch.signal && (
+                      <div className="text-white/35 text-[7px] font-mono mt-1 tracking-wide">
+                        V {Math.round(arch.signal.volatility * 100)} · S {Math.round(arch.signal.scarcity * 100)} · C {Math.round(arch.signal.cohesion * 100)}
                       </div>
                     )}
                   </div>

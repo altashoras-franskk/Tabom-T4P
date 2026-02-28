@@ -1,4 +1,4 @@
-import { MicroState } from '../sim/micro/state';
+import { MicroState } from '../sim/micro/microState';
 import { getTypeColor } from './palette';
 
 export interface BondsConfig {
@@ -46,21 +46,25 @@ export function renderBonds(
   ctx: CanvasRenderingContext2D,
   state: MicroState,
   config: BondsConfig,
-  paletteIndex: number
+  paletteIndex: number,
+  /** Logical width (same as overlay clearRect). Avoids getBoundingClientRect. */
+  width?: number,
+  /** Logical height. */
+  height?: number
 ) {
   if (!config.enabled) return;
 
   const maxDistSq = config.maxDistance * config.maxDistance;
-  // Use CSS dimensions (not canvas buffer dimensions)
   const rect = ctx.canvas.getBoundingClientRect();
-  const width = rect.width;
-  const height = rect.height;
-  
-  // Match canvas2d coordinate system
-  const scaleX = width / 2;
-  const scaleY = height / 2;
-  const centerX = width / 2;
-  const centerY = height / 2;
+  const w = width ?? rect.width;
+  const h = height ?? rect.height;
+  if (w <= 0 || h <= 0) return;
+
+  // Normalized -1..1 → 0..w, 0..h
+  const scaleX = w / 2;
+  const scaleY = h / 2;
+  const centerX = w / 2;
+  const centerY = h / 2;
 
   ctx.save();
   ctx.globalAlpha = config.opacity;

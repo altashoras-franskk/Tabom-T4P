@@ -29,7 +29,8 @@ export type LifeConfig = {
 };
 
 export const DEFAULT_LIFE: LifeConfig = {
-  mode: 'FULL',
+  // Default: stable. Evolution starts when user explicitly dials it up.
+  mode: 'METABOLIC',
   foodEnabled: false,
   foodRatio: 0.15,
   foodType: 255,
@@ -37,11 +38,11 @@ export const DEFAULT_LIFE: LifeConfig = {
   energyDecay: 0.002,
   energyFeedRate: 0.04,
   energyReproThreshold: 2.0,
-  mutationDial: 0.35,
+  mutationDial: 0.05,
   mutationAmount: 0.08,
   mutationRate: 0.0008,
   typeStability: 0.985,
-  reconfigEnabled: true,
+  reconfigEnabled: false,
   reconfigRate: 0.08,
   reconfigAmount: 0.06,
 };
