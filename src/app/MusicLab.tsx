@@ -19,8 +19,9 @@ import { BEHAVIOR_PRESETS, BEHAVIOR_BY_ID, applyBehaviorToPhysics } from '../sim
 import { renderMusic } from '../render/musicRenderer';
 import { DEFAULT_MUSIC_AESTHETIC, getMusicVisualPreset, MUSIC_VISUAL_PRESETS } from '../sim/music/musicAesthetics';
 import { captureMusicSnapshotV1, saveMusicSnapshotToStorage } from '../bridge/musicMetaArtBridge';
-import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
+import { CanvasRecorder, RecorderState, RecordingOptions } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
+import { TelemetryHUD } from './components/TelemetryHUD';
 
 // Lazy load 3D renderer to avoid blocking initial load
 const Music3DRenderer = lazy(() => import('../render/music3DRenderer'));
@@ -169,8 +170,8 @@ const S: React.FC<{
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex justify-between items-baseline">
-        <span style={{fontFamily:MONO,fontSize:7,color:color+'66',letterSpacing:'0.08em',textTransform:'uppercase'}}>{label}</span>
-        <span style={{fontFamily:MONO,fontSize:7,color:color+'99'}}>
+        <span style={{fontFamily:MONO,fontSize:10,color:color+'66',letterSpacing:'0.08em',textTransform:'uppercase'}}>{label}</span>
+        <span style={{fontFamily:MONO,fontSize:10,color:color+'99'}}>
           {display?display(value):value}
         </span>
       </div>
@@ -2143,7 +2144,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
   }, []);
 
   // ── Recording handlers ────────────────────────────────────────────────────
-  const handleRecStart = useCallback(() => {
+  const handleRecStart = useCallback((opts?: RecordingOptions) => {
     const rec = recorderRef.current;
     if (!rec) return;
     // Get audio stream — requires audio to be on; falls back to video-only
@@ -2167,6 +2168,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       },
       30,
       audioStream,
+      opts,
     );
   }, []);
 
@@ -2282,14 +2284,14 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
           <div className="fixed bottom-4 right-4 z-30 flex flex-col gap-1.5 pointer-events-auto" style={{fontFamily:MONO}}>
             {/* Color mode */}
             <div className="px-2.5 py-1.5" style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)'}}>
-              <div style={{fontSize:6,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(55,178,218,0.40)',marginBottom:3}}>COLOR</div>
+              <div style={{fontSize:9,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(55,178,218,0.70)',marginBottom:3}}>COLOR</div>
               <div className="flex gap-1">
                 {(['role','charge','velocity'] as const).map(m=>(
                   <button key={m} onClick={()=>setColor3DMode(m)} title={`Colorir por ${m}`}
                     className="transition-all"
                     style={{
-                      fontSize:6,letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 6px',
-                      color:color3DMode===m?ACCENT:'rgba(255,255,255,0.22)',
+                      fontSize:9,letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 6px',
+                      color:color3DMode===m?ACCENT:'rgba(255,255,255,0.55)',
                       background:color3DMode===m?'rgba(55,178,218,0.06)':'transparent',
                       border:color3DMode===m?`1px dashed ${ACCENT}30`:'1px dashed rgba(255,255,255,0.05)',
                     }}>
@@ -2300,7 +2302,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             </div>
             {/* Overlays */}
             <div className="px-2.5 py-1.5" style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)'}}>
-              <div style={{fontSize:6,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(55,178,218,0.40)',marginBottom:3}}>OVERLAYS</div>
+              <div style={{fontSize:9,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(55,178,218,0.70)',marginBottom:3}}>OVERLAYS</div>
               <div className="flex gap-1 flex-wrap">
                 {[
                   {label:'Grid',   v:show3DGrid,   fn:()=>setShow3DGrid(x=>!x)},
@@ -2310,8 +2312,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   <button key={label} onClick={fn} title={`${label}: ${v?'ON':'OFF'}`}
                     className="transition-all"
                     style={{
-                      fontSize:6,letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 6px',
-                      color:v?ACCENT:'rgba(255,255,255,0.22)',
+                      fontSize:9,letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 6px',
+                      color:v?ACCENT:'rgba(255,255,255,0.55)',
                       background:v?'rgba(55,178,218,0.06)':'transparent',
                       border:v?`1px dashed ${ACCENT}30`:'1px dashed rgba(255,255,255,0.05)',
                     }}>
@@ -2324,11 +2326,11 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             <div className="px-2.5 py-1.5" style={{background:'rgba(0,0,0,0.94)',border:`1px dashed ${ACCENT}18`}}>
               <div className="flex items-center gap-1.5 mb-0.5">
                 <div className="w-1.5 h-1.5 animate-pulse" style={{background:ACCENT}}/>
-                <span style={{fontSize:7,letterSpacing:'0.12em',textTransform:'uppercase',color:ACCENT}}>3D ACTIVE</span>
+                <span style={{fontSize:10,letterSpacing:'0.12em',textTransform:'uppercase',color:ACCENT}}>3D ACTIVE</span>
               </div>
-              <div style={{fontSize:6,color:'rgba(255,255,255,0.25)'}}>
+              <div style={{fontSize:9,color:'rgba(255,255,255,0.55)'}}>
                 <div>{stateRef.current.count} parts · {camera3D.replace('3d-','').toUpperCase()}</div>
-                <div style={{fontSize:5,color:'rgba(255,255,255,0.15)',marginTop:2}}>Drag orbit · Scroll zoom</div>
+                <div style={{fontSize:5,color:'rgba(255,255,255,0.42)',marginTop:2}}>Drag orbit · Scroll zoom</div>
               </div>
             </div>
           </div>
@@ -2359,7 +2361,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
           <div style={{ position:'fixed', top:50, left:8, pointerEvents:'none',
             display:'flex', alignItems:'center', gap:4, zIndex:30 }}>
             <div style={{ width:5, height:5, borderRadius:'50%', background:'rgba(0,200,255,0.7)' }} />
-            <span style={{ fontSize:7, color:'rgba(0,200,255,0.5)', letterSpacing:'0.08em' }}>CTRL</span>
+            <span style={{ fontSize:10, color:'rgba(0,200,255,0.5)', letterSpacing:'0.08em' }}>CTRL</span>
           </div>
         </>
       )}
@@ -2388,27 +2390,27 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         <div className="fixed top-9 left-0 right-0 z-20 pointer-events-none"
           style={{fontFamily:MONO}}>
           <div className="flex items-center pointer-events-auto"
-            style={{background:'rgba(0,0,0,0.94)',borderBottom:'1px dashed rgba(255,255,255,0.06)',height:28}}>
+            style={{background:'rgba(0,0,0,0.94)',borderBottom:'1px dashed rgba(255,255,255,0.06)',height:36}}>
 
             {/* ── Transport ───────────────────────────────────────── */}
             <button onClick={handleAudioToggle} title={audioOn&&running?'Pause':'Play'}
               className="flex items-center justify-center transition-all"
-              style={{width:32,height:28,color:audioOn&&running?ACCENT:'rgba(55,178,218,0.55)',background:audioOn&&running?'rgba(55,178,218,0.06)':'transparent',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-              {audioOn&&running?<Pause size={11}/>:<Play size={11}/>}
+              style={{width:32,height:36,color:audioOn&&running?ACCENT:'rgba(55,178,218,0.55)',background:audioOn&&running?'rgba(55,178,218,0.06)':'transparent',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              {audioOn&&running?<Pause size={15}/>:<Play size={15}/>}
             </button>
 
             {/* BPM */}
-            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:28}}>
+            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:36}}>
               <input type="range" min={30} max={180} step={1} value={bpm}
                 onChange={e=>setBpm(parseInt(e.target.value))}
                 title={`BPM: ${bpm}`}
                 className="w-12 h-px appearance-none cursor-pointer" style={{background:'rgba(255,255,255,.08)',accentColor:ACCENT}}/>
-              <span style={{fontSize:8,color:'rgba(255,255,255,0.40)',width:20,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{bpm}</span>
+              <span style={{fontSize:11,color:'rgba(255,255,255,0.40)',width:20,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{bpm}</span>
             </div>
 
             {/* Vol */}
-            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:28}}>
-              <Volume2 size={8} style={{color:'rgba(255,255,255,0.22)',flexShrink:0}}/>
+            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:36}}>
+              <Volume2 size={13} style={{color:'rgba(255,255,255,0.55)',flexShrink:0}}/>
               <input type="range" min={0} max={1} step={0.01} value={masterVol}
                 onChange={e=>setMasterVol(parseFloat(e.target.value))}
                 title={`Volume: ${Math.round(masterVol*100)}%`}
@@ -2416,8 +2418,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             </div>
 
             {/* FX */}
-            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:28}}>
-              <span style={{fontSize:6,color:'rgba(255,255,255,0.22)',letterSpacing:'0.08em'}}>FX</span>
+            <div className="flex items-center gap-1 px-2" style={{borderRight:'1px dashed rgba(255,255,255,0.06)',height:36}}>
+              <span style={{fontSize:9,color:'rgba(255,255,255,0.55)',letterSpacing:'0.08em'}}>FX</span>
               <input type="range" min={0} max={1} step={0.01} value={fxAmount}
                 onChange={e=>setFxAmount(parseFloat(e.target.value))}
                 title={`FX: ${Math.round(fxAmount*100)}%`}
@@ -2430,15 +2432,15 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             {/* Preset name (click to open grid) */}
             <button onClick={()=>setShowGrid(true)} title="Escolher preset"
               className="flex items-center gap-1.5 px-3 transition-all"
-              style={{height:28,borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
-              <Music size={8} style={{color:currentPreset.primary+'88',flexShrink:0}}/>
-              <span style={{fontSize:8,color:currentPreset.primary+'bb',letterSpacing:'0.04em',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentPreset.name}</span>
+              style={{height:36,borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              <Music size={13} style={{color:currentPreset.primary+'88',flexShrink:0}}/>
+              <span style={{fontSize:11,color:currentPreset.primary+'bb',letterSpacing:'0.04em',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentPreset.name}</span>
             </button>
 
             {/* Root + Scale badges (click to cycle) */}
             <button onClick={() => applyRoot((liveRoot + 1) % 12)} title={`Root: ${NOTE_NAMES[liveRoot % 12]} (click to cycle)`}
               className="flex items-center justify-center transition-all"
-              style={{height:28,width:28,fontSize:9,color:'#88ffcc',background:'rgba(136,255,204,0.04)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
+              style={{height:36,width:28,fontSize:9,color:'#88ffcc',background:'rgba(136,255,204,0.04)',borderRight:'1px dashed rgba(255,255,255,0.06)'}}>
               {NOTE_NAMES[liveRoot % 12]}
             </button>
             <button onClick={() => {
@@ -2447,7 +2449,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               applyScale(scales[(idx + 1) % scales.length]);
             }} title={`Scale: ${SCALE_LABELS[liveScale]} (click to cycle)`}
               className="flex items-center justify-center transition-all"
-              style={{height:28,fontSize:7,color:'rgba(155,89,255,0.75)',padding:'0 8px',borderRight:'1px dashed rgba(255,255,255,0.06)',letterSpacing:'0.06em',textTransform:'uppercase'}}>
+              style={{height:36,fontSize:10,color:'rgba(155,89,255,0.75)',padding:'0 8px',borderRight:'1px dashed rgba(255,255,255,0.06)',letterSpacing:'0.06em',textTransform:'uppercase'}}>
               {SCALE_LABELS[liveScale]}
             </button>
 
@@ -2457,9 +2459,9 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 <button key={l} onClick={()=>setLens(l)} title={`Lens: ${l}`}
                   className="transition-all"
                   style={{
-                    height:28,padding:'0 6px',
-                    fontSize:6,letterSpacing:'0.06em',textTransform:'uppercase',
-                    color:lens===l?ACCENT:'rgba(255,255,255,0.18)',
+                    height:36,padding:'0 6px',
+                    fontSize:9,letterSpacing:'0.06em',textTransform:'uppercase',
+                    color:lens===l?ACCENT:'rgba(255,255,255,0.50)',
                     background:lens===l?'rgba(55,178,218,0.05)':'transparent',
                     borderBottom:lens===l?`1px solid ${ACCENT}`:'1px solid transparent',
                   }}>
@@ -2474,19 +2476,19 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             {/* View toggles — icon only */}
             <button onClick={()=>setCinematic(v=>!v)} title="Cinematic [C]"
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,color:cinematic?ACCENT:'rgba(255,255,255,0.18)'}}>
-              <Film size={10}/>
+              style={{width:26,height:36,color:cinematic?ACCENT:'rgba(255,255,255,0.50)'}}>
+              <Film size={14}/>
             </button>
             <button onClick={()=>setView3D(v=>!v)} title="3D Mode"
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,fontSize:8,color:view3D?ACCENT:'rgba(255,255,255,0.18)',fontWeight:view3D?600:400}}>
+              style={{width:26,height:36,fontSize:11,color:view3D?ACCENT:'rgba(255,255,255,0.50)',fontWeight:view3D?600:400}}>
               3D
             </button>
             {view3D && (['3d-orbital','3d-top','3d-side','3d-fpp'] as const).map(cam=>(
               <button key={cam} onClick={()=>setCamera3D(cam)} title={cam.replace('3d-','').toUpperCase()}
                 className="transition-all"
-                style={{height:28,padding:'0 4px',fontSize:6,letterSpacing:'0.06em',textTransform:'uppercase',
-                  color:camera3D===cam?ACCENT:'rgba(255,255,255,0.18)',
+                style={{height:36,padding:'0 4px',fontSize:9,letterSpacing:'0.06em',textTransform:'uppercase',
+                  color:camera3D===cam?ACCENT:'rgba(255,255,255,0.50)',
                   borderBottom:camera3D===cam?`1px solid ${ACCENT}`:'1px solid transparent',
                 }}>
                 {cam==='3d-orbital'?'ORB':cam==='3d-top'?'TOP':cam==='3d-side'?'SIDE':'FPP'}
@@ -2494,13 +2496,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             ))}
             <button onClick={()=>setShowVel(v=>!v)} title="Velocity Vectors"
               className="flex items-center justify-center transition-all"
-              style={{width:20,height:28,fontSize:7,fontWeight:showVel?700:400,color:showVel?ACCENT:'rgba(255,255,255,0.15)'}}>
+              style={{width:20,height:36,fontSize:10,fontWeight:showVel?700:400,color:showVel?ACCENT:'rgba(255,255,255,0.42)'}}>
               V
             </button>
             <button onClick={()=>setShowOverlays(v=>!v)} title="Overlays [V]"
               className="flex items-center justify-center transition-all"
-              style={{width:24,height:28,color:showOverlays?'rgba(255,255,255,0.22)':'#fbbf24'}}>
-              {showOverlays?<Eye size={9}/>:<EyeOff size={9}/>}
+              style={{width:24,height:36,color:showOverlays?'rgba(255,255,255,0.55)':'#fbbf24'}}>
+              {showOverlays?<Eye size={13}/>:<EyeOff size={13}/>}
             </button>
 
             {/* ── Spacer ─ */}
@@ -2509,13 +2511,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             {/* ── Actions cluster ── */}
             <button onClick={togglePhysicsMode} title="Physics Sandbox"
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,fontSize:9,color:physicsMode?'#ff9944':'rgba(255,255,255,0.18)'}}>
+              style={{width:26,height:36,fontSize:9,color:physicsMode?'#ff9944':'rgba(255,255,255,0.50)'}}>
               ⚛
             </button>
             <button onClick={toggleComposeMode} title="Compose Mode"
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,color:composeMode?'#fbbf24':'rgba(255,255,255,0.18)'}}>
-              <Pencil size={10}/>
+              style={{width:26,height:36,color:composeMode?'#fbbf24':'rgba(255,255,255,0.50)'}}>
+              <Pencil size={14}/>
             </button>
             {composeMode && !running && (
               <button title="Exportar capa para Meta-Gen-Art"
@@ -2545,40 +2547,40 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 }}
                 title="Release composition"
                 className="flex items-center justify-center animate-pulse transition-all"
-                style={{width:26,height:28,color:'#4ade80'}}>
-                <Play size={11}/>
+                style={{width:26,height:36,color:'#4ade80'}}>
+                <Play size={15}/>
               </button>
             )}
             <button onClick={handleResetCompose} title={hasSnapshot?'Restore':'Reset'}
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,color:hasSnapshot?'rgba(251,191,36,0.65)':'rgba(255,255,255,0.18)'}}>
-              <RotateCcw size={9}/>
+              style={{width:26,height:36,color:hasSnapshot?'rgba(251,191,36,0.65)':'rgba(255,255,255,0.50)'}}>
+              <RotateCcw size={13}/>
             </button>
             <button onClick={macroRandom} title="Preset aleatório"
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,color:'rgba(255,255,255,0.18)'}}>
-              <Dice5 size={9}/>
+              style={{width:26,height:36,color:'rgba(255,255,255,0.50)'}}>
+              <Dice5 size={13}/>
             </button>
             <button onClick={()=>{exportSnapshotToMetaArt();}} title="Exportar capa → Meta-Gen-Art"
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,color:lastCoverExport>0&&Date.now()-lastCoverExport<3000?'#4ade80':'rgba(255,255,255,0.18)'}}>
+              style={{width:26,height:36,color:lastCoverExport>0&&Date.now()-lastCoverExport<3000?'#4ade80':'rgba(255,255,255,0.50)'}}>
               <Image size={9}/>
             </button>
             <button onClick={()=>setShowGuide(true)} title="Guia"
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,color:'rgba(55,178,218,0.45)'}}>
-              <HelpCircle size={9}/>
+              style={{width:26,height:36,color:'rgba(55,178,218,0.45)'}}>
+              <HelpCircle size={13}/>
             </button>
             <button onClick={macroClearCanvas} title="Limpar tudo"
               className="flex items-center justify-center transition-all"
-              style={{width:26,height:28,color:'rgba(255,255,255,0.15)'}}>
-              <Trash2 size={9}/>
+              style={{width:26,height:36,color:'rgba(255,255,255,0.42)'}}>
+              <Trash2 size={13}/>
             </button>
 
             {/* Divider + Status */}
             <div style={{width:1,height:16,background:'rgba(255,255,255,0.04)',margin:'0 2px'}}/>
-            <div className="flex items-center gap-1 px-2" style={{height:28}}>
-              <span style={{fontSize:7,color:'rgba(255,255,255,0.22)',fontVariantNumeric:'tabular-nums'}}>{quantaCount}</span>
+            <div className="flex items-center gap-1 px-2" style={{height:36}}>
+              <span style={{fontSize:10,color:'rgba(255,255,255,0.55)',fontVariantNumeric:'tabular-nums'}}>{quantaCount}</span>
             </div>
 
             <ZoomControls
@@ -2595,7 +2597,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {/* ── LEFT TOOL STRIP — Figma-style narrow icon bar ──────────────────── */}
       {!cinematic && (
         <div className="fixed left-0 z-20 flex flex-col items-start"
-          style={{top:68,bottom:showStudioSeq?258:32,fontFamily:MONO}}>
+          style={{top:76,bottom:showStudioSeq?258:32,fontFamily:MONO}}>
           {/* Tool strip */}
           <div className="flex flex-col overflow-y-auto"
             style={{width:36,background:'rgba(0,0,0,0.94)',borderRight:'1px dashed rgba(255,255,255,0.06)',scrollbarWidth:'none'}}>
@@ -2616,7 +2618,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       title={`${t.label} [${t.key}]`}
                       className="flex items-center justify-center transition-all relative"
                       style={{
-                        width:36,height:28,
+                        width:36,height:36,
                         color:activeTool===t.id?t.color:'rgba(255,255,255,.28)',
                         background:activeTool===t.id?`${t.color}0c`:'transparent',
                       }}>
@@ -2647,7 +2649,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 padding:8,maxHeight:'60vh',overflowY:'auto',
                 scrollbarWidth:'none',
               }}>
-                <div style={{fontFamily:MONO,fontSize:7,color:`${toolColor}88`,letterSpacing:'0.10em',textTransform:'uppercase',marginBottom:6}}>
+                <div style={{fontFamily:MONO,fontSize:10,color:`${toolColor}88`,letterSpacing:'0.10em',textTransform:'uppercase',marginBottom:6}}>
                   {TOOLS.find(t=>t.id===activeTool)?.label}
                 </div>
                 {(activeTool==='excite'||activeTool==='freeze') && (
@@ -2687,7 +2689,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                             background:zoneEffect===ef.id?'rgba(255,136,204,0.08)':'transparent',
                             border:zoneEffect===ef.id?'1px dashed rgba(255,136,204,0.35)':'1px dashed rgba(255,255,255,0.04)',
                           }}>
-                          <span style={{fontSize:8}}>{ef.icon}</span><br/>{ef.label}
+                          <span style={{fontSize:11}}>{ef.icon}</span><br/>{ef.label}
                         </button>
                       ))}
                     </div>
@@ -2716,21 +2718,21 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 )}
                 {activeTool==='select'&&selectedQ && (
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-1.5 flex-wrap" style={{fontSize:7}}>
+                    <div className="flex items-center gap-1.5 flex-wrap" style={{fontSize:10}}>
                       <span style={{color:ROLE_COLORS[selectedQ.role]}}>{selectedQ.role}</span>
                       <span style={{color:'rgba(255,255,255,0.30)'}}>p:{selectedQ.pitch} c:{selectedQ.charge.toFixed(2)}</span>
                     </div>
                     <div className="grid grid-cols-4 gap-0.5 mt-1">
                       <button onClick={()=>{selectedQ.timbreIdx=-1;forceRender(n=>n+1);}} title="Usar timbre padrão da role"
                         className="text-[5px] py-0.5 text-center transition-all"
-                        style={{color:selectedQ.timbreIdx===-1?'#fff':'rgba(255,255,255,0.25)',background:selectedQ.timbreIdx===-1?'rgba(255,255,255,0.08)':'transparent',border:'1px dashed rgba(255,255,255,0.06)'}}>
+                        style={{color:selectedQ.timbreIdx===-1?'#fff':'rgba(255,255,255,0.55)',background:selectedQ.timbreIdx===-1?'rgba(255,255,255,0.08)':'transparent',border:'1px dashed rgba(255,255,255,0.06)'}}>
                         Role
                       </button>
                       {TIMBRE_TEMPLATES.map((tmpl,idx)=>(
                         <button key={idx} onClick={()=>{selectedQ.timbreIdx=idx;forceRender(n=>n+1);}} title={tmpl.name}
                           className="text-[8px] py-0.5 text-center transition-all"
                           style={{
-                            color:selectedQ.timbreIdx===idx?tmpl.color:'rgba(255,255,255,0.25)',
+                            color:selectedQ.timbreIdx===idx?tmpl.color:'rgba(255,255,255,0.55)',
                             background:selectedQ.timbreIdx===idx?`${tmpl.color}18`:'transparent',
                             border:selectedQ.timbreIdx===idx?`1px dashed ${tmpl.color}55`:'1px dashed rgba(255,255,255,0.04)',
                           }}>
@@ -2748,7 +2750,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
       {/* ── POWERS PILL BAR — floating, draggable ────────────────────────────── */}
       {!cinematic && (
-        <DraggablePanel id="ml_powers" title="POWERS" defaultX={40} defaultY={98} zIndex={22}>
+        <DraggablePanel id="ml_powers" title="POWERS" defaultX={40} defaultY={106} zIndex={22}>
           <div className="flex items-center gap-0.5 px-1 py-1 flex-wrap" style={{maxWidth:220}}>
             {[
               {icon:'⚡',fn:macroExciteAll,color:'#ff8800',title:'Excite All'},
@@ -2774,8 +2776,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
             <div className="relative">
               <button onClick={()=>setShowClearMenu(v=>!v)} title="Clear..."
                 className="flex items-center justify-center transition-all"
-                style={{width:24,height:24,color:'rgba(255,255,255,0.22)',background:'rgba(0,0,0,0.85)',border:'1px dashed rgba(255,255,255,0.06)'}}>
-                <Trash2 size={10}/>
+                style={{width:24,height:24,color:'rgba(255,255,255,0.55)',background:'rgba(0,0,0,0.85)',border:'1px dashed rgba(255,255,255,0.06)'}}>
+                <Trash2 size={14}/>
               </button>
               {showClearMenu && (
                 <div className="absolute left-0 top-[26px] flex flex-col z-50"
@@ -2790,7 +2792,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   ].map(c=>(
                     <button key={c.label} onClick={()=>{c.fn();setShowClearMenu(false);}} title={c.label}
                       className="text-left px-2.5 py-1.5 hover:bg-white/5 transition-all"
-                      style={{fontSize:7,color:`${c.color}aa`}}>
+                      style={{fontSize:10,color:`${c.color}aa`}}>
                       {c.label}
                     </button>
                   ))}
@@ -2803,11 +2805,11 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
       {/* ── Q.SEQ MINI-PANEL — floating, draggable ───────────────────────────── */}
       {!cinematic && (
-        <DraggablePanel id="ml_qseq" title="Q·SEQ" defaultX={rightOpen?window.innerWidth-344:window.innerWidth-148} defaultY={98} zIndex={22} width={148}
+        <DraggablePanel id="ml_qseq" title="Q·SEQ" defaultX={rightOpen?window.innerWidth-344:window.innerWidth-148} defaultY={106} zIndex={22} width={148}
           headerExtra={
             <button onClick={toggleSeq} title={seqActive?'Desativar sequencer':'Ativar sequencer'}
               className="transition-all"
-              style={{fontSize:6,padding:'1px 6px',color:seqActive?ACCENT:'rgba(255,255,255,0.25)',
+              style={{fontSize:9,padding:'1px 6px',color:seqActive?ACCENT:'rgba(255,255,255,0.55)',
                 background:seqActive?`${ACCENT}10`:'transparent',
                 border:seqActive?`1px dashed ${ACCENT}50`:'1px dashed rgba(255,255,255,0.06)'}}>
               {seqActive?'ON':'OFF'}
@@ -2818,7 +2820,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               {[8,12,16].map(n=>(
                 <button key={n} onClick={()=>setSeqStepsFn(n)} title={`${n} steps`}
                   style={{fontSize:5,padding:'1px 4px',
-                    color:seqSteps===n?ACCENT:'rgba(255,255,255,0.18)',
+                    color:seqSteps===n?ACCENT:'rgba(255,255,255,0.50)',
                     border:seqSteps===n?`1px dashed ${ACCENT}40`:'1px dashed rgba(255,255,255,0.04)'}}>
                   {n}
                 </button>
@@ -2827,7 +2829,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               {[0.5,1,2,4].map(m=>(
                 <button key={m} onClick={()=>setSeqTempoMultFn(m)} title={`Velocidade ${m}×`}
                   style={{fontSize:5,padding:'1px 3px',
-                    color:seqTempoMult===m?ACCENT:'rgba(255,255,255,0.18)',
+                    color:seqTempoMult===m?ACCENT:'rgba(255,255,255,0.50)',
                     border:seqTempoMult===m?`1px dashed ${ACCENT}40`:'1px dashed rgba(255,255,255,0.04)'}}>
                   {m}×
                 </button>
@@ -2841,7 +2843,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                   <button key={i} onClick={()=>toggleSeqStep(i)} title={`Beat ${i+1}: ${armed?'armado':'desarmado'}`}
                     style={{
                       height:14,fontSize:5,position:'relative',
-                      color:armed?ACCENT:'rgba(255,255,255,0.18)',
+                      color:armed?ACCENT:'rgba(255,255,255,0.50)',
                       background:armed?`${ACCENT}20`:'rgba(255,255,255,0.02)',
                       border:isCurrent?'1px solid rgba(255,255,255,0.6)':armed?`1px dashed ${ACCENT}50`:'1px dashed rgba(255,255,255,0.04)',
                     }}>
@@ -2856,11 +2858,11 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
       {/* ── RIGHT PANEL — streamlined 200px ──────────────────────────────────── */}
       {!cinematic && (
-        <div className="fixed top-[68px] right-0 z-20 flex flex-row-reverse" style={{bottom: showStudioSeq ? 258 : 32}}>
+        <div className="fixed top-[76px] right-0 z-20 flex flex-row-reverse" style={{bottom: showStudioSeq ? 258 : 32}}>
           <button onClick={()=>setRightOpen(v=>!v)} title={rightOpen?'Fechar painel':'Abrir painel de controles'}
             className="absolute -left-4 top-4 z-30 w-4 h-8 flex items-center justify-center transition-all"
-            style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)',borderRight:'none',color:'rgba(255,255,255,0.22)'}}>
-            {rightOpen?<ChevronRight size={9}/>:<ChevronLeft size={9}/>}
+            style={{background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)',borderRight:'none',color:'rgba(255,255,255,0.55)'}}>
+            {rightOpen?<ChevronRight size={12}/>:<ChevronLeft size={12}/>}
           </button>
 
           {rightOpen && (
@@ -2871,35 +2873,35 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               <button onClick={()=>setShowGrid(true)} title="Escolher preset"
                 className="flex items-center gap-1.5 px-3 py-2 transition-all hover:bg-white/[0.03]"
                 style={{borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
-                <Music size={8} style={{color:currentPreset.primary+'88'}}/>
-                <span style={{fontSize:8,color:currentPreset.primary+'bb',letterSpacing:'0.04em'}}>{currentPreset.name}</span>
-                <span style={{fontSize:6,color:'rgba(255,255,255,0.15)',marginLeft:'auto'}}>change</span>
+                <Music size={13} style={{color:currentPreset.primary+'88'}}/>
+                <span style={{fontSize:11,color:currentPreset.primary+'bb',letterSpacing:'0.04em'}}>{currentPreset.name}</span>
+                <span style={{fontSize:9,color:'rgba(255,255,255,0.42)',marginLeft:'auto'}}>change</span>
               </button>
 
               {/* Hub: Minhas composições */}
               <button onClick={()=>setShowHubPanel(true)} title="Salvar / carregar composições"
                 className="flex items-center gap-1.5 px-3 py-2 transition-all hover:bg-white/[0.03]"
                 style={{borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
-                <Image size={8} style={{color:'rgba(125,211,252,0.88)'}}/>
-                <span style={{fontSize:8,color:'rgba(125,211,252,0.9)',letterSpacing:'0.04em'}}>Minhas composições</span>
+                <Image size={13} style={{color:'rgba(125,211,252,0.88)'}}/>
+                <span style={{fontSize:11,color:'rgba(125,211,252,0.9)',letterSpacing:'0.04em'}}>Minhas composições</span>
               </button>
 
               {/* Tabs */}
               <div className="flex" style={{flexWrap:'wrap',borderBottom:'1px dashed rgba(255,255,255,0.05)'}}>
                 {([
-                  {id:'timbre',  label:'Timbre',  icon:<Sliders  size={7} className="inline mr-0.5"/>},
-                  {id:'harmony', label:'Harmony', icon:<Music    size={7} className="inline mr-0.5"/>},
-                  {id:'physics', label:'Physics', icon:<Settings size={7} className="inline mr-0.5"/>},
-                  {id:'matrix',  label:'Matrix',  icon:<span style={{fontSize:7,marginRight:2}}>⊞</span>},
-                  {id:'palette', label:'Palette', icon:<span style={{fontSize:7,marginRight:2}}>◈</span>},
-                  {id:'aesthetic', label:'Look',  icon:<span style={{fontSize:7,marginRight:2}}>✦</span>},
-                  {id:'morin',     label:'Morin', icon:<span style={{fontSize:7,marginRight:2}}>◎</span>},
+                  {id:'timbre',  label:'Timbre',  icon:<Sliders  size={11} className="inline mr-0.5"/>},
+                  {id:'harmony', label:'Harmony', icon:<Music    size={11} className="inline mr-0.5"/>},
+                  {id:'physics', label:'Physics', icon:<Settings size={11} className="inline mr-0.5"/>},
+                  {id:'matrix',  label:'Matrix',  icon:<span style={{fontSize:10,marginRight:2}}>⊞</span>},
+                  {id:'palette', label:'Palette', icon:<span style={{fontSize:10,marginRight:2}}>◈</span>},
+                  {id:'aesthetic', label:'Look',  icon:<span style={{fontSize:10,marginRight:2}}>✦</span>},
+                  {id:'morin',     label:'Morin', icon:<span style={{fontSize:10,marginRight:2}}>◎</span>},
                 ] as const).map(tab=>(
                   <button key={tab.id} onClick={()=>setRightTab(tab.id)} title={tab.label}
                     className="flex-1 py-1.5 transition-all min-w-[38px]"
                     style={{
-                      fontSize:6,letterSpacing:'0.12em',textTransform:'uppercase',
-                      color:rightTab===tab.id?ACCENT:'rgba(255,255,255,0.22)',
+                      fontSize:9,letterSpacing:'0.12em',textTransform:'uppercase',
+                      color:rightTab===tab.id?ACCENT:'rgba(255,255,255,0.55)',
                       background:rightTab===tab.id?'rgba(55,178,218,0.04)':'transparent',
                       borderBottom:rightTab===tab.id?`1px solid ${ACCENT}`:'1px solid transparent',
                     }}>
@@ -2913,7 +2915,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Timbre Templates ──────────────────────────────── */}
                   <div>
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>
                       TIMBRE TEMPLATES
                     </div>
                     <div className="grid grid-cols-3 gap-0.5">
@@ -2944,7 +2946,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* Role selector + per-role random */}
                   <div>
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>EDIT ROLE</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>EDIT ROLE</div>
                     <div className="grid grid-cols-4 gap-0.5">
                       {VOICE_ROLES.map(r=>(
                         <button key={r} onClick={()=>setEditRole(r)} title={`Editar role: ${r}`}
@@ -2967,7 +2969,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                           title="Random timbre para este role"
                           className="text-[5.5px] uppercase px-1.5 py-0.5 border border-white/[0.06] text-white/30 hover:text-[#37b2da] hover:border-[#37b2da]/30 bg-black transition-all flex items-center gap-0.5"
                           style={{borderRadius:0}}>
-                          <RotateCcw size={6}/> Rand
+                          <RotateCcw size={10}/> Rand
                         </button>
                         <button
                           onClick={() => { roleOverRef.current[editRole] = {}; forceRender(n=>n+1); }}
@@ -2991,7 +2993,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* Waveform */}
                   <div>
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:4}}>WAVEFORM</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:4}}>WAVEFORM</div>
                     <div className="grid grid-cols-4 gap-0.5">
                       {WAVES.map(w=>(
                         <button key={w.id} onClick={()=>setRoleParam(editRole,'waveform',w.id)}
@@ -3017,7 +3019,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ADSR */}
                   <div className="flex flex-col gap-1.5">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>ENVELOPE</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)'}}>ENVELOPE</div>
                     {(['attack','decay','sustain','release'] as const).map(k=>{
                       const isS=k==='sustain';
                       const envVal=(getRoleVal(editRole,'envelope') as any)?.[k];
@@ -3053,7 +3055,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               {rightTab==='harmony' && (
                 <div className="flex flex-col gap-3 p-3">
                   <div>
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>
                       NOTA RAIZ — <span style={{color:'#88ffcc'}}>{NOTE_NAMES[liveRoot % 12]}</span>
                     </div>
                     <div className="grid grid-cols-6 gap-0.5">
@@ -3070,7 +3072,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     </div>
                   </div>
                   <div>
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>
                       ESCALA — <span style={{color:'#88ffcc'}}>{SCALE_LABELS[liveScale]}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-0.5">
@@ -3086,7 +3088,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     </div>
                   </div>
                   <div>
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>MODO HARMÔNICO</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>MODO HARMÔNICO</div>
                     <div className="flex gap-1">
                       {(['consonant','any','dissonant'] as const).map(m => (
                         <button key={m} onClick={() => applyHarmonyMode(m)} title={m==='consonant'?'Só notas consonantes':m==='dissonant'?'Prioriza dissonâncias':'Qualquer intervalo'}
@@ -3103,7 +3105,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     </div>
                   </div>
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>MAPEAMENTO</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>MAPEAMENTO</div>
                     <div className="flex gap-1">
                       <button onClick={() => setPitchMapMode('preset')} title="Notas mapeadas pelo preset"
                         className={`flex-1 text-[5.5px] uppercase py-1.5 transition-all
@@ -3127,7 +3129,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     </div>
                   </div>
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>LIVE PAD — QUANTIZE</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>LIVE PAD — QUANTIZE</div>
                     <div className="grid grid-cols-6 gap-0.5">
                       {SCALE_INTERVALS[liveScale].map((iv,idx) => {
                         const nn = NOTE_NAMES[(liveRoot + iv) % 12];
@@ -3150,7 +3152,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                     <div className="mt-0.5 text-[5px] font-mono text-white/18">Frequência de disparo de notas</div>
                   </div>
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>NOTAS ATIVAS</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>NOTAS ATIVAS</div>
                     <div className="flex flex-wrap gap-0.5">
                       {SCALE_INTERVALS[liveScale].map(iv => {
                         const nn = NOTE_NAMES[(liveRoot + iv) % 12];
@@ -3177,8 +3179,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                         applyEventRate(0.4+Math.random()*2.5);
                       }}
                       className="w-full py-1.5 transition-all flex items-center justify-center gap-1"
-                      style={{fontSize:7,letterSpacing:'0.10em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',border:'1px dashed rgba(255,255,255,0.05)',background:'transparent'}}>
-                      <RotateCcw size={8}/> Campo Harmônico Aleatório
+                      style={{fontSize:10,letterSpacing:'0.10em',textTransform:'uppercase',color:'rgba(255,255,255,0.55)',border:'1px dashed rgba(255,255,255,0.05)',background:'transparent'}}>
+                      <RotateCcw size={12}/> Campo Harmônico Aleatório
                     </button>
                   </div>
                 </div>
@@ -3337,7 +3339,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Behavior Preset Picker ──────────────────────────── */}
                   <div>
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>BEHAVIOR PRESETS</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>BEHAVIOR PRESETS</div>
                     <div className="grid grid-cols-4 gap-0.5">
                       {BEHAVIOR_PRESETS.map(b => (
                         <button title={`${b.name} — ${b.description}`} key={b.id}
@@ -3371,7 +3373,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Motion + Forces ─────────────────────────────────── */}
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:6}}>MOTION + FORCES</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:6}}>MOTION + FORCES</div>
                     <div className="flex flex-col gap-2">
                       <S label="Damping" value={phys.damping} min={0.90} max={0.999} step={0.001}
                         display={v=>v.toFixed(3)} color="#88aaff"
@@ -3433,7 +3435,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Behavior Physics (novos params) ─────────────────── */}
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:6}}>BEHAVIOR PHYSICS</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:6}}>BEHAVIOR PHYSICS</div>
                     <div className="flex flex-col gap-2">
                       <S label="Alignment" value={phys.alignment} min={0} max={2} step={0.05}
                         display={v=>v.toFixed(2)} color="#aaeeff"
@@ -3464,7 +3466,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Emergent ─────────────────────────────────────────── */}
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:6}}>EMERGENT</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:6}}>EMERGENT</div>
                     <div className="flex flex-col gap-2">
                       <S label="Mutation Rate" value={phys.mutationRate} min={0} max={1} step={0.01}
                         display={v=>v.toFixed(2)} color="#ff88ff"
@@ -3482,7 +3484,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
                   {/* ── Sync info ────────────────────────────────────────── */}
                   <div className="border-t border-dashed border-white/[0.06] pt-2">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)',marginBottom:5}}>SYNC</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)',marginBottom:5}}>SYNC</div>
                     <div className="flex flex-col gap-0.5 text-[7px] font-mono text-white/35">
                       <div>Alignment: {((stateRef.current?.syncIntensity??0)*100).toFixed(0)}%</div>
                       <div>Beat: {((stateRef.current?.beatPhase??0)*100).toFixed(0)}%</div>
@@ -3502,7 +3504,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 const mat = stateRef.current.userMatrix;
                 return (
                   <div className="p-2 flex flex-col gap-2">
-                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>INTERACTION MATRIX</div>
+                    <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)'}}>INTERACTION MATRIX</div>
                     <div className="text-[5.5px] text-white/18 leading-snug bg-white/[0.02] px-1.5 py-1 border border-dashed border-white/[0.06] mb-1" style={{borderRadius:0}}>
                       Click +0.1 · Shift -0.1 · Ctrl reset<br/>
                       Azul=atração · Vermelho=repulsão
@@ -3562,7 +3564,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               {/* ── PALETTE TAB ─────────────────────────────────────────────── */}
               {rightTab === 'palette' && (
                 <div className="p-2 flex flex-col gap-3">
-                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>CANVAS PALETTE</div>
+                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)'}}>CANVAS PALETTE</div>
 
                   <div>
                     <div className="text-[5.5px] uppercase text-white/18 tracking-[0.14em] mb-1.5">MODO DE COR</div>
@@ -3688,7 +3690,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               {/* ── AESTHETIC TAB ───────────────────────────────────────────── */}
               {rightTab === 'aesthetic' && (
                 <div className="p-2 flex flex-col gap-3">
-                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>AESTHETIC</div>
+                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)'}}>AESTHETIC</div>
 
                   {/* Visual presets */}
                   <div>
@@ -3710,7 +3712,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                               {vp.name}
                             </div>
                             <div className="text-[5.5px] font-mono leading-snug mt-0.5"
-                              style={{ color: 'rgba(255,255,255,0.22)' }}>
+                              style={{ color: 'rgba(255,255,255,0.55)' }}>
                               {vp.description}
                             </div>
                           </button>
@@ -3763,10 +3765,10 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               {/* ── MORIN TAB ────────────────────────────────────────────── */}
               {rightTab === 'morin' && (
                 <div className="p-3 flex flex-col gap-3">
-                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.35)'}}>
+                  <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.65)'}}>
                     COMPLEXIDADE — EDGAR MORIN
                   </div>
-                  <div style={{fontSize:7,color:'rgba(255,255,255,0.30)',lineHeight:1.5,fontFamily:MONO}}>
+                  <div style={{fontSize:10,color:'rgba(255,255,255,0.30)',lineHeight:1.5,fontFamily:MONO}}>
                     Índices derivados em tempo real da simulação musical, baseados na teoria da complexidade de Edgar Morin.
                   </div>
                   {([
@@ -3784,11 +3786,11 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 2 }}>
                         <div style={{ width: `${v * 100}%`, height: '100%', background: c, borderRadius: 2, transition: 'width 0.5s', opacity: 0.7 }} />
                       </div>
-                      <span style={{ fontSize: 6, color: 'rgba(255,255,255,0.18)', fontFamily: MONO }}>{desc}</span>
+                      <span style={{ fontSize: 6, color: 'rgba(255,255,255,0.50)', fontFamily: MONO }}>{desc}</span>
                     </div>
                   ))}
                   <div style={{borderTop:'1px dashed rgba(255,255,255,0.06)',paddingTop:8,marginTop:4}}>
-                    <div style={{fontSize:7,color:'rgba(255,255,255,0.25)',fontFamily:MONO,lineHeight:1.6}}>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.55)',fontFamily:MONO,lineHeight:1.6}}>
                       Alto <span style={{color:'#ff6464'}}>dialógica</span> = consonância e dissonância coexistem.<br/>
                       Alto <span style={{color:'#64c8ff'}}>recursivo</span> = feedback musical ativo (eventos geram energia que gera eventos).<br/>
                       Alto <span style={{color:'#64ffa0'}}>hologramático</span> = cada voz carrega a essência do todo.<br/>
@@ -3897,7 +3899,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
         <button onClick={()=>setCinematic(false)}
           title="Press H to restore HUD"
           className="fixed top-3 right-3 z-40 px-2.5 py-1 transition-all"
-          style={{fontFamily:MONO,fontSize:7,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(255,255,255,0.20)',background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)'}}>
+          style={{fontFamily:MONO,fontSize:10,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(255,255,255,0.50)',background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,255,255,0.06)'}}>
           H · Show HUD
         </button>
       )}
@@ -3923,8 +3925,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {composeMode && !running && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[6] pointer-events-none">
           <div className="flex items-center gap-3 px-4 py-2" style={{fontFamily:MONO,background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(251,191,36,0.15)'}}>
-            <span style={{fontSize:7,color:'rgba(251,191,36,0.60)',letterSpacing:'0.12em',textTransform:'uppercase'}}>✏ COMPOSE</span>
-            <span style={{fontSize:7,color:'rgba(255,255,255,0.20)'}}>Click to place · Drag = velocity · ▶ Release to run · R to restore</span>
+            <span style={{fontSize:10,color:'rgba(251,191,36,0.60)',letterSpacing:'0.12em',textTransform:'uppercase'}}>✏ COMPOSE</span>
+            <span style={{fontSize:10,color:'rgba(255,255,255,0.50)'}}>Click to place · Drag = velocity · ▶ Release to run · R to restore</span>
           </div>
         </div>
       )}
@@ -3933,7 +3935,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
       {physicsMode && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[6] pointer-events-none">
           <div className="flex items-center gap-2 px-3 py-1" style={{fontFamily:MONO,background:'rgba(0,0,0,0.94)',border:'1px dashed rgba(255,153,68,0.15)'}}>
-            <span style={{fontSize:7,color:'rgba(255,153,68,0.55)',letterSpacing:'0.12em',textTransform:'uppercase'}}>⚛ BALLISTIC · WALL BOUNCE · GATE NOTES ONLY</span>
+            <span style={{fontSize:10,color:'rgba(255,153,68,0.55)',letterSpacing:'0.12em',textTransform:'uppercase'}}>⚛ BALLISTIC · WALL BOUNCE · GATE NOTES ONLY</span>
           </div>
         </div>
       )}
@@ -3950,8 +3952,8 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               <button key={n} onClick={()=>applyRoot(i)} title={`Root: ${n}`}
                 className="flex-1 transition-all"
                 style={{
-                  height:16, fontSize:6, textAlign:'center',
-                  color: liveRoot===i ? '#88ffcc' : n.includes('#')||n.includes('b') ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.40)',
+                  height:16, fontSize:9, textAlign:'center',
+                  color: liveRoot===i ? '#88ffcc' : n.includes('#')||n.includes('b') ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.40)',
                   background: liveRoot===i ? 'rgba(136,255,204,0.12)' : n.includes('#')||n.includes('b') ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
                   border: liveRoot===i ? '1px solid rgba(136,255,204,0.40)' : '1px dashed rgba(255,255,255,0.04)',
                 }}>
@@ -3968,11 +3970,11 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
               applyScale(scales[(idx + 1) % scales.length]);
             }} title="Trocar escala (clique para ciclar)"
               className="flex items-center gap-1 transition-all"
-              style={{fontSize:7,color:'rgba(155,89,255,0.75)',letterSpacing:'0.06em',textTransform:'uppercase'}}>
+              style={{fontSize:10,color:'rgba(155,89,255,0.75)',letterSpacing:'0.06em',textTransform:'uppercase'}}>
               {SCALE_LABELS[liveScale]} <ChevronDown size={7}/>
             </button>
             <div style={{flex:1}}/>
-            <span style={{fontSize:6,color:'rgba(255,255,255,0.15)'}}>
+            <span style={{fontSize:9,color:'rgba(255,255,255,0.42)'}}>
               {NOTE_NAMES[liveRoot%12]} {SCALE_LABELS[liveScale]}
             </span>
           </div>
@@ -4002,7 +4004,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
 
           {/* Mini keyboard — chromatic (highlights current scale tones) */}
           <div className="px-1.5 pb-1.5">
-            <div className="uppercase" style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.10em',color:'rgba(55,178,218,0.28)',marginBottom:5}}>
+            <div className="uppercase" style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.10em',color:'rgba(55,178,218,0.58)',marginBottom:5}}>
               KEYBOARD
             </div>
             <div className="grid gap-0.5" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
@@ -4021,7 +4023,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                       height: 18,
                       fontSize: 6.5,
                       textAlign: 'center',
-                      color: isRoot ? '#88ffcc' : inScale ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.25)',
+                      color: isRoot ? '#88ffcc' : inScale ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.55)',
                       background: isRoot
                         ? 'rgba(136,255,204,0.10)'
                         : inScale
@@ -4039,7 +4041,7 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
                 );
               })}
             </div>
-            <div style={{ marginTop: 5, fontFamily: MONO, fontSize: 6, color: 'rgba(255,255,255,0.18)', lineHeight: 1.45 }}>
+            <div style={{ marginTop: 5, fontFamily: MONO, fontSize: 6, color: 'rgba(255,255,255,0.50)', lineHeight: 1.45 }}>
               Dica: o timbre vem do <span style={{ color: 'rgba(136,255,204,0.55)' }}>{editRole}</span> (mude no painel da direita).
             </div>
           </div>
@@ -4071,13 +4073,13 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
           <div className="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none transition-colors"
             onClick={() => setShowStudioSeq(v => !v)}
             style={{borderBottom:showStudioSeq?'1px dashed rgba(255,255,255,0.04)':'none'}}>
-            <span style={{fontFamily:DOTO,fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color: studioActive ? ACCENT : 'rgba(255,255,255,0.22)'}}>
+            <span style={{fontFamily:DOTO,fontSize:11,letterSpacing:'0.12em',textTransform:'uppercase',color: studioActive ? ACCENT : 'rgba(255,255,255,0.55)'}}>
               STUDIO SEQ
             </span>
             {studioActive && (
               <span className="w-1.5 h-1.5 animate-pulse flex-shrink-0" style={{background:ACCENT}} />
             )}
-            <span style={{fontFamily:MONO,fontSize:6,color:'rgba(255,255,255,0.12)',marginLeft:'auto'}}>
+            <span style={{fontFamily:MONO,fontSize:9,color:'rgba(255,255,255,0.12)',marginLeft:'auto'}}>
               {showStudioSeq ? '▼' : '▲'}
             </span>
           </div>
@@ -4112,6 +4114,23 @@ export const MusicLab: React.FC<MusicLabProps> = ({ active }) => {
           onStop={handleRecStop}
         />
       </div>
+
+      {/* ── TELEMETRY HUD ─────────────────────────────────────────────────────── */}
+      {!cinematic && (
+        <TelemetryHUD
+          corner="br"
+          bottomOffset={showStudioSeq ? 248 : 0}
+          getLines={() => {
+            const p = presetRef.current;
+            return [
+              `${p.name}  ·  ${p.bpm} BPM`,
+              `${NOTE_NAMES[liveRoot % 12]} ${SCALE_LABELS[liveScale]}  ·  ${phys.motionStyle}`,
+              `quanta: ${quantaCount}  ·  fx: ${(fxAmount * 100).toFixed(0)}%  ·  vol: ${(masterVol * 100).toFixed(0)}%`,
+              `lens: ${lens}  ·  ${audioOn ? '♪ áudio' : '▷ vídeo'}`,
+            ];
+          }}
+        />
+      )}
 
       {/* ── GUIDE OVERLAY ────────────────────────────────────────────────────── */}
       {showGuide && <MusicGuide onClose={() => setShowGuide(false)} />}

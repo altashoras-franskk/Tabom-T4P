@@ -6,8 +6,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 const MONO = "'IBM Plex Mono', monospace";
 const DOTO = "'Doto', monospace";
 import { Play, Pause, RotateCcw, ArrowLeft, ChevronDown, X } from 'lucide-react';
-import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
+import { CanvasRecorder, RecorderState, RecordingOptions } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
+import { TelemetryHUD } from './components/TelemetryHUD';
 import {
   createStudyConfig, createStudyMetrics, createStudySymbols, createStudyWorldState,
   GROUP_COLORS, defaultGroupProfiles,
@@ -969,7 +970,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     return () => clearInterval(id);
   }, [recState]);
 
-  const handleRecStart = useCallback(() => {
+  const handleRecStart = useCallback((opts?: RecordingOptions) => {
     recorderRef.current?.start(
       () => [canvasRef.current],
       () => ({
@@ -981,6 +982,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           `totens: ${symbolsRef.current.totems.length}  tabus: ${symbolsRef.current.tabus.length}  rituais: ${symbolsRef.current.rituals.length}`,
         ],
       }),
+      30, undefined, opts,
     );
   }, [scenario]);
 
@@ -1937,6 +1939,20 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           </div>
         </div>
       </div>
+
+      {/* ── TELEMETRY HUD ─────────────────────────────────────────────────────── */}
+      <TelemetryHUD
+        corner="br"
+        getLines={() => {
+          const m = metricsRef.current;
+          return [
+            `fase: ${m?.phase ?? '—'}  ·  agentes: ${agentsRef.current.length}`,
+            `coesão: ${((m?.cohesion ?? 0) * 100).toFixed(0)}%  polariz.: ${((m?.polarization ?? 0) * 100).toFixed(0)}%  conflito: ${((m?.conflict ?? 0) * 100).toFixed(0)}%`,
+            `lens: ${lensRef.current}  ·  cenário: ${scenario}`,
+            `totens: ${symbolsRef.current.totems.length}  tabus: ${symbolsRef.current.tabus.length}  rituais: ${symbolsRef.current.rituals.length}`,
+          ];
+        }}
+      />
     </div>
   );
 };

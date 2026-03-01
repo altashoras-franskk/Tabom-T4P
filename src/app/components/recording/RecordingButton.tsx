@@ -22,8 +22,8 @@ interface Props {
 export const RecordingButton: React.FC<Props> = ({
   state, elapsed, onStart, onStop, className = '', showOptions = false,
 }) => {
-  const [format,  setFormat]  = useState<RecordFormat>('auto');
-  const [quality, setQuality] = useState<RecordQuality>('standard');
+  const [format,  setFormat]  = useState<RecordFormat>('mp4');
+  const [quality, setQuality] = useState<RecordQuality>('ultra');
   const [optOpen, setOptOpen] = useState(false);
 
   // Force re-render every second while recording to update the timer

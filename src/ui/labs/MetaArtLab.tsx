@@ -43,6 +43,7 @@ import { QuickMenu } from '../../input/controller/QuickMenu';
 import type { ControllerFrameState } from '../../input/controller/types';
 import { CanvasRecorder, RecorderState, fmtTime } from '../../app/components/recording/canvasRecorder';
 import { RecordingButton } from '../../app/components/recording/RecordingButton';
+import { TelemetryHUD } from '../../app/components/TelemetryHUD';
 import type { GeoParams, PhysicsConfig, BrushTexturePreset } from '../../sim/metaart/metaArtTypes';
 import { createDefaultPhysicsConfig, BRUSH_TEXTURE_PRESETS } from '../../sim/metaart/metaArtTypes';
 import {
@@ -3198,6 +3199,22 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           }),
         }}
       />
+
+      {/* ── TELEMETRY HUD ─────────────────────────────────────────────────────── */}
+      {!cinematic && (
+        <TelemetryHUD
+          corner="br"
+          getLines={() => {
+            const d = dnaRef.current;
+            const m = metrics;
+            return [
+              `${d.name ?? 'custom'}  ·  speed:${simSpeed.toFixed(1)}x`,
+              `quanta:${d.genes.particleCount ?? '?'}  flow:${(d.genes.flowStrength ?? 0).toFixed(2)}`,
+              m ? `dens:${m.density.toFixed(2)}  nov:${m.novelty.toFixed(2)}  frag:${m.fragmentation.toFixed(2)}` : 'aguardando métricas…',
+            ];
+          }}
+        />
+      )}
     </div>
   );
 };

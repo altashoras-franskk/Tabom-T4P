@@ -464,8 +464,6 @@ async function callOpenAIStreamingExtract(
     signal: controller.signal,
   });
 
-  clearTimeout(timeoutId);
-
   if (!response.ok) {
     let msg = `API error (${response.status})`;
     try { const e = await response.json(); if (e.error?.message) msg = e.error.message; } catch {}
@@ -542,6 +540,7 @@ async function callOpenAIStreamingExtract(
       }
     }
   } finally {
+    clearTimeout(timeoutId);
     reader.releaseLock();
   }
 }
@@ -664,8 +663,10 @@ export async function generateLLMRhizomeStreaming(
   onDone:   (total: number) => void,
 ): Promise<void> {
   const apiKey = resolveApiKey(request);
+  // Ollama runs locally — no API key required
+  const effectiveKey = apiKey || (request.provider === 'ollama' ? 'ollama' : null);
 
-  if (!apiKey) {
+  if (!effectiveKey) {
     // Demo stub — simulate streaming pacing
     const stub = generateDemoStub(request);
     for (let i = 0; i < stub.nodes.length; i++) {
@@ -697,15 +698,21 @@ export async function generateLLMRhizomeStreaming(
         : (import.meta.env.VITE_RHIZOME_LLM_BASE_URL || 'https://api.openai.com/v1');
       const model = request.modelId || (isOllama ? 'llama3.2' : 'gpt-4o-mini');
       await callOpenAIStreamingExtract(
-        isOllama ? (apiKey || 'ollama') : apiKey,
+        isOllama ? (effectiveKey || 'ollama') : effectiveKey,
         baseURL, model, prompt, request.nodeCount, handle,
       );
     }
   } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError')
+    if (err instanceof Error && err.name === 'AbortError') {
+      if (request.provider === 'ollama')
+        throw new Error('Timeout. Use o mesmo modelo do ollama run (ex: lfm2) em Settings → Modelo e confira se o Ollama está rodando.');
       throw new Error('Timeout. Tente um mapa menor.');
-    if (err instanceof Error && err.message.includes('Failed to fetch'))
+    }
+    if (err instanceof Error && err.message.includes('Failed to fetch')) {
+      if (request.provider === 'ollama')
+        throw new Error('Ollama não está rodando. Inicie no terminal: ollama serve. Use em Settings → Modelo o mesmo nome do ollama run (ex: lfm2).');
       throw new Error('Erro de conexão. Verifique sua internet e a chave de API.');
+    }
     throw err;
   }
 
@@ -865,9 +872,11 @@ export async function generateLLMRhizome(
   request: LLMRhizomeRequest,
 ): Promise<LLMRhizomeResponse> {
   const apiKey = resolveApiKey(request);
+  // Ollama runs locally — no API key required
+  const effectiveKey = apiKey || (request.provider === 'ollama' ? 'ollama' : null);
 
-  // If no API key, use demo stub data
-  if (!apiKey) {
+  // If no API key (and not using Ollama), use demo stub data
+  if (!effectiveKey) {
     await new Promise(r => setTimeout(r, 800 + Math.random() * 400));
     return generateDemoStub(request);
   }
@@ -883,28 +892,30 @@ export async function generateLLMRhizome(
   try {
     if (request.provider === 'anthropic') {
       const model = request.modelId || 'claude-3-5-haiku-20241022';
-      rawText = await callAnthropic(apiKey, model, prompt, request.nodeCount);
+      rawText = await callAnthropic(effectiveKey, model, prompt, request.nodeCount);
     } else if (request.provider === 'ollama') {
-      // Ollama uses OpenAI-compatible API on localhost
+      // Ollama uses OpenAI-compatible API on localhost — no API key needed
       const baseURL = 'http://localhost:11434/v1';
       const model = request.modelId || 'llama3.2';
-      rawText = await callOpenAICompatible(apiKey || 'ollama', baseURL, model, prompt, request.nodeCount);
+      rawText = await callOpenAICompatible(effectiveKey || 'ollama', baseURL, model, prompt, request.nodeCount);
     } else if (request.provider === 'custom') {
       // Custom endpoint — expects VITE_RHIZOME_LLM_BASE_URL
       const baseURL = import.meta.env.VITE_RHIZOME_LLM_BASE_URL || 'https://api.openai.com/v1';
       const model = request.modelId || 'gpt-4o-mini';
-      rawText = await callOpenAICompatible(apiKey, baseURL, model, prompt, request.nodeCount);
+      rawText = await callOpenAICompatible(effectiveKey, baseURL, model, prompt, request.nodeCount);
     } else {
       // Default: OpenAI
       const baseURL = import.meta.env.VITE_RHIZOME_LLM_BASE_URL || 'https://api.openai.com/v1';
       const model = request.modelId || 'gpt-4o-mini';
-      rawText = await callOpenAICompatible(apiKey, baseURL, model, prompt, request.nodeCount);
+      rawText = await callOpenAICompatible(effectiveKey, baseURL, model, prompt, request.nodeCount);
     }
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('Timeout: A requisição demorou muito (>90s). Tente um mapa menor.');
     }
     if (err instanceof Error && err.message.includes('Failed to fetch')) {
+      if (request.provider === 'ollama')
+        throw new Error('Ollama não está rodando. Inicie no terminal: ollama serve (e baixe um modelo: ollama pull llama3.2)');
       throw new Error('Erro de conexão. Verifique sua internet e a chave de API.');
     }
     throw err;

@@ -17,6 +17,7 @@ import {
 import { View3DControls } from '../ui/View3DControls';
 import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
+import { TelemetryHUD } from './components/TelemetryHUD';
 
 interface PsycheLabProps {
   active:               boolean;
@@ -893,6 +894,20 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
         onStart={handleRecStart}
         onStop={handleRecStop}
         className="fixed bottom-4 left-4 z-40"
+      />
+
+      {/* ── TELEMETRY HUD ─────────────────────────────────────────────────────── */}
+      <TelemetryHUD
+        corner="br"
+        getLines={() => {
+          const s   = stateRef.current;
+          const cfg = configRef.current;
+          return [
+            `fase: ${s.phase}  ·  quanta: ${s.count}  ·  preset: ${getPresetName(presetId)}`,
+            `integr: ${(s.integrationIndex * 100).toFixed(0)}%  tensão: ${(s.tensionIndex * 100).toFixed(0)}%  frag: ${(s.fragmentationIndex * 100).toFixed(0)}%`,
+            `lens: ${cfg.lens}  ·  dança: ${cfg.danceIntensity.toFixed(2)}  ·  arq: ${s.archetypeActive.filter(Boolean).length} ativos`,
+          ];
+        }}
       />
     </div>
   );

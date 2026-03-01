@@ -119,6 +119,7 @@ import { View3DControls } from '../ui/View3DControls';
 import { MEME_COLORS } from '../sim/sociogenesis/sociogenesisTypes';
 import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
+import { TelemetryHUD } from './components/TelemetryHUD';
 
 const ADMIN_MODE_KEY = 't4p_admin_mode_v1';
 const ADMIN_PASSWORD = 'morin2026';
@@ -662,8 +663,8 @@ const App: React.FC = () => {
   
   // Bonds & Trails overlay — carrega com bonds ligado (baixa distância/opacidade) para ver entanglements
   const [showBonds, setShowBonds] = useState(true);
-  const [bondsDistance, setBondsDistance] = useState(0.07); // Normalized: só vizinhos bem próximos (mais clean)
-  const [bondsOpacity, setBondsOpacity] = useState(0.18); // 18% opacity — sutil, não pesa
+  const [bondsDistance, setBondsDistance] = useState(0.15); // Acima do core de repulsão (beta*rmax≈0.072) → bonds aparecem
+  const [bondsOpacity, setBondsOpacity] = useState(0.28); // 28% opacity — visível mas não pesado
   const [showTrails, setShowTrails] = useState(false); // OTIMIZAÇÃO: Trails desabilitado por padrão
   const [trailsLength, setTrailsLength] = useState(20);
   const [trailsOpacity, setTrailsOpacity] = useState(0.10); // 10% opacity
@@ -2521,7 +2522,9 @@ const App: React.FC = () => {
       
       // Disable main trails when overlay bonds/trails are active
       const useMainTrails = trails && !showBonds && !showTrails;
-      // Bonds desenhados no overlay (garantido visível)
+      const bondsCfg = showBonds
+        ? { enabled: true, maxDistance: bondsDistance, opacity: bondsOpacity }
+        : null;
       renderWebGL(
         webglRendererRef.current,
         microStateRef.current,
@@ -2529,7 +2532,7 @@ const App: React.FC = () => {
         dimensions.width,
         dimensions.height,
         useMainTrails,
-        null
+        bondsCfg
       );
     } else if (ctx2dRef.current) {
       // 2D fallback: ensure canvas buffer size matches dimensions so drawing is correct
@@ -2597,8 +2600,8 @@ const App: React.FC = () => {
       // Artifacts
       renderArtifacts(ctx, reconfigStateRef.current.artifacts, rW, rH);
 
-      // Bonds no overlay (garantido visível; WebGL pode não ter line program em alguns contextos)
-      if (showBonds) {
+      // Bonds no overlay só no fallback 2D; quando WebGL está ativo os bonds são desenhados no canvas principal
+      if (showBonds && !webglRendererRef.current) {
         const bondsConfig: BondsConfig = {
           enabled: true,
           maxDistance: bondsDistance,
@@ -4245,6 +4248,19 @@ const App: React.FC = () => {
             onStop={handleRecStop}
             showOptions
             className="absolute bottom-4 right-4 z-20"
+          />
+        )}
+
+        {/* ── TELEMETRY HUD — Complexity Life Lab ─────────────────────────────── */}
+        {activeLab === 'complexityLife' && (
+          <TelemetryHUD
+            corner="bl"
+            bottomOffset={60}
+            getLines={() => [
+              `partículas: ${microStateRef.current.count}  ·  espécies: ${microConfigRef.current.typesCount}`,
+              `qualidade: ${simQuality}  ·  fps: ${Math.round(timeRef.current.fps ?? 0)}`,
+              currentDNA ? `dna: ${dnaToString(currentDNA).slice(0, 24)}` : `regime: ${currentRegime}`,
+            ]}
           />
         )}
 

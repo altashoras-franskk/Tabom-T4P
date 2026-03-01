@@ -565,7 +565,7 @@ function LLMPanel({
                 </select>
               ) : (
                 <input style={inputSty}
-                  placeholder={provider === 'anthropic' ? 'claude-3-5-haiku-20241022' : provider === 'ollama' ? 'llama3.2' : 'model-id'}
+                  placeholder={provider === 'anthropic' ? 'claude-3-5-haiku-20241022' : provider === 'ollama' ? 'ex: lfm2, llama3.2' : 'model-id'}
                   value={modelId} onChange={e => setModelId(e.target.value)} />
               )}
             </div>
@@ -910,9 +910,10 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
   const [nodeScores,      setNodeScores]      = useState<Map<number, NodeScore>>(new Map());
 
   // Lifted LLM config — needed by handleLLMExpand (NodeCard)
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>('openai');
+  // Default to Ollama so the lab works without API key when Ollama is running locally
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>('ollama');
   const [llmApiKey,   setLlmApiKey]   = useState('');
-  const [llmModelId,  setLlmModelId]  = useState('gpt-4.1-mini');
+  const [llmModelId,  setLlmModelId]  = useState('llama3.2');
   // Persist OpenAI API key in localStorage (load on mount)
   useEffect(() => {
     const stored = loadOpenAIApiKey();
@@ -929,9 +930,9 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
   const use3DRef      = useRef(false);  // matches useState(false) above
   const render3DErrorRef = useRef(false);
   const llmStatusRef  = useRef<LLMStatus>('idle');
-  const llmProviderRef = useRef<LLMProvider>('openai');
+  const llmProviderRef = useRef<LLMProvider>('ollama');
   const llmApiKeyRef   = useRef('');
-  const llmModelIdRef  = useRef('gpt-4.1-mini');
+  const llmModelIdRef  = useRef('llama3.2');
 
   // ── Camera (zoom + pan) ──────────────────────────────────────────────────
   const cameraRef = useRef({ zoom: 1, panX: 0, panY: 0 });
