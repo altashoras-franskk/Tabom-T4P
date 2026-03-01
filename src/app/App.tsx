@@ -58,7 +58,6 @@ import { setFieldSampler } from '../sim/micro/fieldAccessor';
 import { LoopsMap } from '../ui/LoopsMap';
 import { Challenges } from '../ui/Challenges';
 import { createMetaLifeLabAdapter } from '../guide/adapters/metalifelabAdapter';
-import { createEmergenceGuideJourney } from '../guide/guideJourney';
 import { GuideOverlay } from '../guide/GuideOverlay';
 import { WelcomeModal } from '../guide/WelcomeModal';
 import { useAchievements } from '../hooks/useAchievements';
@@ -99,7 +98,6 @@ import { applyEmergenceLens, applyTribeEffects } from '../sim/sociogenesis/socio
 import { detectLeaders, applyLeaderInfluence, renderLeaders, type Leader } from '../sim/sociogenesis/leaderSystem';
 import type { LabId } from '../ui/TopHUD';
 import { useI18n } from '../i18n/context';
-import { useIsMobile } from './components/ui/use-mobile';
 import { SociogenesisStudyMode } from './SociogenesisStudyMode';
 import { PsycheLab } from './PsycheLab';
 import { MusicLab } from './MusicLab';
@@ -304,7 +302,6 @@ function AdminGate({
 
 const App: React.FC = () => {
   const { t } = useI18n();
-  const isMobile = useIsMobile();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -664,15 +661,9 @@ const App: React.FC = () => {
   const loopUpdateCounterRef = useRef(0);
   
   // Bonds & Trails overlay (OTIMIZAÇÃO: Bonds desabilitado por padrão)
-  const [showBonds, setShowBonds] = useState(true); // Conexões ligadas por padrão no Complexity Life
-  const [bondsDistance, setBondsDistance] = useState(0.07);
-  const [bondsOpacity, setBondsOpacity] = useState(0.10);
-  const showBondsRef = useRef(showBonds);
-  const bondsDistanceRef = useRef(bondsDistance);
-  const bondsOpacityRef = useRef(bondsOpacity);
-  showBondsRef.current = showBonds;
-  bondsDistanceRef.current = bondsDistance;
-  bondsOpacityRef.current = bondsOpacity;
+  const [showBonds, setShowBonds] = useState(false);
+  const [bondsDistance, setBondsDistance] = useState(0.10); // Normalized distance (0-2 range)
+  const [bondsOpacity, setBondsOpacity] = useState(0.10); // 10% opacity
   const [showTrails, setShowTrails] = useState(false); // OTIMIZAÇÃO: Trails desabilitado por padrão
   const [trailsLength, setTrailsLength] = useState(20);
   const [trailsOpacity, setTrailsOpacity] = useState(0.10); // 10% opacity
@@ -856,8 +847,8 @@ const App: React.FC = () => {
     timeSpeed: timeRef.current.speed,
     canvasRef,
   });
-
-  const guide = useGuide(guideAdapter, (adapter) => createEmergenceGuideJourney(adapter, t));
+  
+  const guide = useGuide(guideAdapter);
   
   // Log achievements to WorldLog
   useEffect(() => {
@@ -1065,11 +1056,6 @@ const App: React.FC = () => {
       overlayRectRef.current.valid = false;
     };
 
-    // ResizeObserver: update dimensions when container size changes (e.g. showHome -> false)
-    // so overlay canvas and bonds get correct size instead of staying 0x0
-    const ro = new ResizeObserver(() => handleResize());
-    if (canvasContainerRef.current) ro.observe(canvasContainerRef.current);
-
     // Skip simulation + render when tab is hidden (free 100% CPU)
     const handleVisibility = () => {
       if (!document.hidden) overlayRectRef.current.valid = false;
@@ -1134,29 +1120,12 @@ const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     
     return () => {
-      ro.disconnect();
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // When leaving homepage, recalc canvas dimensions so overlay (bonds, etc.) gets correct size
-  useEffect(() => {
-    if (showHome) return;
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (canvasContainerRef.current) {
-          const r = canvasContainerRef.current.getBoundingClientRect();
-          if (r.width > 0 && r.height > 0) {
-            setDimensions((prev) => (prev.width === r.width && prev.height === r.height ? prev : { width: r.width, height: r.height }));
-          }
-        }
-      });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [showHome]);
 
   // ── Sync view3d ref whenever state changes ────────────────────────────────
   useEffect(() => {
@@ -2605,16 +2574,15 @@ const App: React.FC = () => {
       // Artifacts
       renderArtifacts(ctx, reconfigStateRef.current.artifacts, rW, rH);
 
-      // Bonds overlay — refs para o loop sempre ver estado atual (toggle ON/OFF)
-      const bondsOn = showBondsRef.current;
-      if (bondsOn) {
+      // Bonds overlay
+      if (showBonds) {
         const bondsConfig: BondsConfig = {
           enabled: true,
-          maxDistance: bondsDistanceRef.current,
-          opacity: bondsOpacityRef.current,
+          maxDistance: bondsDistance,
+          opacity: bondsOpacity,
           thickness: 1.5,
         };
-        renderBonds(ctx, microStateRef.current, bondsConfig, paletteIndex, rW, rH);
+        renderBonds(ctx, microStateRef.current, bondsConfig, paletteIndex);
       }
 
       // Trails overlay
@@ -4215,7 +4183,7 @@ const App: React.FC = () => {
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 pointer-events-none"
-          style={{ width: '100%', height: '100%', zIndex: 1 }}
+          style={{ width: '100%', height: '100%' }}
         />
 
         {/* 3D canvas — overlays the 2D render when viewMode='3D', hidden for Psyche Lab */}
@@ -4487,12 +4455,8 @@ const App: React.FC = () => {
               }
             }}
             onOpenGuide={() => {
-              try {
-                setShowGuideHint(false);
-                guide.startGuide();
-              } catch (err) {
-                console.error('[App] onOpenGuide failed', err);
-              }
+              setShowGuideHint(false);
+              guide.startGuide();
             }}
             achievementCount={achievements.unlockedCount}
             onOpenAchievements={() => setShowAchievements(true)}
@@ -5126,28 +5090,6 @@ const App: React.FC = () => {
           }}
           onClose={() => setShowBgPicker(false)}
         />
-      )}
-
-      {/* Mobile: FAB para reabrir UI quando canvas inteiro (hideUI) — menus achaáveis */}
-      {!showHome && hideUI && isMobile && (
-        <button
-          type="button"
-          onClick={() => setHideUI(false)}
-          aria-label="Abrir menu"
-          className="fixed z-[910] flex items-center justify-center rounded-full border-2 border-dashed shadow-lg active:scale-95 transition-transform"
-          style={{
-            width: 56,
-            height: 56,
-            bottom: 'max(20px, env(safe-area-inset-bottom))',
-            right: 'max(20px, env(safe-area-inset-right))',
-            background: 'rgba(0,0,0,0.92)',
-            borderColor: 'rgba(255,212,0,0.5)',
-            color: '#ffd400',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-          }}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
       )}
 
       {/* Guide Hint Arrow - Points to guide button after preset selection */}

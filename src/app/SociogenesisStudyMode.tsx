@@ -19,12 +19,12 @@ import {
 } from '../sim/study/studyTypes';
 import {
   spawnStudyAgents, microTick, macroTick,
-  computeStudyMetrics, computeAgentRoles, buildMicroGrid,
+  computeStudyMetrics, computeAgentRoles, stepDemocracyEpoch, buildMicroGrid,
   type AgentRole,
 } from '../sim/study/studyEngine';
 import { renderStudy, type StudyVisualConfig, defaultVisualConfig } from '../sim/study/studyRenderer';
 import {
-  createSocialFields, createSocialFieldConfig, resetFields,
+  createSocialFields, createSocialFieldConfig, resetFields, depositR, depositN, depositL,
   type SocialFields, type SocialFieldConfig,
 } from '../sim/study/socialFields';
 import { STUDY_SCENARIOS, SCENARIO_CATEGORIES, type StudyScenario } from '../sim/study/studyScenarios';
@@ -46,6 +46,60 @@ function makeRng(seed: number) {
   let s = seed;
   return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
 }
+
+/** Gera um preset totalmente aleatório (como montar um cenário novo), não escolhe um cenário existente. */
+function generateRandomPreset(rng: () => number): { config: StudyConfig; fieldConfig: SocialFieldConfig } {
+  const r = (min: number, max: number) => min + rng() * (max - min);
+  const ri = (min: number, max: number) => min + Math.floor(rng() * (max - min + 1));
+  const cfg = createStudyConfig();
+  const fcfg = createSocialFieldConfig();
+
+  cfg.agentCount = ri(80, 380);
+  cfg.groupCount = ri(2, 5);
+  cfg.groupProfiles = defaultGroupProfiles(cfg.groupCount);
+  cfg.speed = r(0.45, 0.85);
+  cfg.friction = r(0.80, 0.92);
+  cfg.rMax = r(0.26, 0.40);
+  cfg.autonomy = r(0.50, 0.78);
+  cfg.cohesion = r(0.35, 0.65);
+  cfg.crossGroupInfluence = r(0.15, 0.72);
+  cfg.pressure = r(0.30, 0.55);
+  cfg.aggressionBase = r(0.15, 0.50);
+  cfg.trustBase = r(0.35, 0.70);
+  cfg.needBase = r(0.45, 0.75);
+  cfg.boidsAlignment = r(0.35, 0.65);
+  cfg.boidsCohesion = r(0.28, 0.55);
+  cfg.wander = r(0.22, 0.45);
+  cfg.impulseRate = r(0.25, 0.55);
+  cfg.impulseStrength = r(0.50, 0.80);
+  cfg.goalOvershoot = r(0.12, 0.28);
+  cfg.zigzag = r(0.15, 0.35);
+  cfg.hierarchyStrength = r(0.30, 0.65);
+  cfg.conformity = r(0.28, 0.55);
+  cfg.empathy = r(0.22, 0.50);
+  cfg.contagion = r(0.30, 0.55);
+  cfg.mobility = r(0.08, 0.22);
+  cfg.kBelief = r(0.30, 0.60);
+  cfg.kFear = r(0.28, 0.55);
+  cfg.kDesire = r(0.25, 0.50);
+  cfg.harvestRate = r(0.06, 0.14);
+  cfg.decayWealth = r(0.010, 0.025);
+  cfg.ideologyPressure = r(0.12, 0.35);
+  cfg.leaderMode = rng() < 0.5 ? 'emergent' : 'fixed_democracy';
+  cfg.democracyTermSec = ri(40, 100);
+  cfg.worldHalf = rng() < 0.6 ? 2 : 1.5;
+
+  fcfg.decayN = r(0.012, 0.028);
+  fcfg.decayL = r(0.004, 0.012);
+  fcfg.decayR = r(0.002, 0.008);
+  fcfg.diffuseN = r(0.06, 0.14);
+  fcfg.diffuseL = r(0.03, 0.08);
+  fcfg.diffuseR = r(0.01, 0.04);
+  fcfg.regenR = r(0.015, 0.035);
+
+  return { config: cfg, fieldConfig: fcfg };
+}
+
 let _uid = 1;
 const uid = () => `u-${_uid++}`;
 
@@ -247,6 +301,14 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   const [inspectorRole, setInspectorRole] = useState<AgentRole>('normal');
   const inspectorIdxRef = useRef(-1);
 
+  // Symbol (institution) inspector — overlay when clicking totem/tabu/ritual on canvas
+  type SelectedSymbol =
+    | { type: 'totem'; index: number; data: StudyTotem }
+    | { type: 'tabu'; index: number; data: StudyTabu }
+    | { type: 'ritual'; index: number; data: StudyRitual };
+  const [selectedSymbol, setSelectedSymbol] = useState<SelectedSymbol | null>(null);
+  const [showSymbolInspect, setShowSymbolInspect] = useState(true);
+
   // Panel sections
   const [showTools,    setShowTools]    = useState(true);
   const [showAgents,   setShowAgents]   = useState(false);
@@ -294,35 +356,84 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   useEffect(() => { spawnMemeIdRef.current = spawnMemeId; }, [spawnMemeId]);
 
   // ── Reset ──────────────────────────────────────────────────────────────────
-  const resetWorld = useCallback((scId: string, keepAutoSymbols?: boolean, newSeed?: boolean) => {
-    const sc: StudyScenario = STUDY_SCENARIOS.find(s => s.id === scId) ?? STUDY_SCENARIOS[0];
+  type ResetOverrides = { spawnLayout?: StudySpawnLayout; spawnRelationMode?: StudyConfig['spawnRelationMode'] };
+  type CustomPreset = { config: StudyConfig; fieldConfig: SocialFieldConfig };
+  const resetWorld = useCallback((
+    scId: string,
+    keepAutoSymbols?: boolean,
+    newSeed?: boolean,
+    overrides?: ResetOverrides,
+    customPreset?: CustomPreset,
+  ) => {
     if (newSeed) {
       const fresh = (Math.random() * 0xffffffff) >>> 0;
       seedRef.current = fresh;
       setSeed(fresh);
     }
-    const newCfg    = createStudyConfig();
-    const newFCfg   = createSocialFieldConfig();
-    sc.apply(newCfg, newFCfg);
-    if (keepAutoSymbols !== undefined) newCfg.autoSymbols = keepAutoSymbols;
-    if (newCfg.groupProfiles.length !== newCfg.groupCount) {
-      newCfg.groupProfiles = defaultGroupProfiles(newCfg.groupCount);
+    const rng = makeRng(seedRef.current >>> 0);
+    let newCfg: StudyConfig;
+    let newFCfg: SocialFieldConfig;
+
+    if (customPreset) {
+      newCfg = { ...customPreset.config };
+      newFCfg = { ...customPreset.fieldConfig };
+      if (newCfg.groupProfiles.length !== newCfg.groupCount) {
+        newCfg.groupProfiles = defaultGroupProfiles(newCfg.groupCount);
+      }
+    } else {
+      const sc: StudyScenario = STUDY_SCENARIOS.find(s => s.id === scId) ?? STUDY_SCENARIOS[0];
+      newCfg = createStudyConfig();
+      newFCfg = createSocialFieldConfig();
+      sc.apply(newCfg, newFCfg);
+      if (newCfg.groupProfiles.length !== newCfg.groupCount) {
+        newCfg.groupProfiles = defaultGroupProfiles(newCfg.groupCount);
+      }
     }
-    const initialMode = newCfg.spawnRelationMode ?? (newCfg.startWithFamilies ? 'families' : 'none');
-    newCfg.spawnRelationMode = initialMode;
-    newCfg.startWithFamilies = initialMode === 'families';
+
+    if (keepAutoSymbols !== undefined) newCfg.autoSymbols = keepAutoSymbols;
+    let initialMode = newCfg.spawnRelationMode ?? (newCfg.startWithFamilies ? 'families' : 'none');
+    if (overrides?.spawnRelationMode != null) {
+      initialMode = overrides.spawnRelationMode;
+      newCfg.spawnRelationMode = initialMode;
+      newCfg.startWithFamilies = initialMode === 'families';
+    } else {
+      newCfg.spawnRelationMode = initialMode;
+      newCfg.startWithFamilies = initialMode === 'families';
+    }
     setInitialRelationMode(initialMode);
+    if (overrides?.spawnLayout != null) {
+      spawnLayoutRef.current = overrides.spawnLayout;
+      setSpawnLayout(overrides.spawnLayout);
+    }
     cfgRef.current    = newCfg;
     fieldCfgRef.current = newFCfg;
 
-    const rng = makeRng(seedRef.current >>> 0);
-    agentsRef.current = spawnStudyAgents(newCfg, rng, spawnLayoutRef.current);
+    const layout = overrides?.spawnLayout ?? spawnLayoutRef.current;
+    agentsRef.current = spawnStudyAgents(newCfg, rng, layout);
     rolesRef.current  = new Array(agentsRef.current.length).fill('normal');
 
     const newFields  = createSocialFields();
     const newSymbols = createStudySymbols();
-    if (sc.setupWorld) sc.setupWorld(newFields, newSymbols);
+    if (customPreset) {
+      for (let i = 0; i < 3 + Math.floor(rng() * 3); i++) {
+        depositR(newFields, rng() * 2 - 1, rng() * 2 - 1, 0.3 + rng() * 0.4, 0.15 + rng() * 0.2);
+      }
+      if (rng() < 0.5) depositN(newFields, rng() * 1.6 - 0.8, rng() * 1.6 - 0.8, 0.4, 0.25);
+      if (rng() < 0.5) depositL(newFields, rng() * 1.6 - 0.8, rng() * 1.6 - 0.8, 0.35, 0.22);
+    } else {
+      const sc: StudyScenario = STUDY_SCENARIOS.find(s => s.id === scId) ?? STUDY_SCENARIOS[0];
+      if (sc.setupWorld) sc.setupWorld(newFields, newSymbols);
+    }
     fieldsRef.current  = newFields;
+    if (!customPreset) {
+      const scen = STUDY_SCENARIOS.find(s => s.id === scId);
+      if (scen?.name) {
+        const c = `Cenário "${scen.name}" definiu esta instituição.`;
+        newSymbols.totems.forEach(t => { t.cause = c; });
+        newSymbols.tabus.forEach(t => { t.cause = c; });
+        newSymbols.rituals.forEach(r => { r.cause = c; });
+      }
+    }
     symbolsRef.current = newSymbols;
 
     wsRef.current     = createStudyWorldState();
@@ -342,6 +453,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     setSymbolsVer(v => v + 1);
     setInspectorIdx(-1);
     setInspectorSnap(null);
+    setSelectedSymbol(null);
     inspectorIdxRef.current = -1;
 
     const archCounts = new Map<number, number>();
@@ -389,6 +501,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     setEventsUI([]);
     setInspectorIdx(-1);
     setInspectorSnap(null);
+    setSelectedSymbol(null);
     inspectorIdxRef.current = -1;
     setSymbolsVer(v => v + 1);
 
@@ -403,6 +516,22 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
       .slice(0, 10);
     setArchetypesUI(topArch);
   }, [scenario, initialRelationMode]);
+
+  // Random completo: monta um preset novo aleatório (não escolhe cenário) — seed, layout, laços e todos os parâmetros
+  const LAYOUT_OPTIONS: StudySpawnLayout[] = ['unified_center', 'separated_clusters', 'corners', 'ring', 'line', 'random'];
+  const RELATION_OPTIONS: StudyConfig['spawnRelationMode'][] = ['none', 'sparse', 'families'];
+  const handleRandomCompleto = useCallback(() => {
+    const randomSeed = (Math.random() * 0xffffffff) >>> 0;
+    const randomLayout = LAYOUT_OPTIONS[Math.floor(Math.random() * LAYOUT_OPTIONS.length)];
+    const randomRelation = RELATION_OPTIONS[Math.floor(Math.random() * RELATION_OPTIONS.length)];
+    seedRef.current = randomSeed;
+    setSeed(randomSeed);
+    setSpawnLayout(randomLayout);
+    spawnLayoutRef.current = randomLayout;
+    setInitialRelationMode(randomRelation);
+    const preset = generateRandomPreset(makeRng(randomSeed));
+    resetWorld('random_preset', autoSymbols, false, { spawnLayout: randomLayout, spawnRelationMode: randomRelation }, preset);
+  }, [autoSymbols, resetWorld]);
 
   useEffect(() => { resetWorld('discipline_state'); }, []);// eslint-disable-line
 
@@ -555,6 +684,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           setSymbolsVer(v => v + 1);
           clockRef.current.lastMacro = t;
 
+          // Fixed democracy: advance term every democracyTermSec (e.g. 4 "years")
+          stepDemocracyEpoch(agentsRef.current, cfgRef.current, wsRef.current, t);
+
           // Update inspector snapshot
           const idx = inspectorIdxRef.current;
           if (idx >= 0 && idx < agentsRef.current.length) {
@@ -607,8 +739,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           ]);
         }
 
-        if (t - clockRef.current.lastRole >= 3.5) {
-          rolesRef.current = computeAgentRoles(agentsRef.current, rolesRef.current);
+        // Atualizar papéis (liderança etc.) com menos frequência — evita troca rápida, mais legível
+        if (t - clockRef.current.lastRole >= 7.5) {
+          rolesRef.current = computeAgentRoles(agentsRef.current, rolesRef.current, cfgRef.current, wsRef.current);
           clockRef.current.lastRole = t;
 
           // Top leaders panel (stable identity color + role label)
@@ -705,7 +838,51 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     const syms  = symbolsRef.current;
 
     if (t === 'select') {
-      // Generous hit radius in world units so agents are easy to click (was 0.07)
+      // Hit-test apenas no número/rótulo (acima do círculo), não no meio onde os agentes se concentram
+      const labelOffset = 0.12;   // mundo: rótulo fica acima do topo do círculo
+      const labelHitR2 = 0.08 * 0.08; // zona clicável pequena no rótulo
+      const symsList = syms;
+      for (let i = symsList.totems.length - 1; i >= 0; i--) {
+        const totem = symsList.totems[i];
+        const ly = totem.y - totem.radius - labelOffset;
+        const d2 = (wx - totem.x) ** 2 + (wy - ly) ** 2;
+        if (d2 <= labelHitR2) {
+          setSelectedSymbol({ type: 'totem', index: i, data: { ...totem } });
+          setShowSymbolInspect(true);
+          setInspectorIdx(-1);
+          setInspectorSnap(null);
+          inspectorIdxRef.current = -1;
+          return;
+        }
+      }
+      for (let i = symsList.tabus.length - 1; i >= 0; i--) {
+        const tabu = symsList.tabus[i];
+        const ly = tabu.y - tabu.radius - labelOffset;
+        const d2 = (wx - tabu.x) ** 2 + (wy - ly) ** 2;
+        if (d2 <= labelHitR2) {
+          setSelectedSymbol({ type: 'tabu', index: i, data: { ...tabu } });
+          setShowSymbolInspect(true);
+          setInspectorIdx(-1);
+          setInspectorSnap(null);
+          inspectorIdxRef.current = -1;
+          return;
+        }
+      }
+      for (let i = symsList.rituals.length - 1; i >= 0; i--) {
+        const ritual = symsList.rituals[i];
+        const ly = ritual.y - ritual.radius - labelOffset;
+        const d2 = (wx - ritual.x) ** 2 + (wy - ly) ** 2;
+        if (d2 <= labelHitR2) {
+          setSelectedSymbol({ type: 'ritual', index: i, data: { ...ritual } });
+          setShowSymbolInspect(true);
+          setInspectorIdx(-1);
+          setInspectorSnap(null);
+          inspectorIdxRef.current = -1;
+          return;
+        }
+      }
+      setSelectedSymbol(null);
+      // Agent hit-test
       const hitRadius = 0.38;
       let bestIdx = -1, bestD2 = hitRadius * hitRadius;
       agentsRef.current.forEach((a, i) => {
@@ -723,17 +900,18 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
     }
 
     const now = clockRef.current.elapsed;
+    setSelectedSymbol(null);
     if (t === 'totem_bond' || t === 'totem_rift' || t === 'totem_oracle' || t === 'totem_archive' || t === 'totem_panopticon') {
       const kindMap: Record<string, StudyTotem['kind']> = { totem_bond: 'BOND', totem_rift: 'RIFT', totem_oracle: 'ORACLE', totem_archive: 'ARCHIVE', totem_panopticon: 'PANOPTICON' };
       const colorMap: Record<string, string> = { BOND: '#34d399', RIFT: '#ff6b6b', ORACLE: '#c084fc', ARCHIVE: '#94a3b8', PANOPTICON: '#fbbf24' };
       const iconMap: Record<string, string> = { BOND: '⊕', RIFT: '⊖', ORACLE: '🔮', ARCHIVE: '📜', PANOPTICON: '👁' };
       const kind = kindMap[t];
-      const item: StudyTotem = { id: uid(), kind, x: wx, y: wy, radius: 0.26, groupId: 0, pulseStrength: 0.85, bornAt: now };
+      const item: StudyTotem = { id: uid(), kind, x: wx, y: wy, radius: 0.26, groupId: 0, pulseStrength: 0.85, bornAt: now, cause: `Colocado manualmente (${TOOL_SOCIOLOGICAL_LABELS[t]?.short ?? kind}).` };
       syms.totems = [...syms.totems, item];
       eventsRef.current = [{ time: now, icon: iconMap[kind], message: `${kind} Totem placed`, color: colorMap[kind] }, ...eventsRef.current].slice(0, 30);
       setEventsUI([...eventsRef.current]);
     } else if (t === 'tabu_enter' || t === 'tabu_mix') {
-      const item: StudyTabu = { id: uid(), kind: t === 'tabu_enter' ? 'NO_ENTER' : 'NO_MIX', x: wx, y: wy, radius: 0.20, severity: 0.6, bornAt: now, violationCount: 0 };
+      const item: StudyTabu = { id: uid(), kind: t === 'tabu_enter' ? 'NO_ENTER' : 'NO_MIX', x: wx, y: wy, radius: 0.20, severity: 0.6, bornAt: now, violationCount: 0, cause: `Colocado manualmente (${TOOL_SOCIOLOGICAL_LABELS[t]?.short ?? 'tabu'}).` };
       syms.tabus = [...syms.tabus, item];
       eventsRef.current = [{ time: now, icon: 'X', message: `Taboo ${item.kind} declared`, color: '#ef4444' }, ...eventsRef.current].slice(0, 30);
       setEventsUI([...eventsRef.current]);
@@ -742,7 +920,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
       const colorMap2: Record<string, string> = { GATHER: '#a78bfa', PROCESSION: '#fbd38d', OFFERING: '#fbbf24', REVOLT: '#ef4444' };
       const iconMap2: Record<string, string> = { GATHER: '◎', PROCESSION: '|', OFFERING: '🎁', REVOLT: '🔥' };
       const kind2 = kindMap2[t];
-      const item: StudyRitual = { id: uid(), kind: kind2, x: wx, y: wy, radius: 0.30, periodSec: 7, lastFired: now, active: false, bornAt: now };
+      const item: StudyRitual = { id: uid(), kind: kind2, x: wx, y: wy, radius: 0.30, periodSec: 7, lastFired: now, active: false, bornAt: now, cause: `Colocado manualmente (${TOOL_SOCIOLOGICAL_LABELS[t]?.short ?? kind2}).` };
       syms.rituals = [...syms.rituals, item];
       eventsRef.current = [{ time: now, icon: iconMap2[kind2], message: `${kind2} Ritual founded`, color: colorMap2[kind2] }, ...eventsRef.current].slice(0, 30);
       setEventsUI([...eventsRef.current]);
@@ -766,11 +944,14 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
       setShowCodex(true);
     }
   }, [phase]);
+  // Account for Top HUD (72px) + Sociogenesis top bar (~40px) so canvas isn't squashed
   const canvasW = Math.max(400, dims.w - 256);
-  const canvasH = Math.max(300, dims.h - 40);
+  const canvasH = Math.max(300, dims.h - 72 - 40);
   const syms = symbolsRef.current;
   const symTotal = syms.totems.length + syms.tabus.length + syms.rituals.length;
-  const currentScenario = STUDY_SCENARIOS.find(s => s.id === scenario) ?? STUDY_SCENARIOS[0];
+  const currentScenario: StudyScenario = scenario === 'random_preset'
+    ? { id: 'random_preset', name: 'Preset aleatório', icon: '🎲', description: 'Parâmetros e campos gerados aleatoriamente.', category: 'genesis', apply: () => {} }
+    : (STUDY_SCENARIOS.find(s => s.id === scenario) ?? STUDY_SCENARIOS[0]);
 
   // ── Recording ────────────────────────────────────────────────────────────
   const recorderRef  = useRef<CanvasRecorder | null>(null);
@@ -805,8 +986,14 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
   const handleRecStop = useCallback(() => recorderRef.current?.stop(), []);
 
+  // Top HUD height so this panel sits below it (tabs + controls bar)
+  const TOP_HUD_HEIGHT = 72;
+
   return (
-    <div className="fixed inset-0 z-20 flex flex-col overflow-hidden select-none" style={{ background: '#000', fontFamily: MONO }}>
+    <div
+      className="fixed left-0 right-0 bottom-0 z-20 flex flex-col overflow-hidden select-none"
+      style={{ top: TOP_HUD_HEIGHT, background: '#000', fontFamily: MONO }}
+    >
 
       {/* ── Exception banner ───────────────────────────────────────────────── */}
       {wsUI.exceptionActive && (
@@ -899,6 +1086,17 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
           🎲 <span style={{ color: 'rgba(167,139,250,0.65)', fontSize: 8 }}>{seed % 1000000}</span>
         </button>
 
+        {/* Random completo: cenário + seed + layout + laços */}
+        <button
+          title="Random completo: novo cenário, seed, disposição inicial e tipo de laços — reinicia a simulação"
+          onClick={handleRandomCompleto}
+          className="flex items-center gap-1.5 px-2.5 py-1 border transition-all text-[10px]"
+          style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)', fontFamily: MONO }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.9)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(34,197,94,0.5)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.45)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}>
+          <span style={{ fontSize: 11 }}>⟳</span> Random completo
+        </button>
+
         <div className="flex-1" />
 
         {/* Phase + Scenario chip — deixa claro qual sociedade (guildas, metrópole, etc.) */}
@@ -987,9 +1185,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             )}
           </div>
 
-          {/* Group + Archetype legend — bottom right (dynamic by species/culture/niche) */}
+          {/* Group + Archetype legend — bottom right */}
           <div className="absolute bottom-5 right-5 flex flex-col items-end gap-3 pointer-events-none max-w-[200px]">
-            {/* Símbolos sobre agentes (papéis / roles) — o que são os ícones em cima dos agentes */}
+            {/* Símbolos sobre agentes (papéis / roles) — ícones em cima dos agentes no canvas */}
             <div className="flex flex-col items-end gap-0.5">
               <div className="text-[8px] uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }} title="Ícones que aparecem em cima de alguns agentes">Símbolos sobre agentes</div>
               {([
@@ -1002,9 +1200,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 { role: 'rebel' as const, sym: '⁄', color: '#f87171' },
                 { role: 'priest' as const, sym: '○', color: '#c084fc' },
               ]).map(({ role, sym, color }) => (
-                <div key={role} className="flex items-center gap-2" style={{ fontFamily: MONO }}>
+                <div key={role} className="flex items-center gap-2" style={{ fontFamily: MONO }} title={getRoleLabel(role, true)}>
                   <span className="text-[9px] text-right" style={{ color: 'rgba(255,255,255,0.5)' }}>{getRoleLabel(role)}</span>
-                  <span className="text-[10px] shrink-0" style={{ color }} title={getRoleLabel(role, true)}>{sym}</span>
+                  <span className="text-[10px] shrink-0" style={{ color }}>{sym}</span>
                 </div>
               ))}
             </div>
@@ -1082,22 +1280,47 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
           {/* TOOLS */}
           <Section title="Tools" open={showTools} onToggle={() => setShowTools(v => !v)}>
-            <div className="grid grid-cols-2 gap-1">
-              {TOOLS.map(t2 => (
-                <button key={t2.id}
-                  onClick={() => { setTool(t2.id); toolRef.current = t2.id; }}
-                  title={TOOL_SOCIOLOGICAL_LABELS[t2.id]?.long ?? t2.desc}
-                  className="flex items-center gap-1.5 px-2 py-1.5 border text-[10px] transition-all"
-                  style={tool === t2.id
-                    ? { borderColor: t2.color + '55', background: t2.color + '12', color: t2.color, fontFamily: MONO }
-                    : { borderColor: 'rgba(255,255,255,0.07)', background: 'transparent', color: 'rgba(255,255,255,0.40)', fontFamily: MONO }}>
-                  <span className="text-[11px]">{t2.icon}</span>
-                  <span className="truncate">{TOOL_SOCIOLOGICAL_LABELS[t2.id]?.short ?? t2.label}</span>
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-1.5">
+              {TOOLS.map(t2 => {
+                const isActive = tool === t2.id;
+                const longDesc = TOOL_SOCIOLOGICAL_LABELS[t2.id]?.long ?? t2.desc;
+                return (
+                  <button
+                    key={t2.id}
+                    onClick={() => { setTool(t2.id); toolRef.current = t2.id; }}
+                    title={longDesc}
+                    className="flex items-center gap-2 px-2 py-2 rounded-md border text-[10px] transition-all text-left"
+                    style={isActive
+                      ? { borderColor: t2.color + '55', background: t2.color + '14', color: t2.color, fontFamily: MONO }
+                      : { borderColor: 'rgba(255,255,255,0.08)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontFamily: MONO }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
+                        (e.currentTarget as HTMLElement).style.borderColor = t2.color + '30';
+                        (e.currentTarget as HTMLElement).style.color = t2.color + 'dd';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        (e.currentTarget as HTMLElement).style.background = 'transparent';
+                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                        (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.45)';
+                      }
+                    }}
+                  >
+                    <span
+                      className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px]"
+                      style={{ background: isActive ? t2.color + '28' : 'rgba(255,255,255,0.06)', color: t2.color }}
+                    >
+                      {t2.icon}
+                    </span>
+                    <span className="truncate">{TOOL_SOCIOLOGICAL_LABELS[t2.id]?.short ?? t2.label}</span>
+                  </button>
+                );
+              })}
             </div>
-            {/* Active tool description */}
-            <div className="text-[9px] leading-relaxed mt-1 px-0.5" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}>
+            {/* Active tool description — hover on any tool shows full explanation in native tooltip */}
+            <div className="text-[9px] leading-relaxed mt-2 px-1 py-1.5 rounded border border-white/[0.06] bg-white/[0.02]" style={{ color: 'rgba(255,255,255,0.35)', fontFamily: MONO }}>
               {TOOL_SOCIOLOGICAL_LABELS[tool]?.long ?? TOOLS.find(t2 => t2.id === tool)?.desc ?? ''}
             </div>
             {/* Auto-symbols toggle */}
@@ -1198,6 +1421,8 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               onChange={v => patchCfg({ cohesion: v })} />
             <SliderRow label="Aggress." v={cfgRef.current.aggressionBase} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ aggressionBase: v })} />
+            <SliderRow label="Troca entre grupos" v={cfgRef.current.crossGroupInfluence ?? 0.35} min={0} max={1} step={0.05}
+              onChange={v => patchCfg({ crossGroupInfluence: v })} />
           </Section>
 
           {/* VISUAL */}
@@ -1277,6 +1502,38 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
           {/* DYNAMICS */}
           <Section title="Dynamics" open={showDynamics} onToggle={() => setShowDyn(v => !v)}>
+            <div className="flex items-center justify-between py-1.5" style={{ fontFamily: MONO }}>
+              <span className="text-[9px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.45)' }}>Liderança</span>
+              <div className="flex gap-0.5">
+                <button
+                  onClick={() => patchCfg({ leaderMode: 'emergent' })}
+                  className="px-2 py-0.5 text-[9px] transition-all"
+                  style={{
+                    background: cfgRef.current.leaderMode === 'emergent' ? 'rgba(0,212,170,0.15)' : 'transparent',
+                    border: `1px solid ${cfgRef.current.leaderMode === 'emergent' ? 'rgba(0,212,170,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                    color: cfgRef.current.leaderMode === 'emergent' ? '#00d4aa' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  Emergente
+                </button>
+                <button
+                  onClick={() => patchCfg({ leaderMode: 'fixed_democracy' })}
+                  className="px-2 py-0.5 text-[9px] transition-all"
+                  title="Um líder por grupo, rotação a cada 4 anos (80s sim)"
+                  style={{
+                    background: cfgRef.current.leaderMode === 'fixed_democracy' ? 'rgba(167,139,250,0.15)' : 'transparent',
+                    border: `1px solid ${cfgRef.current.leaderMode === 'fixed_democracy' ? 'rgba(167,139,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                    color: cfgRef.current.leaderMode === 'fixed_democracy' ? '#a78bfa' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  Democracia (4a)
+                </button>
+              </div>
+            </div>
+            {cfgRef.current.leaderMode === 'fixed_democracy' && (
+              <SliderRow label="Mandato (s)" v={cfgRef.current.democracyTermSec} min={20} max={120} step={10}
+                onChange={v => patchCfg({ democracyTermSec: v })} />
+            )}
             <SliderRow label="Conform." v={cfgRef.current.conformity} min={0} max={1} step={0.05}
               onChange={v => patchCfg({ conformity: v })} />
             <SliderRow label="Empathy" v={cfgRef.current.empathy} min={0} max={1} step={0.05}
@@ -1412,6 +1669,63 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             </Section>
           )}
 
+          {/* SYMBOL (INSTITUTION) INSPECTOR — overlay ao clicar em totem/tabu/ritual no canvas */}
+          {selectedSymbol && (
+            <Section
+              title={selectedSymbol.type === 'totem' ? `Totem: ${getTotemLabel(selectedSymbol.data.kind)}` : selectedSymbol.type === 'tabu' ? `Tabu: ${getTabuLabel(selectedSymbol.data.kind)}` : `Ritual: ${getRitualLabel(selectedSymbol.data.kind)}`}
+              badge={selectedSymbol.type === 'totem' ? (selectedSymbol.data.emergent ? 'emergente' : 'manual') : selectedSymbol.type === 'tabu' ? (selectedSymbol.data.id.startsWith('auto-') ? 'emergente' : 'manual') : (selectedSymbol.data as StudyRitual).active ? 'ativo' : '—'}
+              open={showSymbolInspect}
+              onToggle={() => setShowSymbolInspect(v => !v)}
+            >
+              <div className="mb-2 px-1.5 py-1 rounded" style={{ background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)' }}>
+                <span className="text-[8px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}>O que faz</span>
+                <div className="text-[11px] mt-0.5" style={{ color: '#00d4aa', fontFamily: MONO }}>
+                  {selectedSymbol.type === 'totem' && getTotemLabel(selectedSymbol.data.kind, true)}
+                  {selectedSymbol.type === 'tabu' && getTabuLabel(selectedSymbol.data.kind, true)}
+                  {selectedSymbol.type === 'ritual' && getRitualLabel(selectedSymbol.data.kind, true)}
+                </div>
+              </div>
+              <div className="mb-2 px-1.5 py-1 rounded" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <span className="text-[8px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}>Como foi causada</span>
+                <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.85)', fontFamily: MONO }}>
+                  {selectedSymbol.data.cause ?? (
+                    selectedSymbol.type === 'totem' && (selectedSymbol.data.emergent || selectedSymbol.data.id.startsWith('auto-'))
+                      ? 'Surgiu por emergência da simulação (auto-símbolo a partir da dinâmica do grupo).'
+                      : selectedSymbol.type === 'tabu' && selectedSymbol.data.id.startsWith('auto-')
+                        ? 'Declarado por emergência da simulação (auto-tabu).'
+                        : selectedSymbol.type === 'ritual'
+                          ? 'Fundado manualmente ou pelo cenário.'
+                          : 'Colocado manualmente no canvas.')
+                  }
+                </div>
+              </div>
+              {selectedSymbol.type === 'totem' && (
+                <div className="text-[9px] mt-1" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}>
+                  Pulso N/L: {(selectedSymbol.data.pulseStrength * 100).toFixed(0)}% · Raio: {selectedSymbol.data.radius.toFixed(2)}
+                </div>
+              )}
+              {selectedSymbol.type === 'tabu' && (
+                <div className="text-[9px] mt-1" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}>
+                  Severidade: {(selectedSymbol.data.severity * 100).toFixed(0)}% · Violações: {selectedSymbol.data.violationCount}
+                </div>
+              )}
+              {selectedSymbol.type === 'ritual' && (
+                <div className="text-[9px] mt-1" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}>
+                  Período: {(selectedSymbol.data as StudyRitual).periodSec}s · {(selectedSymbol.data as StudyRitual).active ? 'Ativo agora' : 'Inativo'}
+                </div>
+              )}
+              <button
+                onClick={() => setSelectedSymbol(null)}
+                className="mt-2 flex items-center gap-1 text-[10px] transition-colors"
+                style={{ color: 'rgba(255,255,255,0.35)', fontFamily: MONO }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)'; }}
+              >
+                <X size={10} /> Fechar
+              </button>
+            </Section>
+          )}
+
           {/* SYMBOLS */}
           <Section title="Symbols" badge={symTotal} open={showSymbols} onToggle={() => setShowSymbols(v => !v)}>
             {symTotal === 0 && (
@@ -1425,8 +1739,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               return (
               <SymRow key={t2.id}
                 icon={ic[t2.kind] || '⊕'}
-                label={`${t2.kind} Totem`}
+                label={getTotemLabel(t2.kind)}
                 sub={t2.emergent ? 'auto-emerged' : t2.id.startsWith('auto-') ? 'auto-emerged' : 'manual'}
+                title={getTotemLabel(t2.kind, true)}
                 color={cl[t2.kind] || '#34d399'}
                 onRemove={() => { syms.totems = syms.totems.filter(x => x.id !== t2.id); setSymbolsVer(v => v + 1); }} />
               );
@@ -1434,8 +1749,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             {syms.tabus.map(t2 => (
               <SymRow key={t2.id}
                 icon={t2.kind === 'NO_ENTER' ? 'X' : '×'}
-                label={`Tabu ${t2.kind}`}
+                label={getTabuLabel(t2.kind)}
                 sub={t2.id.startsWith('auto-') ? 'auto-emerged' : 'manual'}
+                title={getTabuLabel(t2.kind, true)}
                 color="#ef4444"
                 onRemove={() => { syms.tabus = syms.tabus.filter(x => x.id !== t2.id); setSymbolsVer(v => v + 1); }} />
             ))}
@@ -1445,8 +1761,9 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               return (
               <SymRow key={r2.id}
                 icon={ic[r2.kind] || '◎'}
-                label={`${r2.kind} Ritual`}
+                label={getRitualLabel(r2.kind)}
                 sub={r2.emergent ? 'auto-emerged' : r2.id.startsWith('auto-') ? 'auto-emerged' : 'manual'}
+                title={getRitualLabel(r2.kind, true)}
                 color={cl[r2.kind] || '#a78bfa'}
                 onRemove={() => { syms.rituals = syms.rituals.filter(x => x.id !== r2.id); setSymbolsVer(v => v + 1); }} />
               );
@@ -1684,19 +2001,33 @@ function SliderRow({ label, v, min, max, step, onChange }: {
   );
 }
 
-function SymRow({ icon, label, sub, color, onRemove }: {
-  icon: string; label: string; sub: string; color: string; onRemove: () => void;
+function SymRow({ icon, label, sub, color, title, onRemove }: {
+  icon: string; label: string; sub: string; color: string; title?: string; onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 py-0.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-      <span style={{ color }} className="text-[11px] shrink-0">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.60)' }}>{label}</div>
-        <div className="text-[8px]" style={{ color: 'rgba(255,255,255,0.22)' }}>{sub}</div>
+    <div
+      title={title}
+      className="flex items-center gap-2.5 py-1.5 px-2 rounded-md transition-colors group"
+      style={{
+        fontFamily: "'IBM Plex Mono', monospace",
+        background: 'transparent',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+    >
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[12px]"
+        style={{ background: color + '22', border: `1px solid ${color}44`, color }}
+      >
+        {icon}
       </div>
-      <button onClick={onRemove} className="transition-colors" style={{ color: 'rgba(255,255,255,0.20)' }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(239,68,68,0.70)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.20)'; }}>
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.75)' }}>{label}</div>
+        <div className="text-[8px]" style={{ color: 'rgba(255,255,255,0.28)' }}>{sub}</div>
+      </div>
+      <button onClick={onRemove} className="opacity-40 group-hover:opacity-100 transition-opacity p-0.5 rounded" style={{ color: 'rgba(255,255,255,0.5)' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(239,68,68,0.9)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.5)'; }}>
         <X size={9} />
       </button>
     </div>

@@ -32,17 +32,19 @@ export interface StudyVisualConfig {
 }
 
 export const defaultVisualConfig: StudyVisualConfig = {
-  agentScale: 0.30,   // small dots by default — see many agents and family structures
+  agentScale: 0.32,   // base pequeno; escala por papel (líder grande, resto menor)
   showTrails: true,
-  showDirection: false, // off by default — less visual noise
-  trailOpacity: 0.7,   // trails clearly visible
-  showFamilyConnections: true,  // show how agents are connected within families (rhizome)
+  showDirection: false,
+  trailOpacity: 0.7,
+  showFamilyConnections: true,
 };
 
 // ── Agent radius ──────────────────────────────────────────────────────────────
 let _visualCfg: StudyVisualConfig = defaultVisualConfig;
-// Base radius: smaller dots so many agents read as patterns (Complexity Life Lab–style)
-function agentR(cw: number, ch: number): number { return 0.022 * 0.5 * Math.min(cw, ch) * _visualCfg.agentScale; }
+// Base radius: pequeno; diferenciação vem de agentDrawScale (role + influência)
+function agentR(cw: number, ch: number): number {
+  return 0.014 * Math.min(cw, ch) * _visualCfg.agentScale;
+}
 
 // ── Hex → rgba ────────────────────────────────────────────────────────────────
 function hexA(hex: string, a: number): string {
@@ -109,6 +111,28 @@ function stableKey(a: StudyAgent): number {
 
 function momentKey(a: StudyAgent): number {
   return (a.archKeyMoment >>> 0) || computeArchetypeKey(a);
+}
+
+// Influência (centralidade + status) para brilho e, quando normal, para tamanho
+function agentInfluence(a: StudyAgent): number {
+  const raw = (a.centrality ?? 0) * 0.55 + (a.status ?? 0) * 0.45;
+  return Math.max(0, Math.min(1, raw));
+}
+// Escala de desenho: base pequeno, só líder/autoridade ficam grandes (evita homogeneidade)
+function agentDrawScale(a: StudyAgent, role?: AgentRole): number {
+  const inf = agentInfluence(a);
+  const r = role ?? 'normal';
+  if (r === 'leader' || r === 'dictator') return 1.72;   // sempre grande
+  if (r === 'authority' || r === 'priest') return 1.24;
+  // Normal: 0.38 a 0.95 por influência — maioria pequena
+  return 0.38 + 0.57 * inf;
+}
+function agentSizeScale(a: StudyAgent): number {
+  return 0.38 + 0.57 * agentInfluence(a);
+}
+function agentBrightness(a: StudyAgent): number {
+  const inf = agentInfluence(a);
+  return 0.62 + 0.38 * inf;
 }
 
 // ── Main entry ────────────────────────────────────────────────────────────────
@@ -204,30 +228,21 @@ export function renderStudy(
   // ── Agents (always rendered; lens changes style only) ──
   const r = agentR(cw, ch);
 
-  // ── Compute "top leaders" (always highlighted, independent of role label) ──
+  // ── Quem tem destaque: por PAPEL (leader, authority, dictator, priest) — estável e legível
   const leaders = new Set<number>();
   let primeLeader = -1;
-  if (agents.length) {
-    let i1 = -1, i2 = -1, i3 = -1;
-    let s1 = -1, s2 = -1, s3 = -1;
-    for (let i = 0; i < agents.length; i++) {
-      const a = agents[i];
-      const role = roles[i] ?? 'normal';
-      const roleBoost =
-        role === 'leader'    ? 0.20 :
-        role === 'dictator'  ? 0.18 :
-        role === 'authority' ? 0.14 :
-        role === 'priest'    ? 0.10 :
-        0;
-      const score = a.centrality * 0.55 + a.status * 0.35 + a.charisma * 0.25 - a.fear * 0.08 + roleBoost;
-      if (score > s1) { i3 = i2; s3 = s2; i2 = i1; s2 = s1; i1 = i; s1 = score; }
-      else if (score > s2) { i3 = i2; s3 = s2; i2 = i; s2 = score; }
-      else if (score > s3) { i3 = i; s3 = score; }
-    }
-    if (i1 >= 0) leaders.add(i1);
-    if (i2 >= 0) leaders.add(i2);
-    if (i3 >= 0) leaders.add(i3);
-    primeLeader = i1;
+  for (let i = 0; i < agents.length; i++) {
+    const role = roles[i] ?? 'normal';
+    if (role === 'leader' || role === 'dictator') leaders.add(i);
+    if (role === 'leader' && primeLeader < 0) primeLeader = i;
+  }
+  if (primeLeader < 0 && leaders.size > 0) primeLeader = leaders.values().next().value;
+  // Fallback: se ainda ninguém tem papel de líder (ex.: antes da 1ª atualização), destaca os 2 com maior score
+  if (leaders.size === 0 && agents.length > 0) {
+    const scored = agents.map((a, i) => ({ i, s: a.centrality * 0.6 + a.status * 0.4 }));
+    scored.sort((a, b) => b.s - a.s);
+    if (scored[0].s > 0.3) { leaders.add(scored[0].i); primeLeader = scored[0].i; }
+    if (scored[1] && scored[1].s > 0.25) leaders.add(scored[1].i);
   }
 
   if (lens === 'off') {
@@ -251,7 +266,7 @@ export function renderStudy(
   if (selectedAgentIdx != null && selectedAgentIdx >= 0 && selectedAgentIdx < agents.length) {
     const a = agents[selectedAgentIdx];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, roles[selectedAgentIdx]);
     _drawSelectedHighlight(ctx, ax, ay, ar, selectedAgentIdx);
   }
 
@@ -481,31 +496,79 @@ function _drawLeaderHighlight(
   ctx.restore();
 }
 
+function _drawRoleRing(ctx: CanvasRenderingContext2D, ax: number, ay: number, ar: number, role: AgentRole): void {
+  const ringR = ar + 3;
+  ctx.beginPath();
+  ctx.arc(ax, ay, ringR, 0, Math.PI * 2);
+  if (role === 'authority') {
+    ctx.strokeStyle = 'rgba(96,165,250,0.7)';
+    ctx.lineWidth = 1.8;
+  } else if (role === 'priest') {
+    ctx.strokeStyle = 'rgba(192,132,252,0.65)';
+    ctx.lineWidth = 1.5;
+  }
+  ctx.globalAlpha = 0.9;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
 function renderAgentsGroups(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[], roles: AgentRole[], r: number,
   leaders: Set<number>, primeLeader: number,
 ): void {
-  // First pass: leader glows (behind agents)
+  // First pass: leader/dictator glows (ouro) — estável por papel
   for (const li of leaders) {
     if (li < 0 || li >= agents.length) continue;
     const a = agents[li];
+    const roleLi = roles[li] ?? 'leader';
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, roleLi);
     _drawLeaderHighlight(ctx, ax, ay, ar, li === primeLeader);
   }
+  // Authority (anel azul) e priest (anel violeta) — para sacar quem é quem
+  for (let i = 0; i < agents.length; i++) {
+    const role = roles[i] ?? 'normal';
+    if (role !== 'authority' && role !== 'priest') continue;
+    const a = agents[i];
+    const ax = cx(a.x, cw), ay = cy(a.y, ch);
+    const ar = r * agentDrawScale(a, role);
+    _drawRoleRing(ctx, ax, ay, ar, role);
+  }
 
-  // Second pass: agents
+  // Second pass: influence glow for high power/wealth/opinion (behind body)
+  for (let i = 0; i < agents.length; i++) {
+    const a = agents[i];
+    const inf = agentInfluence(a);
+    if (inf < 0.5) continue;
+    const ax = cx(a.x, cw), ay = cy(a.y, ch);
+    const ar = r * agentDrawScale(a, roles[i]);
+    const baseCol = archetypeKeyToColor(stableKey(a));
+    const [cr, cg, cb] = _hexToRgb(baseCol);
+    const glowR = ar + inf * r * 4;
+    const g = ctx.createRadialGradient(ax, ay, ar * 0.3, ax, ay, glowR);
+    g.addColorStop(0, `rgba(${cr},${cg},${cb},${0.08 + inf * 0.14})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(ax, ay, glowR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Third pass: agents (tamanho por papel + influência; brilho por influência)
   for (let i = 0; i < agents.length; i++) {
     const a    = agents[i];
     const ax   = cx(a.x, cw), ay = cy(a.y, ch);
     const role = roles[i] ?? 'normal';
     const baseCol = archetypeKeyToColor(stableKey(a));
     const groupCol = GROUP_COLORS[a.groupId % GROUP_COLORS.length];
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, role);
+    const alpha = agentBrightness(a);
 
     // Mood encoded as a subtle bottom arc (half-ring), not a full circle overlay.
-    // This keeps the agent clean while showing dominant emotion.
     const dom = Math.max(a.belief, a.fear, a.desire);
     if (dom > 0.50) {
       let moodCol = '';
@@ -521,7 +584,7 @@ function renderAgentsGroups(
       ctx.globalAlpha = 1;
     }
 
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.65);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, alpha);
 
     // Group identity: thin colored dot below agent instead of full ring
     ctx.beginPath();
@@ -535,23 +598,25 @@ function renderAgentsGroups(
   }
 }
 
-// ── Agents: Power lens — status/fear ──────────────────────────────────────────
+// ── Agents: Power lens — status/wealth/opinion (size + glow)
 function renderAgentsPower(
   ctx: CanvasRenderingContext2D, cw: number, ch: number,
   agents: StudyAgent[], roles: AgentRole[], r: number,
   leaders: Set<number>, primeLeader: number,
 ): void {
-  // Glow pass (behind agents)
+  const inf = (a: StudyAgent) => agentInfluence(a);
+  // Glow pass (behind agents) — by influence
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
-    if (a.status < 0.25) continue;
+    const influence = inf(a);
+    if (influence < 0.2) continue;
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, roles[i]);
     const baseCol = archetypeKeyToColor(stableKey(a));
     const [cr, cg, cb] = _hexToRgb(baseCol);
-    const glowR = ar + a.status * r * 3;
+    const glowR = ar + influence * r * 4;
     const g = ctx.createRadialGradient(ax, ay, ar * 0.5, ax, ay, glowR);
-    g.addColorStop(0, `rgba(${cr},${cg},${cb},${a.status * 0.12})`);
+    g.addColorStop(0, `rgba(${cr},${cg},${cb},${influence * 0.14})`);
     g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -562,19 +627,19 @@ function renderAgentsPower(
     if (li < 0 || li >= agents.length) continue;
     const a = agents[li];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, roles[li]);
     _drawLeaderHighlight(ctx, ax, ay, ar, li === primeLeader);
   }
 
-  // Agent pass
+  // Agent pass (size/brilho = poder)
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const role  = roles[i] ?? 'normal';
     const baseCol = archetypeKeyToColor(stableKey(a));
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, role);
+    const alpha = agentBrightness(a);
 
-    // Fear blends toward red
     const [cr, cg, cb] = _hexToRgb(baseCol);
     const fearBlend = a.fear * 0.6;
     const fr = Math.round(cr + (220 - cr) * fearBlend);
@@ -582,7 +647,7 @@ function renderAgentsPower(
     const fb = Math.round(cb + (50 - cb) * fearBlend);
     const fillHex = `#${fr.toString(16).padStart(2, '0')}${fg.toString(16).padStart(2, '0')}${fb.toString(16).padStart(2, '0')}`;
 
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, fillHex, 0.62);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, fillHex, alpha);
     _drawRoleIndicator(ctx, ax, ay, ar, baseCol, role);
   }
 }
@@ -601,7 +666,7 @@ function renderAgentsEconomy(
     if (li < 0 || li >= agents.length) continue;
     const a = agents[li];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, roles[li]);
     _drawLeaderHighlight(ctx, ax, ay, ar, li === primeLeader);
   }
 
@@ -610,7 +675,8 @@ function renderAgentsEconomy(
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const role  = roles[i] ?? 'normal';
     const baseCol = archetypeKeyToColor(stableKey(a));
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, role);
+    const alpha = Math.max(agentBrightness(a), 0.35 + a.wealth * 0.45);
 
     // Wealth gold glow for top 10
     if (top10.has(i)) {
@@ -624,7 +690,7 @@ function renderAgentsEconomy(
       ctx.fill();
     }
 
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.35 + a.wealth * 0.55);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, alpha);
     _drawRoleIndicator(ctx, ax, ay, ar, baseCol, role);
   }
 }
@@ -639,7 +705,7 @@ function renderAgentsFaded(
     const a = agents[i];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const baseCol = archetypeKeyToColor(stableKey(a));
-    const ar = r * (0.58 + a.status * 0.55);
+    const ar = r * agentDrawScale(a, _roles[i]);
     _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.18);
   }
 }
@@ -654,15 +720,15 @@ function renderAgentsPlain(
     if (li < 0 || li >= agents.length) continue;
     const a = agents[li];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, _roles[li]);
     _drawLeaderHighlight(ctx, ax, ay, ar, li === primeLeader);
   }
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const baseCol = archetypeKeyToColor(stableKey(a));
-    const ar = r * (0.72 + a.status * 0.72);
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, 0.62);
+    const ar = r * agentDrawScale(a, _roles[i]);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, agentBrightness(a));
   }
 }
 
@@ -672,12 +738,11 @@ function renderAgentsArchetype(
   agents: StudyAgent[], roles: AgentRole[], r: number,
   leaders: Set<number>, primeLeader: number,
 ): void {
-  // Leader glows behind agents
   for (const li of leaders) {
     if (li < 0 || li >= agents.length) continue;
     const a = agents[li];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.55);
+    const ar = r * agentDrawScale(a, roles[li]);
     _drawLeaderHighlight(ctx, ax, ay, ar, li === primeLeader);
   }
 
@@ -687,9 +752,8 @@ function renderAgentsArchetype(
     const role = roles[i] ?? 'normal';
     const stableCol = archetypeKeyToColor(stableKey(a));
     const col  = stableCol;
-    const ar   = r * (0.72 + a.status * 0.55);
+    const ar   = r * agentDrawScale(a, role);
 
-    // Moment drift: subtle half-ring at top if archetype is shifting
     if (momentKey(a) !== stableKey(a)) {
       const momentCol = archetypeKeyToColor(momentKey(a));
       ctx.beginPath();
@@ -701,7 +765,7 @@ function renderAgentsArchetype(
       ctx.globalAlpha = 1;
     }
 
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, col, 0.65);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, col, agentBrightness(a));
     _drawRoleIndicator(ctx, ax, ay, ar, col, role);
   }
 }
@@ -714,34 +778,39 @@ function _drawRoleIndicator(
   r: number, _color: string, role: AgentRole,
 ): void {
   if (role === 'normal') return;
-  const gy = ay - r - 5; // glyph Y position: just above agent
   ctx.save();
+
+  const gy = ay - r - (role === 'leader' || role === 'authority' ? 8 : 5);
 
   switch (role) {
     case 'leader': {
-      // Small golden circle
       ctx.beginPath();
-      ctx.arc(ax, gy, 2.2, 0, Math.PI * 2);
+      ctx.arc(ax, gy, 3.5, 0, Math.PI * 2);
       ctx.fillStyle = '#fbbf24';
-      ctx.globalAlpha = 0.80;
+      ctx.globalAlpha = 0.92;
       ctx.fill();
+      ctx.strokeStyle = 'rgba(251,191,36,0.6)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
       break;
     }
     case 'authority': {
-      // Small blue diamond
+      const d = 3.2;
       ctx.beginPath();
-      ctx.moveTo(ax, gy - 2.5);
-      ctx.lineTo(ax + 2, gy);
-      ctx.lineTo(ax, gy + 2.5);
-      ctx.lineTo(ax - 2, gy);
+      ctx.moveTo(ax, gy - d);
+      ctx.lineTo(ax + d, gy);
+      ctx.lineTo(ax, gy + d);
+      ctx.lineTo(ax - d, gy);
       ctx.closePath();
       ctx.fillStyle = '#60a5fa';
-      ctx.globalAlpha = 0.75;
+      ctx.globalAlpha = 0.88;
       ctx.fill();
+      ctx.strokeStyle = 'rgba(96,165,250,0.5)';
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
       break;
     }
     case 'dictator': {
-      // Red filled triangle (pointing up)
       ctx.beginPath();
       ctx.moveTo(ax, gy - 3);
       ctx.lineTo(ax + 2.5, gy + 1.5);
@@ -844,7 +913,7 @@ function renderAgentsMorin(
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, roles[i]);
 
     if (a.ethics > 0.25) {
       const eR = ar + 3 + a.ethics * 8;
@@ -874,17 +943,17 @@ function renderAgentsMorin(
     if (li < 0 || li >= agents.length) continue;
     const a = agents[li];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, roles[li]);
     _drawLeaderHighlight(ctx, ax, ay, ar, li === primeLeader);
   }
 
-  // Pass 4: agent bodies
+  // Pass 4: agent bodies (size/brilho = influência)
   for (let i = 0; i < agents.length; i++) {
     const a = agents[i];
     const ax = cx(a.x, cw), ay = cy(a.y, ch);
     const role = roles[i] ?? 'normal';
     const baseCol = archetypeKeyToColor(stableKey(a));
-    const ar = r * (0.72 + a.status * 0.72);
+    const ar = r * agentDrawScale(a, role);
 
     // Perception controls body opacity: low perception = dim
     const percAlpha = 0.40 + a.perception * 0.50;
@@ -910,7 +979,7 @@ function renderAgentsMorin(
       ctx.globalAlpha = 1;
     }
 
-    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, percAlpha);
+    _drawAgent(ctx, ax, ay, a.vx, a.vy, ar, baseCol, percAlpha * agentBrightness(a));
     _drawRoleIndicator(ctx, ax, ay, ar, baseCol, role);
   }
 

@@ -42,15 +42,10 @@ export const GuideOverlay: React.FC<GuideOverlayProps> = ({
       setTargetRect(null);
       return;
     }
-    try {
-      const el = document.querySelector(currentStep.targetSelector);
-      if (el) {
-        setTargetRect(el.getBoundingClientRect());
-      } else {
-        setTargetRect(null);
-      }
-    } catch (err) {
-      console.error('[GuideOverlay] target rect failed', err);
+    const el = document.querySelector(currentStep.targetSelector);
+    if (el) {
+      setTargetRect(el.getBoundingClientRect());
+    } else {
       setTargetRect(null);
     }
   }, [currentStep]);

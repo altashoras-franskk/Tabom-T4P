@@ -31,11 +31,28 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
   // ══════════════════════════════════════════════════════════ GENESIS ══════════
 
   {
+    id: 'integrado', name: 'Integrado (troca entre grupos)', icon: '🔄', category: 'genesis',
+    description: 'Baixa coesão · alta troca de opinião entre grupos · subnichos por recurso, separatistas possíveis',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 180; cfg.groupCount = 4; cfg.speed = 0.52;
+      cfg.cohesion = 0.26; cfg.autonomy = 0.72; cfg.needBase = 0.38;
+      cfg.crossGroupInfluence = 0.78; cfg.aggressionBase = 0.18; cfg.trustBase = 0.58;
+      cfg.ideologyPressure = 0.35; cfg.autoSymbols = true;
+      fcfg.regenR = 0.032; fcfg.diffuseN = 0.12;
+    },
+    setupWorld(f, _s) {
+      depositR(f, 0.5, 0.5, 0.55, 0.22); depositR(f, -0.5, -0.4, 0.50, 0.20);
+      depositR(f, -0.3, 0.6, 0.45, 0.18); depositR(f, 0.4, -0.5, 0.40, 0.18);
+      f.dirty = true;
+    },
+  },
+
+  {
     id: 'open_market', name: 'Open Market Tension', icon: '📈', category: 'economy',
     description: 'Resources abundant · no norms · accumulation → inequality & conflict',
     apply(cfg, fcfg) {
       cfg.agentCount = 160; cfg.groupCount = 4; cfg.speed = 0.50; cfg.aggressionBase = 0.35;
-      cfg.trustBase = 0.45; cfg.kBelief = 0.20; cfg.harvestRate = 0.10; cfg.decayWealth = 0.008;
+      cfg.trustBase = 0.45; cfg.crossGroupInfluence = 0.45; cfg.kBelief = 0.20; cfg.harvestRate = 0.10; cfg.decayWealth = 0.008;
       cfg.ideologyPressure = 0.15; cfg.violationThreshold = 6; cfg.autoSymbols = true;
       fcfg.decayN = 0.035; fcfg.regenR = 0.040;
       cfg.groupProfiles = [
@@ -56,7 +73,8 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: 'Central BOND totem + Procession · high norms · conformity enforced',
     apply(cfg, fcfg) {
       cfg.agentCount = 140; cfg.groupCount = 3; cfg.speed = 0.38; cfg.aggressionBase = 0.18;
-      cfg.trustBase = 0.65; cfg.kBelief = 0.65; cfg.kFear = 0.50; cfg.ideologyPressure = 0.40;
+      cfg.trustBase = 0.65; cfg.crossGroupInfluence = 0.22; cfg.cohesion = 0.62;
+      cfg.kBelief = 0.65; cfg.kFear = 0.50; cfg.ideologyPressure = 0.40;
       cfg.violationThreshold = 2; cfg.autoSymbols = true;
       fcfg.decayN = 0.008; fcfg.diffuseN = 0.14; fcfg.regenR = 0.016;
       cfg.groupProfiles = [
@@ -91,7 +109,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: '2 RIFT totems · low trust · ideology → extreme polarization',
     apply(cfg, fcfg) {
       cfg.agentCount = 120; cfg.groupCount = 2; cfg.speed = 0.52; cfg.aggressionBase = 0.50;
-      cfg.trustBase = 0.28; cfg.ideologyPressure = 0.65; cfg.violationThreshold = 3; cfg.autoSymbols = true;
+      cfg.trustBase = 0.28; cfg.crossGroupInfluence = 0.12; cfg.ideologyPressure = 0.65; cfg.violationThreshold = 3; cfg.autoSymbols = true;
       fcfg.diffuseN = 0.05; fcfg.diffuseL = 0.03;
     },
     setupWorld(f, s) {
@@ -152,10 +170,11 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
 
   {
     id: 'scarcity_war', name: 'Scarcity War', icon: '⚔️', category: 'conflict',
-    description: 'Resources near depletion · groups clash over remaining hotspots',
+    description: 'Resources near depletion · groups clash · guerras espaçadas (warPhase)',
     apply(cfg, fcfg) {
-      cfg.agentCount = 160; cfg.groupCount = 4; cfg.speed = 0.55; cfg.aggressionBase = 0.60;
-      cfg.trustBase = 0.30; cfg.harvestRate = 0.14; cfg.decayWealth = 0.025;
+      cfg.agentCount = 160; cfg.groupCount = 4; cfg.speed = 0.55; cfg.aggressionBase = 0.62;
+      cfg.trustBase = 0.28; cfg.crossGroupInfluence = 0.18; cfg.cohesion = 0.42;
+      cfg.harvestRate = 0.14; cfg.decayWealth = 0.025;
       cfg.violationThreshold = 4; cfg.autoSymbols = true;
       fcfg.regenR = 0.006; fcfg.decayR = 0.015;
     },
@@ -173,7 +192,8 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: '2 groups · opposing RIFT totems · max aggression · legitimacy conflict',
     apply(cfg, fcfg) {
       cfg.agentCount = 140; cfg.groupCount = 2; cfg.speed = 0.58; cfg.aggressionBase = 0.72;
-      cfg.trustBase = 0.15; cfg.ideologyPressure = 0.70; cfg.kFear = 0.55;
+      cfg.trustBase = 0.15; cfg.crossGroupInfluence = 0.08; cfg.cohesion = 0.58;
+      cfg.ideologyPressure = 0.70; cfg.kFear = 0.55;
       cfg.violationThreshold = 2; cfg.exceptionDuration = 40; cfg.autoSymbols = true;
       fcfg.diffuseN = 0.04;
       cfg.groupProfiles = [
@@ -195,7 +215,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: '4 groups unified then split — watch polarization break cohesion',
     apply(cfg, fcfg) {
       cfg.agentCount = 160; cfg.groupCount = 4; cfg.speed = 0.46; cfg.cohesion = 0.70;
-      cfg.aggressionBase = 0.22; cfg.ideologyPressure = 0.55; cfg.autoSymbols = true;
+      cfg.crossGroupInfluence = 0.28; cfg.aggressionBase = 0.22; cfg.ideologyPressure = 0.55; cfg.autoSymbols = true;
       fcfg.diffuseN = 0.07; fcfg.diffuseL = 0.04;
     },
     setupWorld(f, s) {
@@ -281,8 +301,8 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: 'Extreme ideology pressure · 5 groups converging to single worldview',
     apply(cfg, fcfg) {
       cfg.agentCount = 150; cfg.groupCount = 5; cfg.speed = 0.40; cfg.ideologyPressure = 0.80;
-      cfg.pressure = 0.60; cfg.trustBase = 0.70; cfg.aggressionBase = 0.10;
-      cfg.autoSymbols = true; fcfg.diffuseN = 0.15;
+      cfg.pressure = 0.60; cfg.trustBase = 0.70; cfg.crossGroupInfluence = 0.58; cfg.cohesion = 0.35;
+      cfg.aggressionBase = 0.10; cfg.autoSymbols = true; fcfg.diffuseN = 0.15;
     },
   },
 
@@ -338,6 +358,23 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
   },
 
   // ══════════════════════════════════════════════════════════ POWER ══════════
+
+  {
+    id: 'ditadura', name: 'Ditadura (mandato fixo longo)', icon: '👑', category: 'power',
+    description: 'Líderes fixos por muitos "anos" · grupo obedece · alta conformidade',
+    apply(cfg, fcfg) {
+      cfg.agentCount = 160; cfg.groupCount = 3; cfg.speed = 0.40;
+      cfg.leaderMode = 'fixed_democracy'; cfg.democracyTermSec = 400;
+      cfg.cohesion = 0.72; cfg.conformity = 0.78; cfg.crossGroupInfluence = 0.15;
+      cfg.aggressionBase = 0.25; cfg.trustBase = 0.45; cfg.ideologyPressure = 0.50;
+      cfg.autoSymbols = true;
+    },
+    setupWorld(f, s) {
+      s.totems.push(totem('BOND', 0, 0, 0.40, 0, 1.0));
+      depositL(f, 0, 0, 0.70, 0.45);
+      f.dirty = true;
+    },
+  },
 
   {
     id: 'iron_order', name: 'Iron Order', icon: '⚙️', category: 'power',
@@ -410,7 +447,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: 'High mobility · low loyalty · groups intermix freely → emergent tribes',
     apply(cfg) {
       cfg.agentCount = 180; cfg.groupCount = 5; cfg.speed = 0.55; cfg.mobility = 0.60;
-      cfg.cohesion = 0.20; cfg.culturalInertia = 0.15; cfg.contagion = 0.55;
+      cfg.cohesion = 0.20; cfg.crossGroupInfluence = 0.68; cfg.culturalInertia = 0.15; cfg.contagion = 0.55;
       cfg.empathy = 0.50; cfg.conformity = 0.15; cfg.cooperationBias = 0.35;
       cfg.autoSymbols = true;
     },
@@ -435,6 +472,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: '2 isolated groups meet · empathy vs aggression determines outcome',
     apply(cfg) {
       cfg.agentCount = 120; cfg.groupCount = 2; cfg.speed = 0.42; cfg.empathy = 0.55;
+      cfg.crossGroupInfluence = 0.62; cfg.cohesion = 0.38;
       cfg.aggressionBase = 0.35; cfg.contagion = 0.40; cfg.mobility = 0.15;
       cfg.culturalInertia = 0.60; cfg.cooperationBias = 0.25; cfg.autoSymbols = true;
     },
@@ -845,6 +883,7 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
     description: 'Alta mobilidade, diversidade radical — subculturas se misturam e colidem',
     apply(cfg) {
       cfg.agentCount = 180; cfg.groupCount = 5; cfg.speed = 0.55;
+      cfg.cohesion = 0.30; cfg.crossGroupInfluence = 0.72;
       cfg.mobility = 0.35; cfg.empathy = 0.50; cfg.innovationRate = 0.12;
       cfg.culturalInertia = 0.15; cfg.conformity = 0.20; cfg.autoSymbols = true;
       cfg.groupProfiles = [
@@ -940,13 +979,20 @@ export const STUDY_SCENARIOS: StudyScenario[] = [
 
   {
     id: 'colonialismo', name: 'Colonialismo', icon: '🏴', category: 'economy',
-    description: 'Extração desigual + fronteiras simbólicas + memórias de origem em disputa',
+    description: 'Grupo 0 domina centro e recurso · expansão colonial · outros dispersos',
     apply(cfg, fcfg) {
-      cfg.agentCount = 190; cfg.groupCount = 4; cfg.speed = 0.50;
+      cfg.agentCount = 190; cfg.groupCount = 4; cfg.speed = 0.54;
       cfg.spawnRelationMode = 'sparse'; cfg.startWithFamilies = false;
       cfg.bondFormationRate = 0.06; cfg.birthMemoryStrength = 0.92;
-      cfg.hierarchyStrength = 0.80; cfg.cooperationBias = 0.08;
+      cfg.hierarchyStrength = 0.80; cfg.cooperationBias = 0.08; cfg.crossGroupInfluence = 0.22;
       cfg.resourceScarcity = 0.30; cfg.panopticism = 0.62; cfg.autoSymbols = true;
+      cfg.cohesion = 0.38;
+      cfg.groupProfiles = [
+        { name: 'Colonizador', sphere: 'political',  fieldSensitivity: { n: 0.8, l: 1.8, r: 1.4 }, ideologyBias: -0.5, trustBias: 0.35, aggressionBias: 0.55, cohesionBias: 0.88, desireBias: 0.4 },
+        { name: 'Colonizado A', sphere: 'popular',   fieldSensitivity: { n: 1.4, l: 0.6, r: 1.2 }, ideologyBias: 0.1,  trustBias: 0.45, aggressionBias: 0.35, cohesionBias: 0.45, desireBias: 0.5 },
+        { name: 'Colonizado B', sphere: 'religious', fieldSensitivity: { n: 1.6, l: 1.0, r: 0.6 }, ideologyBias: -0.2, trustBias: 0.5,  aggressionBias: 0.28, cohesionBias: 0.5,  desireBias: 0.35 },
+        { name: 'Mestiço',     sphere: 'economic',   fieldSensitivity: { n: 1.0, l: 0.9, r: 1.4 }, ideologyBias: 0.2,  trustBias: 0.5,  aggressionBias: 0.2,  cohesionBias: 0.35, desireBias: 0.6 },
+      ];
       fcfg.diffuseN = 0.08; fcfg.regenR = 0.015;
     },
     setupWorld(f, s) {

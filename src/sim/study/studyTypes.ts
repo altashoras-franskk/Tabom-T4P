@@ -147,6 +147,8 @@ export interface StudyTotem {
   pulseStrength: number;  // N/L deposit amount per macroTick
   bornAt: number;
   emergent?: boolean;     // true if auto-placed by engine
+  /** Explicação assertiva: o que na dinâmica causou esta instituição (emergência, cenário ou manual). */
+  cause?: string;
 }
 
 export interface StudyTabu {
@@ -157,6 +159,7 @@ export interface StudyTabu {
   severity: number;       // 0..1 — how harsh the punishment
   bornAt: number;
   violationCount: number; // tracked per macroTick window
+  cause?: string;
 }
 
 export interface StudyRitual {
@@ -169,6 +172,7 @@ export interface StudyRitual {
   active: boolean;        // currently in a firing cycle
   linkedTotemId?: string;
   bornAt: number;
+  cause?: string;
 }
 
 export interface StudySymbols {
@@ -234,6 +238,8 @@ export interface StudyConfig {
   cooperationBias: number;  // 0..1 — tendency to share wealth
   culturalInertia: number;  // 0..1 — resistance to belief change
   resourceScarcity: number; // 0..1 — 0=scarce, 1=abundant (R regen modifier)
+  /** 0..1 — how much out-group neighbors influence opinion/belief (troca entre grupos) */
+  crossGroupInfluence: number;
 
   // Boids / Crowd movement
   boidsAlignment:  number;  // 0..1 — tendency to align velocity with neighbors
@@ -283,6 +289,12 @@ export interface StudyConfig {
   understandingGrowth: number;  // 0..1 — rate understanding grows from cross-group contact
   ecoDegradation: number;       // 0..1 — permanent R field damage from overextraction
   consensusDecay: number;       // 0..1 — rate at which total consensus erodes (order without disorder = death)
+
+  // ── Leader mode: emergent vs fixed (democracy) ───────────────────────────
+  /** emergent = leaders by centrality/status; fixed_democracy = one leader per group, rotates every term */
+  leaderMode: 'emergent' | 'fixed_democracy';
+  /** Simulated "years" per term when leaderMode === 'fixed_democracy' (e.g. 4 years). 1 year ≈ 20s sim time. */
+  democracyTermSec: number;
 }
 
 // ── World state (mutable, passed by ref to macroTick) ────────────────────────
@@ -297,6 +309,14 @@ export interface StudyWorldState {
   rngState:            number;  // deterministic RNG state for reproducible runs
   /** Next family id to assign when a new bond is formed (societies from 0). */
   nextFamilyId:        number;
+  /** When leaderMode === 'fixed_democracy': current term index (increments every democracyTermSec). */
+  democracyEpoch:     number;
+  /** Sim time when current term started. */
+  democracyEpochStartTime: number;
+  /** Agent indices that are fixed leaders this term (one per group). */
+  fixedLeaderIndices: number[];
+  /** 0..1 — spikes when conflict high, decays when low; drives "guerra" (fuga, hostilidade). */
+  warPhase: number;
 }
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
@@ -370,9 +390,9 @@ export interface StudyPing {
 export function createStudyConfig(): StudyConfig {
   return {
     agentCount: 280, groupCount: 3,
-    speed: 0.52, friction: 0.87, rMax: 0.32,
-    autonomy: 0.60, cohesion: 0.45, pressure: 0.40,
-    aggressionBase: 0.28, trustBase: 0.52, needBase: 0.58,
+    speed: 0.62, friction: 0.85, rMax: 0.32,
+    autonomy: 0.62, cohesion: 0.48, pressure: 0.38,
+    aggressionBase: 0.20, trustBase: 0.55, needBase: 0.58,
     macroTickSec: 1.0,
     kBelief: 0.45, kFear: 0.40, kDesire: 0.35,
     harvestRate: 0.09, decayWealth: 0.018,
@@ -380,9 +400,9 @@ export function createStudyConfig(): StudyConfig {
     conformity: 0.38, empathy: 0.32, mobility: 0.12,
     contagion: 0.40, hierarchyStrength: 0.45,
     innovationRate: 0.08, cooperationBias: 0.28,
-    culturalInertia: 0.42, resourceScarcity: 0.55,
-    boidsAlignment: 0.35, boidsCohesion: 0.28,
-    wander: 0.28, impulseRate: 0.30, impulseStrength: 0.65, goalOvershoot: 0.18, zigzag: 0.20,
+    culturalInertia: 0.42, resourceScarcity: 0.55, crossGroupInfluence: 0.35,
+    boidsAlignment: 0.48, boidsCohesion: 0.40,
+    wander: 0.35, impulseRate: 0.38, impulseStrength: 0.68, goalOvershoot: 0.20, zigzag: 0.22,
     panopticism: 0.50,
     violationThreshold: 3, exceptionDuration: 25,
     autoSymbols: true,
@@ -401,6 +421,8 @@ export function createStudyConfig(): StudyConfig {
     understandingGrowth: 0.15,
     ecoDegradation: 0.04,
     consensusDecay: 0.02,
+    leaderMode: 'emergent',
+    democracyTermSec: 80, // 4 "years" ≈ 80s (1 year ≈ 20s)
   };
 }
 
@@ -415,6 +437,10 @@ export function createStudyWorldState(): StudyWorldState {
     meanWealth: 0.25, gini: 0,
     rngState: 1,
     nextFamilyId: 1,
+    democracyEpoch: 0,
+    democracyEpochStartTime: 0,
+    fixedLeaderIndices: [],
+    warPhase: 0,
   };
 }
 

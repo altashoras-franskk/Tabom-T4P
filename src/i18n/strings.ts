@@ -132,14 +132,6 @@ const en = {
   // Toasts
   toast_adminActivated: 'Admin Mode activated',
   toast_adminDesc: 'Access granted.',
-
-  // Guide — 3-step emergence experiment (Complexity Life, accessible for all ages)
-  guide_emergence_1_title: 'Take your time',
-  guide_emergence_1_copy: "You're looking at a living canvas. Each dot is an agent; each colour is a species. They move by simple rules of attraction and repulsion. For a few seconds, just watch — there's nothing to do yet. When you're ready, click Next below.",
-  guide_emergence_2_title: 'One small change',
-  guide_emergence_2_copy: "In the bar at the top, find the «Speed» control (or the numbers 1–4 next to it). Try moving the speed a little — faster or slower. Watch how the same scene changes rhythm. When you've tried it, click Next.",
-  guide_emergence_3_title: 'What you just saw',
-  guide_emergence_3_copy: "That change is called emergence: the same rules, with a different rhythm, create different patterns — rings, flocks, or chaos. Nothing was programmed to «look like that»; it emerges from the rules. You can keep exploring: open the panel on the right for presets, or drag on the canvas to push the agents.",
 } as const;
 
 const ptBR: Record<StringKey, string> = {
@@ -257,13 +249,6 @@ const ptBR: Record<StringKey, string> = {
 
   toast_adminActivated: 'Admin Mode ativado',
   toast_adminDesc: 'Acesso liberado.',
-
-  guide_emergence_1_title: 'Olhe com calma',
-  guide_emergence_1_copy: 'Você está vendo uma tela viva. Cada ponto é um agente; cada cor é uma espécie. Eles se movem por regras simples de atração e repulsão. Por alguns segundos, apenas observe — não há nada a fazer ainda. Quando quiser, clique em Próximo abaixo.',
-  guide_emergence_2_title: 'Um ajuste só',
-  guide_emergence_2_copy: 'Na barra no topo, procure o controle de «Velocidade» (ou os números 1–4 ao lado). Tente mudar um pouco — mais rápido ou mais devagar. Veja como a mesma cena muda de ritmo. Quando tiver experimentado, clique em Próximo.',
-  guide_emergence_3_title: 'O que você viu',
-  guide_emergence_3_copy: 'Essa mudança se chama emergência: as mesmas regras, com outro ritmo, geram outros padrões — anéis, cardumes ou caos. Nada foi programado para «ficar daquele jeito»; surge das regras. Você pode continuar explorando: abra o painel à direita para ver presets, ou arraste no canvas para empurrar os agentes.',
 };
 
 export const translations: Record<Locale, Record<StringKey, string>> = { en, 'pt-BR': ptBR };
