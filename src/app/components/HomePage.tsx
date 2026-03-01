@@ -1,13 +1,53 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { LabId } from '../../ui/TopHUD';
-import logoDevicesForIntuition from '../../assets/devices-for-intuition-logo-transparent.png';
 import { AuthModal, type AuthUser } from './AuthModal';
 import { useI18n } from '../../i18n/context';
 import type { StringKey } from '../../i18n/strings';
 
 const MONO = "'IBM Plex Mono', monospace";
 const DOTO = "'Doto', monospace";
+
+// Stroke cinza do título (igual à referência visual)
+const TITLE_STROKE = 'rgba(160,160,170,0.85)';
+// Doto Rounded mais fina (Thin = 100); fallback para Doto
+const DOTO_ROUNDED_THIN = "'Doto Rounded', 'Doto', sans-serif";
+
+// ── Tools for Perception Hero Title (DOTO Rounded thin + stroke cinza) ────────
+function ToolsForPerceptionTitle({ subtitle }: { subtitle: string }) {
+  return (
+    <div className="relative flex flex-col items-center justify-center w-full max-w-[min(95vw,1000px)]">
+      {/* Título em 3 linhas — DOTO Rounded thin, stroke cinza, bem grande */}
+      <div
+        className="relative text-center uppercase leading-[0.88] select-none"
+        style={{
+          fontFamily: DOTO_ROUNDED_THIN,
+          fontWeight: 100,
+          color: '#fff',
+          WebkitTextStroke: `1.2px ${TITLE_STROKE}`,
+          paintOrder: 'stroke fill',
+          textShadow: '0 0 12px rgba(255,255,255,0.06)',
+        }}
+      >
+        <div className="text-[clamp(4rem,14vw,10rem)] tracking-tight">TOOLS</div>
+        <div className="text-[clamp(4rem,14vw,10rem)] tracking-tight mt-0.5" style={{ marginLeft: '0.12em' }}>FOR</div>
+        <div className="text-[clamp(4rem,14vw,10rem)] tracking-tight mt-0.5">PERCEPTION</div>
+      </div>
+      {/* Subtitle — menor */}
+      <div
+        className="relative mt-6 text-center uppercase tracking-[0.4em]"
+        style={{
+          fontFamily: MONO,
+          fontSize: 'clamp(9px,2.2vw,11px)',
+          color: 'rgba(255,255,255,0.7)',
+          letterSpacing: '0.5em',
+        }}
+      >
+        {subtitle}
+      </div>
+    </div>
+  );
+}
 
 // ── Lab Data (names/descriptions/status from i18n) ─────────────────────────────
 interface LabConfig {
@@ -601,25 +641,11 @@ export function HomePage({
         <section className="h-[100svh] snap-start flex flex-col items-center justify-center px-6">
           <div style={{ flex: '1 1 0', minHeight: '12vh' }} />
 
-          <motion.div className="w-[min(92vw,1040px)]"
+          <motion.div className="w-full flex justify-center"
             initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.5 }} transition={{ duration: 1, delay: 0.15 }}>
-            <img
-              src={logoDevicesForIntuition}
-              alt="Devices for Intuition"
-              draggable={false}
-              loading="eager"
-              className="w-full h-auto select-none"
-              style={{
-                filter: 'drop-shadow(0 0 18px rgba(255,255,255,0.10))',
-              }}
-            />
+            <ToolsForPerceptionTitle subtitle={t('home_alphaTest')} />
           </motion.div>
-
-          <motion.p className="mt-5 text-zinc-500 text-[10px] md:text-xs tracking-[0.5em] text-center" style={{ fontFamily: MONO }}
-            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.45, duration: 0.7 }}>
-            {t('home_alphaTest')}
-          </motion.p>
 
           {/* Logged in: greeting + nav; not logged in: just nav so they scroll down */}
           {user ? (

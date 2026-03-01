@@ -1,4 +1,4 @@
-// ── AuthModal — Login / Register for Devices for Intuition ────────────────────
+// ── AuthModal — Login / Register for Tools for Perception ────────────────────
 import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
@@ -219,7 +219,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
         {/* Header */}
         <div style={{ marginBottom: 20, textAlign: 'center' }}>
           <div style={{ fontSize: 9, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', marginBottom: 6, fontFamily: MONO }}>
-            Devices for Intuition
+            Tools for Perception
           </div>
           <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)', fontWeight: 500, marginBottom: 4, fontFamily: DOTO, letterSpacing: '0.02em' }}>
             {mode === 'login' ? 'Entrar' : 'Criar conta'}

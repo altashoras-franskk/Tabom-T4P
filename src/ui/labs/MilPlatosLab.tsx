@@ -54,6 +54,8 @@ const OVERLAY_DEFS: { key: MPOverlay; label: string }[] = [
   { key: 'heatConsistency', label: 'Consistencia' },
   { key: 'heatTerritory',   label: 'Territorio' },
   { key: 'connections',     label: 'Conexoes' },
+  { key: 'orgaos',          label: 'Orgaos' },
+  { key: 'corpo',           label: 'Corpo' },
   { key: 'flights',         label: 'Fugas' },
 ];
 
@@ -88,13 +90,17 @@ function worldTo3D(world: any, overlays: Set<MPOverlay>): { particles: Particle3
   const particles: Particle3D[] = [];
   const links: Link3D[] = [];
   const indexMap = new Map<string, number>();
-  if (overlays.has('cso') || overlays.has('connections')) {
+  const showOrgaos = (overlays.has('cso') || overlays.has('connections')) && overlays.has('orgaos');
+  const showCorpo = (overlays.has('cso') || overlays.has('connections')) && overlays.has('corpo');
+  if (showOrgaos) {
     for (const o of world.cso.organs) {
       const idx = particles.length;
       indexMap.set('o' + o.id, idx);
       const [r, g, b] = hslToRGB(o.hue, 0.5, 0.55);
       particles.push({ nx: o.x, ny: o.y, z: o.importance * 0.5, r, g, b });
     }
+  }
+  if (showCorpo && showOrgaos) {
     for (const o of world.cso.organs) {
       const ai = indexMap.get('o' + o.id);
       if (ai === undefined) continue;
@@ -132,7 +138,7 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
   const [params, setParams] = useState<MPParams>(createDefaultParams);
   const [tab, setTab] = useState<MPTab>('cso');
   const [activeTool, setActiveTool] = useState<MPToolId>('select');
-  const [overlays, setOverlays] = useState<Set<MPOverlay>>(new Set(['cso', 'afetos', 'rizoma', 'connections']));
+  const [overlays, setOverlays] = useState<Set<MPOverlay>>(new Set(['cso', 'afetos', 'rizoma', 'connections', 'orgaos', 'corpo']));
   const [metrics, setMetrics] = useState<MPMetrics>(createMPMetrics);
   const [selectedPreset, setSelectedPreset] = useState('');
   const [inspected, setInspected] = useState<InspectedElement | null>(null);

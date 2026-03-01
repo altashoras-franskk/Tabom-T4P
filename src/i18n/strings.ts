@@ -19,13 +19,13 @@ const en = {
   home_toolsNav: 'TOOLS',
 
   // Home — project section
-  home_devicesTag: 'devices for intuition',
+  home_devicesTag: 'tools for perception',
   home_projectTitle: 'A living lab to think with the body — and perception.',
   home_projectDesc: 'We build tools to perceive and study, heuristically, visually and non-linearly, complex dynamics: systems that change, self-organize, enter crisis, reinvent themselves.',
   home_projectDesc2: 'We build lenses to test hypotheses in real time — a machine for generating questions, not final answers.',
   home_toolsAre: 'the tools are',
   home_lenses: '"LENSES"',
-  home_biblio_thesis: 'Continuous Thesis',
+  home_biblio_thesis: 'Rizoma Epistêmico',
   home_biblio_bibliography: 'Bibliography',
 
   // Home — algorithm
@@ -49,7 +49,7 @@ const en = {
   home_locked: 'LOCKED',
 
   // Home — footer
-  home_footer: 'Devices for Intuition © 2026',
+  home_footer: 'Tools for Perception © 2026',
 
   // Labs list (names, tags, descriptions) — by lab id
   lab_complexityLife_name: 'Complexity Lab',
@@ -146,13 +146,13 @@ const ptBR: Record<StringKey, string> = {
   home_hello: 'Olá,',
   home_toolsNav: 'FERRAMENTAS',
 
-  home_devicesTag: 'devices for intuition',
+  home_devicesTag: 'tools for perception',
   home_projectTitle: 'Um laboratório vivo para pensar com o corpo — e percepção.',
   home_projectDesc: 'Criamos ferramentas para perceber e estudar, de forma heurística, visual e não linear, dinâmicas complexas: sistemas que mudam, se organizam, entram em crise, se reinventam.',
   home_projectDesc2: 'Construímos lentes para testar hipóteses em tempo real — uma máquina de gerar perguntas, não respostas finais.',
   home_toolsAre: 'as ferramentas são',
   home_lenses: '"LENTES"',
-  home_biblio_thesis: 'Tese Contínua',
+  home_biblio_thesis: 'Rizoma Epistêmico',
   home_biblio_bibliography: 'Bibliografia',
 
   home_algorithm: 'Algoritmo',
@@ -172,7 +172,7 @@ const ptBR: Record<StringKey, string> = {
   home_entrarToAccess: 'Entrar (canto superior) para acessar as ferramentas.',
   home_locked: 'TRANCADO',
 
-  home_footer: 'Devices for Intuition © 2026',
+  home_footer: 'Tools for Perception © 2026',
 
   lab_complexityLife_name: 'Complexity Lab',
   lab_complexityLife_desc: 'APRENDA A OPERAR COM O ALGORITMO DA VIDA ARTIFICIAL ATRAVÉS DE EXPERIMENTOS, PRESETS E PARÂMETROS VARIÁVEIS INTERATIVOS.',

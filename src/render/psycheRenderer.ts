@@ -56,6 +56,13 @@ export interface PsycheCamera {
 }
 export const DEFAULT_PSYCHE_CAMERA: PsycheCamera = { zoom: 1.0, panX: 0, panY: 0 };
 
+/** Which theory maps to draw when overlay is on; all three can be true at once */
+export interface PsycheOverlayMaps {
+  jung:  boolean;
+  freud: boolean;
+  lacan: boolean;
+}
+
 // ── Render options object (optional, all have defaults) ───────────────────────
 export interface PsycheRenderOpts {
   rastrosOn?:    boolean;   // default false
@@ -63,6 +70,7 @@ export interface PsycheRenderOpts {
   fieldOn?:      boolean;   // default false
   bondsOn?:      boolean;   // default true
   overlayOn?:    boolean;   // topology labels + region glows, default true
+  overlayMaps?:  PsycheOverlayMaps;  // which maps (Jung/Freud/Lacan) to draw; default all from lens
   trailFade?:    number;    // 0.02–0.18, default 0.06
   trailOpacity?: number;    // 0..1, default 0.65
   trailWidth?:   number;    // 1..8, default 3  — controls tail length
@@ -624,19 +632,6 @@ function drawQuanta(
     if (lens === 'COHERENCE') size = baseR * (0.6 + state.coherence[i] * 0.8);
     if ((lens === 'ARCHETYPES' || lens === 'LACAN' || lens === 'FREUD') && state.tag[i] !== TAG_NONE) size = baseR * 1.5;
 
-    // ── Freud: pulsional halo ────────────────────────────────────────────────
-    if (lens === 'FREUD') {
-      const drive = freudDriveOf(state, i);
-      const [r,g,b] = FREUD_DRIVE_RGB[drive];
-      const haloMult = 2.2 + state.charge[i] * 1.8 + state.arousal[i] * 1.0;
-      const haloR = size * haloMult;
-      const halo = c.createRadialGradient(sx,sy, size*0.4, sx,sy, haloR);
-      halo.addColorStop(0, `rgba(${r},${g},${b},0.28)`);
-      halo.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      c.fillStyle = halo;
-      c.beginPath(); c.arc(sx, sy, haloR, 0, Math.PI*2); c.fill();
-    }
-
     c.fillStyle = color;
     c.beginPath(); c.arc(sx, sy, size, 0, Math.PI*2); c.fill();
 
@@ -790,6 +785,7 @@ export function renderPsyche(
     fieldOn      = false,
     bondsOn      = true,
     overlayOn    = true,
+    overlayMaps  = { jung: true, freud: false, lacan: false },
     trailFade    = 0.06,
     trailOpacity = 0.65,
     trailWidth   = 3,
@@ -868,15 +864,15 @@ export function renderPsyche(
   // 4. Flow vectors
   if (fieldOn) drawFlowVectors(c, ctxL, state);
 
-  // 5. Region overlays
-  if (overlayOn) drawRegionOverlays(c, ctxL, state, state.elapsed);
+  // 5. Region overlays (Jung map)
+  if (overlayOn && overlayMaps.jung) drawRegionOverlays(c, ctxL, state, state.elapsed);
 
-  // 6. Topology geometry
-  if (overlayOn) drawTopology(c, ctxL, state.elapsed);
+  // 6. Topology geometry (Jung map)
+  if (overlayOn && overlayMaps.jung) drawTopology(c, ctxL, state.elapsed);
 
-  // 7. Theory overlays
-  if (overlayOn && lens === 'LACAN') drawLacanOverlay(c, ctxL, state.elapsed);
-  if (overlayOn && lens === 'FREUD') drawFreudOverlay(c, ctxL, state, state.elapsed);
+  // 7. Theory overlays — independent map toggles (all 3 can be on)
+  if (overlayOn && overlayMaps.lacan) drawLacanOverlay(c, ctxL, state.elapsed);
+  if (overlayOn && overlayMaps.freud) drawFreudOverlay(c, ctxL, state, state.elapsed);
 
   // 8. Bonds / Links
   if (bondsOn) drawLinks(c, ctxL, state, false, bondWidth, bondOpacity);

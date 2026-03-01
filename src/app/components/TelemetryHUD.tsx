@@ -20,10 +20,12 @@ interface Props {
   bottomOffset?: number;
   /** When false the overlay is hidden (default true) */
   visible?: boolean;
+  /** Accent color for dot and LIVE label (e.g. phase color to match bar/ball) */
+  accentColor?: string;
 }
 
 const MONO = "'IBM Plex Mono', monospace";
-const ACCENT = '#37b2da';
+const DEFAULT_ACCENT = '#37b2da';
 
 export const TelemetryHUD: React.FC<Props> = ({
   getLines,
@@ -31,6 +33,7 @@ export const TelemetryHUD: React.FC<Props> = ({
   interval     = 500,
   bottomOffset = 0,
   visible      = true,
+  accentColor  = DEFAULT_ACCENT,
 }) => {
   const [lines, setLines] = useState<string[]>(() => getLines());
   const cbRef = useRef(getLines);
@@ -69,17 +72,17 @@ export const TelemetryHUD: React.FC<Props> = ({
         minWidth:       120,
         maxWidth:       280,
       }}>
-        {/* Header row */}
+        {/* Header row — dot and LIVE use accentColor (e.g. phase color) */}
         <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:4 }}>
           <span style={{
             width:5, height:5, borderRadius:'50%',
-            background: `${ACCENT}80`,
+            background: `${accentColor}80`,
             flexShrink: 0,
             animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
           }} />
           <span style={{
             fontSize:    6,
-            color:       `${ACCENT}55`,
+            color:       `${accentColor}99`,
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
           }}>

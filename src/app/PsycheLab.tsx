@@ -58,7 +58,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
   onView3DConfigChange,
 }) => {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const stateRef   = useRef<PsycheState>(createPsycheState(600));
+  const stateRef   = useRef<PsycheState>(createPsycheState(1200));
   const configRef  = useRef<PsycheConfig>(defaultPsycheConfig());
   const rafRef     = useRef<number>(0);
   const lastFrameT = useRef<number>(0);
@@ -134,7 +134,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
   const [archetypesOn,   setArchetypesOn]   = useState(true);
   const [journeyOn,      setJourneyOn]      = useState(false);
   const [danceIntensity, setDanceIntensity] = useState(0.22);
-  const [quantaCount,    setQuantaCount]    = useState(600);
+  const [quantaCount,    setQuantaCount]    = useState(1200);
   const [cinematicMode,  setCinematicMode]  = useState(false);
   const [running,        setRunning]        = useState(true);
 
@@ -143,6 +143,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
   const [fieldOn,   setFieldOn]   = useState(false);
   const [bondsOn,   setBondsOn]   = useState(true);
   const [overlayOn, setOverlayOn] = useState(true);
+  const [overlayMaps, setOverlayMaps] = useState({ jung: true, freud: false, lacan: false });
   const [bgColor,   setBgColor]   = useState('#000000');
 
   // Trail config
@@ -528,7 +529,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
         renderPsyche(
           canvasRef.current, state, config.lens, cinematicMode,
           getPresetName(presetId),
-          { rastrosOn, campoOn, fieldOn, bondsOn, overlayOn, trailFade, trailOpacity, trailWidth, soulVis, bondWidth, bondOpacity, bgColor },
+          { rastrosOn, campoOn, fieldOn, bondsOn, overlayOn, overlayMaps, trailFade, trailOpacity, trailWidth, soulVis, bondWidth, bondOpacity, bgColor },
           camera2dRef.current,
         );
       }
@@ -543,7 +544,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, cinematicMode, presetId, rastrosOn, campoOn, fieldOn, bondsOn, overlayOn, trailFade, trailOpacity, trailWidth, viewMode, render3DPsyche, bgColor]);
+  }, [active, cinematicMode, presetId, rastrosOn, campoOn, fieldOn, bondsOn, overlayOn, overlayMaps, trailFade, trailOpacity, trailWidth, viewMode, render3DPsyche, bgColor]);
 
   // ── Sync lens ─────────────────────────────────────────────────────────────
   useEffect(() => { configRef.current.lens = lens; }, [lens]);
@@ -813,6 +814,8 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
           onBondsToggle={() => setBondsOn(v => !v)}
           overlayOn={overlayOn}
           onOverlayToggle={() => setOverlayOn(v => !v)}
+          overlayMaps={overlayMaps}
+          onOverlayMapChange={(key, on) => setOverlayMaps(prev => ({ ...prev, [key]: on }))}
           bgColor={bgColor}
           onBgColorChange={setBgColor}
           trailFade={trailFade}
@@ -896,9 +899,10 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
         className="fixed bottom-4 left-4 z-40"
       />
 
-      {/* ── TELEMETRY HUD ─────────────────────────────────────────────────────── */}
+      {/* ── TELEMETRY HUD (única telemetria; cor = fase / barrinha) ───────────── */}
       <TelemetryHUD
         corner="br"
+        accentColor={PHASE_COLORS[phase]}
         getLines={() => {
           const s   = stateRef.current;
           const cfg = configRef.current;

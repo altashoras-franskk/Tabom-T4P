@@ -60,10 +60,10 @@ export function renderMPWorld(
     renderAffects(ctx, cx, cy, scale, cso.affects, time);
   }
 
-  if (overlays.has('connections') || overlays.has('cso')) {
-    renderOrganConnections(ctx, cx, cy, scale, cso.organs, params);
-    renderOrgans(ctx, cx, cy, scale, cso.organs, params, time);
-  }
+  const showCorpo = (overlays.has('connections') || overlays.has('cso')) && overlays.has('corpo');
+  const showOrgaos = (overlays.has('connections') || overlays.has('cso')) && overlays.has('orgaos');
+  if (showCorpo) renderOrganConnections(ctx, cx, cy, scale, cso.organs, params);
+  if (showOrgaos) renderOrgans(ctx, cx, cy, scale, cso.organs, params, time);
 
   if (overlays.has('rizoma')) {
     renderRhizomeEdges(ctx, cx, cy, scale, rhizome, rhizomeEdges, time);

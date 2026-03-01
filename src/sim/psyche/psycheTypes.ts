@@ -47,7 +47,7 @@ export const REGION_SIGMA: Record<RegionId, number> = {
 
 export const FLOW_W = 64;
 export const FLOW_H = 64;
-export const MAX_QUANTA = 1300;
+export const MAX_QUANTA = 2000;
 export const MAX_LINKS  = 500;
 
 /** Archetype node — static definition */
@@ -181,7 +181,7 @@ export interface LacanMetrics {
 
 export function defaultPsycheConfig(): PsycheConfig {
   return {
-    quantaTarget:   600,
+    quantaTarget:   1200,
     danceIntensity: 0.20,
     flowGain:       0.30,
     damping:        2.0,

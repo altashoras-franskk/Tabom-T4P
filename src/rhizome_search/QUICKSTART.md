@@ -39,7 +39,7 @@ npm run dev
 ### Passo a Passo
 
 1. **Abra Rhizome Lab**
-   - No menu principal do Quantum Symbolics
+   - No menu principal do Tools for Perception
 
 2. **Expanda "LLM Epistêmico"**
    - No painel direito

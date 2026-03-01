@@ -199,7 +199,7 @@ export const MP_TOOLS: MPTool[] = [
 ];
 
 // ── Visualization Overlay ───────────────────────────────────────────────────
-export type MPOverlay = 'cso' | 'afetos' | 'rizoma' | 'heatConsistency' | 'heatTerritory' | 'connections' | 'flights' | 'plateaus';
+export type MPOverlay = 'cso' | 'afetos' | 'rizoma' | 'heatConsistency' | 'heatTerritory' | 'connections' | 'flights' | 'plateaus' | 'orgaos' | 'corpo';
 
 // ── Plateau Detection ────────────────────────────────────────────────────────
 export type PlateauLabel =

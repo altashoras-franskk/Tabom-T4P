@@ -35,6 +35,8 @@ interface PsycheHUDProps {
   fieldOn:            boolean;
   bondsOn:            boolean;
   overlayOn:          boolean;
+  overlayMaps?:       { jung: boolean; freud: boolean; lacan: boolean };
+  onOverlayMapChange?: (key: 'jung' | 'freud' | 'lacan', on: boolean) => void;
   trailFade:          number;
   trailOpacity:       number;
   trailWidth:         number;
@@ -151,7 +153,9 @@ const CAMADAS_LACAN = [
   { sigil:'a', name:'Objeto a',   color:'#fb923c', desc:'Causa do desejo' },
 ];
 
-const QUANTA_OPTIONS = [300, 600, 900, 1200];
+const QUANTA_MIN = 200;
+const QUANTA_MAX = 2000;
+const QUANTA_DEFAULT = 1200;
 
 const BG_PRESETS: { hex: string; label: string }[] = [
   { hex: '#000000', label: 'Preto' },
@@ -193,6 +197,7 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
   const [showArchPanel, setShowArchPanel] = useState(false);
   const [showPresets,   setShowPresets]   = useState(false);
   const [showLens,      setShowLens]      = useState(false);
+  const [showMapas,     setShowMapas]     = useState(false);
   const [showParams,    setShowParams]    = useState(false);
   const [showLog,       setShowLog]       = useState(false);
 
@@ -283,37 +288,6 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
             </div>
           </div>
 
-          {/* Metrics */}
-          {isFreud && props.freudMetrics ? (
-            <div style={{ ...cardStyle, borderColor: '#f4a46018', padding: '10px 12px' }}>
-              <div style={{ ...labelStyle, color: '#f4a46050', marginBottom: 8 }}>Índices Freudianos</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <MetricRow label="Eros"      sublabel="pulsão de vida"   value={props.freudMetrics.eros}     color="#f472b6" />
-                <MetricRow label="Thanatos"  sublabel="pulsão de morte"  value={props.freudMetrics.thanatos} color="#64748b" />
-                <MetricRow label="Repressão" sublabel="bloqueio do Ego"  value={props.freudMetrics.repressao} color="#f4a460" />
-                <MetricRow label="Sublimação" sublabel="energia transformada" value={props.freudMetrics.sublimacao} color="#86efac" />
-              </div>
-            </div>
-          ) : isLacan && props.lacanMetrics ? (
-            <div style={{ ...cardStyle, borderColor: '#e0a0ff18', padding: '10px 12px' }}>
-              <div style={{ ...labelStyle, color: '#e0a0ff50', marginBottom: 8 }}>Registros RSI</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <MetricRow label="Real"       sublabel="o inassimilável"        value={props.lacanMetrics.real}       color="#dc2626" />
-                <MetricRow label="Simbólico"  sublabel="rede de significantes"  value={props.lacanMetrics.simbolico}  color="#3b82f6" />
-                <MetricRow label="Imaginário" sublabel="identificação especular" value={props.lacanMetrics.imaginario} color="#f5c842" />
-              </div>
-            </div>
-          ) : (
-            <div style={{ ...cardStyle, padding: '10px 12px' }}>
-              <div style={{ ...labelStyle, marginBottom: 8 }}>Índices</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <MetricRow label="Integração"   sublabel="coesão psíquica"    value={props.integrationIndex}            color="#f5c842" />
-                <MetricRow label="Tensão"       sublabel="conflito de forças" value={props.tensionIndex}               color="#f87171" />
-                <MetricRow label="Fragmentação" sublabel="dissociação"        value={Math.min(1, props.fragmentIndex)} color="#fb923c" />
-              </div>
-            </div>
-          )}
-
           {/* Velocidade */}
           <div style={{ ...cardStyle, padding: '10px 12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -397,9 +371,26 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
             </div>
           </Section>
 
+          {/* Mapas (Jung / Freud / Lacan) — dropdown, all 3 can be on */}
+          <Section title="Mapas" open={showMapas} onToggle={() => setShowMapas(v => !v)}
+            accent="#c4b5fd"
+            extra={<span style={{ fontFamily: MONO, fontSize: 8, color: '#c4b5fd80' }}>
+              {props.overlayMaps ? [props.overlayMaps.jung && 'Jung', props.overlayMaps.freud && 'Freud', props.overlayMaps.lacan && 'Lacan'].filter(Boolean).join(' · ') || '—' : '—'}
+            </span>}>
+            <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <Toggle label="Overlay" on={props.overlayOn} onToggle={props.onOverlayToggle} color="#c4b5fd" />
+              {props.overlayMaps && props.onOverlayMapChange && (
+                <>
+                  <Toggle label="Jung"  on={props.overlayMaps.jung}  onToggle={() => props.onOverlayMapChange!('jung',  !props.overlayMaps!.jung)}  color="#c4b5fd" />
+                  <Toggle label="Freud" on={props.overlayMaps.freud} onToggle={() => props.onOverlayMapChange!('freud', !props.overlayMaps!.freud)} color="#f4a460" />
+                  <Toggle label="Lacan" on={props.overlayMaps.lacan} onToggle={() => props.onOverlayMapChange!('lacan', !props.overlayMaps!.lacan)} color="#e0a0ff" />
+                </>
+              )}
+            </div>
+          </Section>
+
           {/* Toggles */}
           <div style={{ ...cardStyle, padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Toggle label="Mapa"     on={props.overlayOn}   onToggle={props.onOverlayToggle}   color="#c4b5fd" />
             <Toggle label="Campo"    on={props.campoOn}     onToggle={props.onCampoToggle}     color="#06b6d4" />
             <Toggle label="Vetores"  on={props.fieldOn}     onToggle={props.onFieldToggle}     color="#a3e635" />
             <Toggle label="Rastros"  on={props.trailOn}     onToggle={props.onTrailToggle}     color="#a78bfa" />
@@ -421,21 +412,19 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
             )}
           </div>
 
-          {/* Quanta count */}
+          {/* Quanta count — slider 200–2k, default 1.2k */}
           <div style={{ ...cardStyle, padding: '8px 12px' }}>
-            <div style={{ ...labelStyle, marginBottom: 6 }}>Partículas</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-              {QUANTA_OPTIONS.map(n => (
-                <button key={n} onClick={() => props.onQuantaChange(n)} style={{
-                  padding: '3px 0', fontFamily: MONO, fontSize: 8,
-                  background: props.quantaCount === n ? `${ACCENT}10` : 'none',
-                  border: `1px dashed ${props.quantaCount === n ? `${ACCENT}40` : 'rgba(255,255,255,0.06)'}`,
-                  color: props.quantaCount === n ? `${ACCENT}cc` : 'rgba(255,255,255,0.22)',
-                  cursor: 'pointer', transition: 'all 0.15s',
-                }}>
-                  {n >= 1000 ? `${n/1000}k` : n}
-                </button>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={labelStyle}>Partículas</span>
+              <span style={{ ...valueStyle, color: ACCENT }}>{props.quantaCount >= 1000 ? `${(props.quantaCount / 1000).toFixed(1)}k` : props.quantaCount}</span>
+            </div>
+            <input type="range" min={QUANTA_MIN} max={QUANTA_MAX} step={100}
+              value={props.quantaCount}
+              onChange={e => props.onQuantaChange(parseInt(e.target.value, 10))}
+              style={{ width: '100%', height: 6, accentColor: ACCENT, cursor: 'pointer' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+              <span style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.15)' }}>200</span>
+              <span style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.15)' }}>2k</span>
             </div>
           </div>
 
@@ -537,23 +526,54 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
             </div>
           </Section>
 
-          {/* Theory panels */}
-          {isFreud ? (
-            <FreudPanel metrics={props.freudMetrics} phase={props.phase} />
-          ) : isLacan ? (
-            <LacanPanel metrics={props.lacanMetrics} phase={props.phase} integration={props.integrationIndex} />
-          ) : (
-            <ProcessoJungPanel integration={props.integrationIndex} tension={props.tensionIndex} fragment={props.fragmentIndex} phase={props.phase} />
+          {/* Telemetria por mapa — no patchboard direito; cada mapa ligado mostra a telemetria dele */}
+          {props.overlayMaps?.freud && props.freudMetrics && (
+            <div style={{ ...cardStyle, borderColor: '#f4a46018', padding: '10px 12px' }}>
+              <div style={{ ...labelStyle, color: '#f4a46050', marginBottom: 8 }}>Índices Freudianos</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <MetricRow label="Eros"      sublabel="pulsão de vida"   value={props.freudMetrics.eros}     color="#f472b6" />
+                <MetricRow label="Thanatos"  sublabel="pulsão de morte"  value={props.freudMetrics.thanatos} color="#64748b" />
+                <MetricRow label="Repressão" sublabel="bloqueio do Ego"  value={props.freudMetrics.repressao} color="#f4a460" />
+                <MetricRow label="Sublimação" sublabel="energia transformada" value={props.freudMetrics.sublimacao} color="#86efac" />
+              </div>
+            </div>
+          )}
+          {props.overlayMaps?.lacan && props.lacanMetrics && (
+            <div style={{ ...cardStyle, borderColor: '#e0a0ff18', padding: '10px 12px' }}>
+              <div style={{ ...labelStyle, color: '#e0a0ff50', marginBottom: 8 }}>Registros RSI</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <MetricRow label="Real"       sublabel="o inassimilável"        value={props.lacanMetrics.real}       color="#dc2626" />
+                <MetricRow label="Simbólico"  sublabel="rede de significantes"  value={props.lacanMetrics.simbolico}  color="#3b82f6" />
+                <MetricRow label="Imaginário" sublabel="identificação especular" value={props.lacanMetrics.imaginario} color="#f5c842" />
+              </div>
+            </div>
+          )}
+          {props.overlayMaps?.jung && (
+            <div style={{ ...cardStyle, padding: '10px 12px' }}>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Índices (Jung)</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <MetricRow label="Integração"   sublabel="coesão psíquica"    value={props.integrationIndex}            color="#f5c842" />
+                <MetricRow label="Tensão"       sublabel="conflito de forças" value={props.tensionIndex}               color="#f87171" />
+                <MetricRow label="Fragmentação" sublabel="dissociação"        value={Math.min(1, props.fragmentIndex)} color="#fb923c" />
+              </div>
+            </div>
           )}
 
-          {/* Map panel */}
-          {isFreud ? (
+          {/* Theory panels (interpretação) — mantidos por mapa ligado */}
+          {props.overlayMaps?.freud && (props.freudMetrics ? <FreudPanel metrics={props.freudMetrics} phase={props.phase} /> : null)}
+          {props.overlayMaps?.lacan && (props.lacanMetrics ? <LacanPanel metrics={props.lacanMetrics} phase={props.phase} integration={props.integrationIndex} /> : null)}
+          {props.overlayMaps?.jung && <ProcessoJungPanel integration={props.integrationIndex} tension={props.tensionIndex} fragment={props.fragmentIndex} phase={props.phase} />}
+
+          {/* Map panel — um por mapa ligado */}
+          {props.overlayMaps?.freud && (
             <MapaPanel title="Aparelho Psíquico" camadas={CAMADAS_FREUD} intro="Cada quantum habita zonas do aparelho freudiano."
               legenda={[['#ef4444','Id','pulsão crua'],['#3b82f6','Ego','realidade'],['#9ca3af','Superego','lei']]} />
-          ) : isLacan ? (
+          )}
+          {props.overlayMaps?.lacan && (
             <MapaPanel title="Topologia RSI" camadas={CAMADAS_LACAN} intro="Real, Simbólico, Imaginário — borromeanamente ligados."
               legenda={[['#dc2626','Real','inassimilável'],['#3b82f6','Simbólico','lei/linguagem'],['#f5c842','Imaginário','espelho']]} />
-          ) : (
+          )}
+          {props.overlayMaps?.jung && (
             <MapaPanel title="Mapa Psíquico" camadas={CAMADAS_JUNG} intro="Cada quantum navega por regiões que modulam seu estado."
               legenda={[['#ef4444','Vermelho','alta energia'],['#3b82f6','Azul','coerência'],['#86efac','Verde','valência +'],['#7c3aed','Roxo','sombra'],['#f5c842','Dourado','Self']]} />
           )}
