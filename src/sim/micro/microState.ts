@@ -24,6 +24,19 @@ export interface MicroState {
   geneC: Float32Array; // Gene C (0..1)
   geneD: Float32Array; // Gene D (0..1)
   archetypeId: Uint16Array; // Archetype species ID
+  // PATCH 02 — EvolutionStack + Ciclo celular
+  lineageId: Uint32Array;   // ID de linhagem para especiação
+  plasticity0: Float32Array; // plasticidade slot 0..5 (aprendizado / Hebb-lite)
+  plasticity1: Float32Array;
+  plasticity2: Float32Array;
+  plasticity3: Float32Array;
+  plasticity4: Float32Array;
+  plasticity5: Float32Array;
+  colonyId: Uint16Array;    // ID de colônia (módulo de colônias)
+  lastRewardSignal: Float32Array; // recompensa recente (Hebb-lite)
+  cellCyclePhase: Uint8Array;     // 0=G1, 1=S, 2=G2/M (só divide em 2)
+  cellCycleProgress: Float32Array; // 0..1 dentro da fase atual
+  nextLineageId: number;           // contador para novas linhagens (spawn/addParticle)
 }
 
 export interface MicroConfig {
@@ -95,6 +108,19 @@ export const createMicroState = (maxCount: number): MicroState => {
     geneC: new Float32Array(maxCount),
     geneD: new Float32Array(maxCount),
     archetypeId: new Uint16Array(maxCount),
+    // PATCH 02 — EvolutionStack + Ciclo celular
+    lineageId: new Uint32Array(maxCount),
+    plasticity0: new Float32Array(maxCount),
+    plasticity1: new Float32Array(maxCount),
+    plasticity2: new Float32Array(maxCount),
+    plasticity3: new Float32Array(maxCount),
+    plasticity4: new Float32Array(maxCount),
+    plasticity5: new Float32Array(maxCount),
+    colonyId: new Uint16Array(maxCount),
+    lastRewardSignal: new Float32Array(maxCount),
+    cellCyclePhase: new Uint8Array(maxCount),
+    cellCycleProgress: new Float32Array(maxCount),
+    nextLineageId: 1,
   };
 };
 
@@ -165,6 +191,13 @@ export const spawnParticles = (
     state.geneC[i] = rng.next();
     state.geneD[i] = rng.next();
     state.archetypeId[i] = state.type[i]; // start aligned with type
+    // PATCH 02 — EvolutionStack + Ciclo celular
+    state.lineageId[i] = state.nextLineageId++;
+    state.plasticity0[i] = state.plasticity1[i] = state.plasticity2[i] = state.plasticity3[i] = state.plasticity4[i] = state.plasticity5[i] = 0;
+    state.colonyId[i] = 0;
+    state.lastRewardSignal[i] = 0;
+    state.cellCyclePhase[i] = 0;
+    state.cellCycleProgress[i] = 0;
   }
 };
 
@@ -193,6 +226,13 @@ export const addParticle = (
   state.geneC[i] = rng.next();
   state.geneD[i] = rng.next();
   state.archetypeId[i] = type;
+  // PATCH 02 — EvolutionStack + Ciclo celular
+  state.lineageId[i] = state.nextLineageId++;
+  state.plasticity0[i] = state.plasticity1[i] = state.plasticity2[i] = state.plasticity3[i] = state.plasticity4[i] = state.plasticity5[i] = 0;
+  state.colonyId[i] = 0;
+  state.lastRewardSignal[i] = 0;
+  state.cellCyclePhase[i] = 0;
+  state.cellCycleProgress[i] = 0;
   return true;
 };
 
@@ -229,6 +269,18 @@ export const removeParticlesInRadius = (
         state.geneC[i] = state.geneC[last];
         state.geneD[i] = state.geneD[last];
         state.archetypeId[i] = state.archetypeId[last];
+        // PATCH 02: Swap EvolutionStack + cell cycle
+        state.lineageId[i] = state.lineageId[last];
+        state.plasticity0[i] = state.plasticity0[last];
+        state.plasticity1[i] = state.plasticity1[last];
+        state.plasticity2[i] = state.plasticity2[last];
+        state.plasticity3[i] = state.plasticity3[last];
+        state.plasticity4[i] = state.plasticity4[last];
+        state.plasticity5[i] = state.plasticity5[last];
+        state.colonyId[i] = state.colonyId[last];
+        state.lastRewardSignal[i] = state.lastRewardSignal[last];
+        state.cellCyclePhase[i] = state.cellCyclePhase[last];
+        state.cellCycleProgress[i] = state.cellCycleProgress[last];
       }
       state.count--;
       removed++;
@@ -426,6 +478,13 @@ export const spawnParticlesWithPattern = (
     state.geneC[i] = rng.next();
     state.geneD[i] = rng.next();
     state.archetypeId[i] = type; // start aligned with type
+    // PATCH 02 — EvolutionStack + Ciclo celular
+    state.lineageId[i] = state.nextLineageId++;
+    state.plasticity0[i] = state.plasticity1[i] = state.plasticity2[i] = state.plasticity3[i] = state.plasticity4[i] = state.plasticity5[i] = 0;
+    state.colonyId[i] = 0;
+    state.lastRewardSignal[i] = 0;
+    state.cellCyclePhase[i] = 0;
+    state.cellCycleProgress[i] = 0;
   }
 };
 

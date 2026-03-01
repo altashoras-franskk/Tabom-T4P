@@ -52,21 +52,26 @@ export function renderBonds(
   /** Logical height. */
   height?: number
 ) {
-  if (!config.enabled) return;
+  if (!config.enabled || state.count < 2) return;
 
   const maxDistSq = config.maxDistance * config.maxDistance;
   const rect = ctx.canvas.getBoundingClientRect();
-  const w = width ?? rect.width;
-  const h = height ?? rect.height;
-  if (w <= 0 || h <= 0) return;
+  const w = width != null && height != null ? width : rect.width;
+  const h = width != null && height != null ? height : rect.height;
+  const bufW = ctx.canvas.width;
+  const bufH = ctx.canvas.height;
+  if (w <= 0 || h <= 0 || bufW <= 0 || bufH <= 0) return;
 
-  // Normalized -1..1 → 0..w, 0..h
+  // Normalized -1..1 → 0..w, 0..h (logical), depois escalamos para o buffer real
   const scaleX = w / 2;
   const scaleY = h / 2;
   const centerX = w / 2;
   const centerY = h / 2;
 
   ctx.save();
+  // Força coordenadas no buffer do canvas (ignora transform do overlay)
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(bufW / w, bufH / h);
   ctx.globalAlpha = config.opacity;
   ctx.lineWidth = config.thickness;
 

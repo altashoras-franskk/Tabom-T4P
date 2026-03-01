@@ -349,13 +349,11 @@ function computeEmergenceIndex(m: ComplexityMetrics): number {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function computeMorinIndices(f: ComplexityForces, m: ComplexityMetrics): MorinIndices {
-  // Dialógica: co-presence of antagonistic forces.
-  // Amplificação (R-loop) and Regulação (B-loop) are antagonistic;
-  // Perturbação and Auto-Organização are antagonistic.
-  // High dialogica = both poles active simultaneously (min of the pair × 2, capped at 1).
-  const dialRB = Math.min(f.amplificacao, f.regulacao) * 2;
-  const dialPA = Math.min(f.perturbacao, f.autoOrganizacao) * 2;
-  const dialogica = Math.min(1, (dialRB * 0.5 + dialPA * 0.5));
+  // Dialógica: co-presence of antagonistic forces. Both pairs must be strong and balanced.
+  // Geometric mean so that if one pair is weak, dialógica stays low (não satura em 1).
+  const minRB = Math.min(f.amplificacao, f.regulacao);
+  const minPA = Math.min(f.perturbacao, f.autoOrganizacao);
+  const dialogica = Math.min(1, Math.sqrt(minRB * minPA) * 1.15);
 
   // Loop recursivo: product is producer. Measured by feedback strength ×
   // how different the output (forces) is from input stability.
@@ -376,14 +374,15 @@ export function computeMorinIndices(f: ComplexityForces, m: ComplexityMetrics): 
   const sapiensDemens = constructive / total;
 
   // Tetralogia: order ↔ disorder ↔ interactions ↔ organization.
-  // All four poles need to be active (none near zero) for a healthy cycle.
+  // Balance ratio (min/max): 1 only when all four poles equally active; factor in minimum activity.
   const order = f.regulacao;
   const disorder = f.perturbacao;
   const interactions = m.metabolismo;
   const organization = f.autoOrganizacao;
   const minPole = Math.min(order, disorder, interactions, organization);
-  const maxPole = Math.max(order, disorder, interactions, organization) || 1;
-  const tetralogia = Math.min(1, (minPole / maxPole) * 2 + minPole * 0.5);
+  const maxPole = Math.max(order, disorder, interactions, organization) || 1e-6;
+  const balance = minPole / maxPole;
+  const tetralogia = Math.min(1, balance * (0.5 + 0.5 * minPole));
 
   return { dialogica, recursivo, hologramatico, sapiensDemens, tetralogia };
 }

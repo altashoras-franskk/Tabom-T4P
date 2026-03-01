@@ -177,7 +177,7 @@ function computeRawMetrics(state: MicroState, config: MicroConfig): FeedbackMetr
   }
   const entropyLike = cellsOccupied > 0 ? clamp01(totalEntropy / cellsOccupied) : 0;
 
-  // ── B) Clustering: variance in cell occupancy ─────────────────────────────
+  // ── B) Clustering: variance in cell occupancy (scale evita saturação em 100%)
   const avgCellPop = sampledN / (GRID * GRID);
   let variance = 0;
   for (let c = 0; c < GRID * GRID; c++) {
@@ -185,14 +185,14 @@ function computeRawMetrics(state: MicroState, config: MicroConfig): FeedbackMetr
     variance += d * d;
   }
   variance /= (GRID * GRID);
-  const maxVar = Math.max(1, avgCellPop * avgCellPop * 6);
-  const clustering = clamp01(variance / maxVar);
+  const maxVar = Math.max(1, avgCellPop * avgCellPop * 12);
+  const clustering = clamp01(Math.sqrt(variance / maxVar) * 1.1);
 
-  // ── C) Conflict: fraction of high-speed particles ─────────────────────────
-  const conflict = clamp01(highConflictCount / sampledN * 2.2);
+  // ── C) Conflict: fraction of high-speed particles (1.4 → 100% só com ~70%+ em alta velocidade)
+  const conflict = clamp01(highConflictCount / sampledN * 1.4);
 
-  // ── D) Diversity: fraction of types above 2% population threshold ─────────
-  const minPop = Math.max(1, sampledN * 0.02);
+  // ── D) Diversity: fraction of types above 5% population (evita 100% em todos os presets)
+  const minPop = Math.max(1, sampledN * 0.05);
   let activeTypes = 0;
   for (let t = 0; t < typesCount; t++) {
     if (typePop[t] >= minPop) activeTypes++;

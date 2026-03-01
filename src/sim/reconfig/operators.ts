@@ -54,11 +54,12 @@ export const runOperators = (
   mutationStrength: number,
   speciationRate: number,
   institutionRate: number,
+  operatorCooldown: number,
   rng: SeededRNG,
   totalTime: number
 ): Beat | null => {
-  // Check cooldown
-  if (totalTime - reconfig.lastOperatorTime < 3) {
+  // Check cooldown (operatorCooldown in seconds)
+  if (totalTime - reconfig.lastOperatorTime < operatorCooldown) {
     return null;
   }
 

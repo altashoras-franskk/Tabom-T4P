@@ -1,7 +1,13 @@
 // WebGL2 renderer — uniform locations cached at init, palette pre-allocated
 import { MicroState } from '../../sim/micro/microState';
-import { PARTICLE_VERTEX_SHADER, PARTICLE_FRAGMENT_SHADER } from './shaders';
+import { PARTICLE_VERTEX_SHADER, PARTICLE_FRAGMENT_SHADER, BONDS_VERTEX_SHADER, BONDS_FRAGMENT_SHADER } from './shaders';
 import { getPaletteRgb } from '../palette';
+
+export interface WebGLBondsConfig {
+  enabled: boolean;
+  maxDistance: number;
+  opacity: number;
+}
 
 export interface RenderConfig {
   pointSize: number;
@@ -53,6 +59,12 @@ export interface WebGLRenderer {
   // Canvas size cache — avoid getBoundingClientRect every frame
   cachedW: number;
   cachedH: number;
+  // Bonds (lines) — optional, created on first use
+  lineProgram?: WebGLProgram;
+  lineVao?: WebGLVertexArrayObject;
+  lineBuffer?: WebGLBuffer;
+  lineCapacity: number;
+  lineUniformAlpha?: WebGLUniformLocation;
 }
 
 const createShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null => {
@@ -165,6 +177,32 @@ export const initWebGLRenderer = (canvas: HTMLCanvasElement): WebGLRenderer | nu
     }
   }
 
+  // Bonds line program (optional)
+  const lineVS = createShader(gl, gl.VERTEX_SHADER, BONDS_VERTEX_SHADER);
+  const lineFS = createShader(gl, gl.FRAGMENT_SHADER, BONDS_FRAGMENT_SHADER);
+  const lineProgram = lineVS && lineFS ? createProgram(gl, lineVS, lineFS) : null;
+  let lineVao: WebGLVertexArrayObject | null = null;
+  let lineBuffer: WebGLBuffer | null = null;
+  const LINE_CAPACITY = 60000; // 60k lines = 600k floats
+  let lineUniformAlpha: WebGLUniformLocation | null = null;
+  if (lineProgram) {
+    lineVao = gl.createVertexArray();
+    lineBuffer = gl.createBuffer();
+    if (lineVao && lineBuffer) {
+      gl.bindVertexArray(lineVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, LINE_CAPACITY * 2 * 5 * 4, gl.DYNAMIC_DRAW); // 5 floats per vertex, 2 verts per line
+      const posLoc = gl.getAttribLocation(lineProgram, 'a_position');
+      const colLoc = gl.getAttribLocation(lineProgram, 'a_color');
+      gl.enableVertexAttribArray(posLoc);
+      gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 20, 0);
+      gl.enableVertexAttribArray(colLoc);
+      gl.vertexAttribPointer(colLoc, 3, gl.FLOAT, false, 20, 8);
+      gl.bindVertexArray(null);
+      lineUniformAlpha = gl.getUniformLocation(lineProgram, 'u_alpha');
+    }
+  }
+
   return {
     gl, canvas, program, fadeProgram,
     positionBuffer, typeBuffer, sizeBuffer, mutationGlowBuffer,
@@ -177,6 +215,11 @@ export const initWebGLRenderer = (canvas: HTMLCanvasElement): WebGLRenderer | nu
     lastCount: -1,
     cachedW: 0,
     cachedH: 0,
+    lineProgram: lineProgram ?? undefined,
+    lineVao: lineVao ?? undefined,
+    lineBuffer: lineBuffer ?? undefined,
+    lineCapacity: LINE_CAPACITY,
+    lineUniformAlpha: lineUniformAlpha ?? undefined,
   };
 };
 
@@ -222,6 +265,7 @@ export const renderWebGL = (
   width: number,
   height: number,
   trails: boolean,
+  bondsConfig?: WebGLBondsConfig | null,
 ): void => {
   const { gl, program, positionBuffer, typeBuffer, sizeBuffer, mutationGlowBuffer, vao, uniforms } = renderer;
 
@@ -295,4 +339,38 @@ export const renderWebGL = (
   gl.drawArrays(gl.POINTS, 0, count);
 
   gl.bindVertexArray(null);
+
+  // ── Bonds: lines between nearby particles (same buffer, guaranteed visible)
+  if (bondsConfig?.enabled && count >= 2 && renderer.lineProgram && renderer.lineVao && renderer.lineBuffer) {
+    const maxDistSq = bondsConfig.maxDistance * bondsConfig.maxDistance;
+    const paletteIndex = renderer.config.paletteIndex;
+    const lineStride = 10; // 5 floats per vertex * 2 vertices
+    const maxLines = Math.min(renderer.lineCapacity, Math.floor((count * 80) / 2));
+    const lineData = new Float32Array(maxLines * lineStride);
+    let nLines = 0;
+    for (let i = 0; i < count && nLines < maxLines; i++) {
+      const xi = state.x[i], yi = state.y[i];
+      const ti = state.type[i];
+      const [r, g, b] = getPaletteRgb(paletteIndex, ti, typesCount);
+      for (let j = i + 1; j < count && nLines < maxLines; j++) {
+        const dx = state.x[j] - xi, dy = state.y[j] - yi;
+        const distSq = dx * dx + dy * dy;
+        if (distSq >= maxDistSq || distSq < 1e-12 || Math.abs(dx) >= 1.0 || Math.abs(dy) >= 1.0) continue;
+        const o = nLines * lineStride;
+        lineData[o + 0] = xi; lineData[o + 1] = yi; lineData[o + 2] = r; lineData[o + 3] = g; lineData[o + 4] = b;
+        lineData[o + 5] = state.x[j]; lineData[o + 6] = state.y[j]; lineData[o + 7] = r; lineData[o + 8] = g; lineData[o + 9] = b;
+        nLines++;
+      }
+    }
+    if (nLines > 0 && renderer.lineUniformAlpha !== undefined) {
+      gl.useProgram(renderer.lineProgram);
+      gl.uniform1f(renderer.lineUniformAlpha, bondsConfig.opacity);
+      gl.bindVertexArray(renderer.lineVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, renderer.lineBuffer);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, lineData.subarray(0, nLines * lineStride));
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.drawArrays(gl.LINES, 0, nLines * 2);
+      gl.bindVertexArray(null);
+    }
+  }
 };

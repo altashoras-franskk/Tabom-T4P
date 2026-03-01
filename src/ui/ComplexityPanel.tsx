@@ -94,21 +94,28 @@ function ForceBar({ label, value, color, hint }: {
 }
 
 function CtrlSlider({
-  icon, label, hint, value, min, max, step, display, onChange,
+  icon, label, hint, value, min, max, step, display, effectiveDisplay, onChange,
 }: {
   icon?: string; label: string; hint: string; value: number;
   min: number; max: number; step: number;
-  display?: string; onChange: (v: number) => void;
+  display?: string; /** Quando retroação ativa: mostra valor efetivo (base + Δ) */
+  effectiveDisplay?: string;
+  onChange: (v: number) => void;
 }) {
   return (
     <div style={{ marginBottom: 7 }} title={hint}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <span style={{ fontFamily: MONO, fontSize: 9, color: DIM2, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
           {icon && <span style={{ fontSize: 10 }}>{icon}</span>}
           {label}
         </span>
         <span style={{ fontFamily: MONO, fontSize: 9, color: `${TEAL}99` }}>
           {display ?? value.toFixed(2)}
+          {effectiveDisplay != null && (
+            <span style={{ marginLeft: 4, fontSize: 8, color: 'rgba(255,255,255,0.4)' }} title="Valor efetivo (base + retroação)">
+              → {effectiveDisplay}
+            </span>
+          )}
         </span>
       </div>
       <input
@@ -240,6 +247,19 @@ export function ComplexityPanel({
   const FPS_COLOR = fps >= 50 ? '#60ff90' : fps >= 30 ? '#ffc840' : '#ff6050';
   const bal = vitalRates.birthsPerSec - vitalRates.deathsPerSec;
 
+  // Valores efetivos (base + retroação) quando feedback ativo — para alinhar telemetria aos sliders
+  const mod = cfg.enabled ? modulation : null;
+  const eff = mod
+    ? {
+        rmax: Math.max(0.04, Math.min(0.5, microConfig.rmax * (1 + mod.rmax))),
+        force: Math.max(0.05, microConfig.force * (1 + mod.force)),
+        drag: Math.max(0.05, Math.min(10, microConfig.drag * (1 + mod.drag))),
+        beta: Math.max(0.05, Math.min(0.95, microConfig.beta * (1 + mod.beta))),
+        entropy: Math.max(0, Math.min(0.05, microConfig.entropy * (1 + mod.entropy) + Math.abs(mod.entropy) * 0.001)),
+        mutationRate: Math.max(0, Math.min(0.01, microConfig.mutationRate * (1 + mod.mutationRate))),
+      }
+    : null;
+
   return (
     <div
       data-ui-overlay="true"
@@ -366,12 +386,17 @@ export function ComplexityPanel({
           </div>
 
           {/* ──────────────────────────────────────────────────────────────
-              SECÇÃO: TELEMETRIA AO VIVO
+              SECÇÃO: TELEMETRIA AO VIVO (reflete parâmetros efetivos em tempo real)
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
             <SectionHeader label="Telemetria" open={secTel} onToggle={() => setSecTel(v => !v)} />
             {secTel && (
               <div>
+                {cfg.enabled && (
+                  <div style={{ fontFamily: MONO, fontSize: 7.5, color: 'rgba(255,255,255,0.35)', marginBottom: 6, letterSpacing: '0.03em' }}>
+                    Parâmetros efetivos = base + retroação (Δ). Nasc./mortes exigem Energia ligada.
+                  </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', marginBottom: 6 }}>
                   <TelRow label="FPS" value={Math.round(fps)} color={FPS_COLOR} />
                   <TelRow label="Agentes" value={agentCount} />
@@ -406,7 +431,7 @@ export function ComplexityPanel({
               SECÇÃO: ESTADO EMERGENTE (read-only)
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Estado Emergente" open={secMetrics} onToggle={() => setSecMet(v => !v)} />
+            <SectionHeader label="Estado Emergente · Hologramático" open={secMetrics} onToggle={() => setSecMet(v => !v)} />
             {secMetrics && (
               <div>
                 <MetricBar label="Variedade" value={metrics.variedade} color="#c080ff" hint="Diversidade de tipos no espaço. Alta variedade = alto potencial de resiliência (Lei de Ashby)." />
@@ -502,29 +527,46 @@ export function ComplexityPanel({
           </div>
 
           {/* ──────────────────────────────────────────────────────────────
-              SECÇÃO: DINÂMICA DE INTERAÇÃO
-              Parâmetros: acoplamento, força, auto-org, entropia, dialógica
+              SECÇÃO: INTERAÇÃO (micro) + DIALÓGICA (Morin)
+              Parâmetros: acoplamento, força, viscosidade, beta, entropia, dialógica
+              Com retroação ativa: valor efetivo = base + Δ exibido ao lado do slider.
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Interação" open={secInteract} onToggle={() => setSecInt(v => !v)} accent={`${TEAL}88`} />
+            <SectionHeader label="Interação · Dialógica" open={secInteract} onToggle={() => setSecInt(v => !v)} accent={`${TEAL}88`} />
             {secInteract && (
               <div>
+                <CtrlSlider
+                  icon="🧬" label="Nº de Espécies"
+                  hint="Número de tipos/espécies na matriz de interação (typesCount). Afeta diversidade e matriz atração/repulsão."
+                  value={microConfig.typesCount} min={2} max={16} step={1}
+                  display={`${microConfig.typesCount}`}
+                  onChange={v => onMicroChange({ typesCount: Math.round(v) })}
+                />
+                <ToggleRow
+                  label="Fronteira toroidal"
+                  hint="wrap: true = agentes reaparecem do outro lado; false = bordas sólidas."
+                  checked={microConfig.wrap}
+                  onChange={(v) => onMicroChange({ wrap: v })}
+                />
                 <CtrlSlider
                   icon="🔗" label="Acoplamento"
                   hint="Raio de interação entre agentes. Alto acoplamento = mais interconexões. (rmax)"
                   value={microConfig.rmax} min={0.04} max={0.50} step={0.01}
+                  effectiveDisplay={eff ? eff.rmax.toFixed(2) : undefined}
                   onChange={v => onMicroChange({ rmax: v })}
                 />
                 <CtrlSlider
                   icon="⚡" label="Força de Atração"
                   hint="Magnitude das forças de atração/repulsão. Amplitude dos loops de interação. (force)"
                   value={microConfig.force} min={0.2} max={4.0} step={0.05}
+                  effectiveDisplay={eff ? eff.force.toFixed(2) : undefined}
                   onChange={v => onMicroChange({ force: v })}
                 />
                 <CtrlSlider
                   icon="🫧" label="Viscosidade"
                   hint="Arrasto exponencial (drag). Alto = movimento mais contido; baixo = mais cinético."
                   value={microConfig.drag} min={0.1} max={5.0} step={0.1}
+                  effectiveDisplay={eff ? eff.drag.toFixed(2) : undefined}
                   onChange={v => onMicroChange({ drag: v })}
                 />
                 <CtrlSlider
@@ -537,6 +579,7 @@ export function ComplexityPanel({
                   icon="⭐" label="Limiar Auto-Org"
                   hint="Raio central de repulsão (beta). Controla quando agentes se organizam em estruturas vs. se dispersam."
                   value={microConfig.beta} min={0.05} max={0.95} step={0.01}
+                  effectiveDisplay={eff ? eff.beta.toFixed(2) : undefined}
                   onChange={v => onMicroChange({ beta: v })}
                 />
                 <CtrlSlider
@@ -550,6 +593,7 @@ export function ComplexityPanel({
                   hint="Ruído injetado por frame. Alta entropia = perturbação criativa. Baixa = sistema determinístico."
                   value={microConfig.entropy} min={0} max={1.0} step={0.01}
                   display={microConfig.entropy.toFixed(2)}
+                  effectiveDisplay={eff ? eff.entropy.toFixed(3) : undefined}
                   onChange={v => onMicroChange({ entropy: v })}
                 />
                 <CtrlSlider
@@ -569,11 +613,11 @@ export function ComplexityPanel({
           </div>
 
           {/* ──────────────────────────────────────────────────────────────
-              SECÇÃO: METABOLISMO
+              SECÇÃO: METABOLISMO · Auto-Eco-Organização (Morin)
               Parâmetros: absorção, custo, reprodução, capacidade, mutação
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Metabolismo" open={secMeta} onToggle={() => setSecMeta(v => !v)} accent={`${TEAL}88`} />
+            <SectionHeader label="Metabolismo · Auto-Eco-Org." open={secMeta} onToggle={() => setSecMeta(v => !v)} accent={`${TEAL}88`} />
             {secMeta && (
               <div>
                 <div style={{ marginBottom: 8 }}>
@@ -586,6 +630,15 @@ export function ComplexityPanel({
                     checked={life.foodEnabled}
                     onChange={(v) => onLifeChange({ foodEnabled: v })}
                   />
+                {life.foodEnabled && (
+                  <CtrlSlider
+                    icon="🍎" label="Razão Comida"
+                    hint="Proporção de partículas que são recurso (food). life.foodRatio → microConfig.foodRatio."
+                    value={life.foodRatio} min={0.05} max={0.5} step={0.01}
+                    display={life.foodRatio.toFixed(2)}
+                    onChange={v => onLifeChange({ foodRatio: v })}
+                  />
+                )}
                   <ToggleRow
                     label="Energia"
                     hint="Ativa o sistema de energia/reprodução. Sem energia, não há seleção por custo/ganho."
@@ -663,7 +716,7 @@ export function ComplexityPanel({
                 />
                 <div style={{ marginTop: 6, padding: '6px 8px', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: MONO, fontSize: 8.5, color: DIM }}>
-                    <span>mutationRate</span><span style={{ color: DIM2 }}>{life.mutationRate.toFixed(5)}</span>
+                    <span>mutationRate</span><span style={{ color: DIM2 }}>{life.mutationRate.toFixed(5)}{eff != null && <span style={{ marginLeft: 4, fontSize: 7.5, color: 'rgba(255,255,255,0.35)' }} title="Valor efetivo (micro + retroação)">→ {eff.mutationRate.toFixed(5)}</span>}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: MONO, fontSize: 8.5, color: DIM }}>
                     <span>typeStability</span><span style={{ color: DIM2 }}>{life.typeStability.toFixed(3)}</span>
@@ -677,11 +730,11 @@ export function ComplexityPanel({
           </div>
 
           {/* ──────────────────────────────────────────────────────────────
-              SECÇÃO: RETROALIMENTAÇÃO (LOOPS)
+              SECÇÃO: RETROALIMENTAÇÃO · Recursivité (Morin)
               Parâmetros: força, atraso, memória, regulação
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Retroalimentação" open={secFeedback} onToggle={() => setSecFb(v => !v)} accent={`${TEAL}88`} />
+            <SectionHeader label="Retroalimentação · Recursivité" open={secFeedback} onToggle={() => setSecFb(v => !v)} accent={`${TEAL}88`} />
             {secFeedback && (
               <div>
                 <CtrlSlider
@@ -733,10 +786,31 @@ export function ComplexityPanel({
                   value={reconfigConfig.institutionRate} min={0} max={1} step={0.05}
                   onChange={v => onReconfigChange({ institutionRate: v })}
                 />
-                <TelRow
-                  label="Mutação matriz (chance)"
-                  value={reconfigConfig.mutationStrength}
-                  color="rgba(255,255,255,0.55)"
+                <CtrlSlider
+                  icon="⚙" label="Força mutação matriz"
+                  hint="Intensidade/chance do operador de mutação da matriz de atração (mutationStrength)."
+                  value={reconfigConfig.mutationStrength} min={0} max={0.5} step={0.01}
+                  display={reconfigConfig.mutationStrength.toFixed(2)}
+                  onChange={v => onReconfigChange({ mutationStrength: v })}
+                />
+                <CtrlSlider
+                  icon="⏳" label="Cooldown operadores"
+                  hint="Tempo mínimo entre disparos dos operadores macro (operatorCooldown, segundos)."
+                  value={reconfigConfig.operatorCooldown} min={0.5} max={8} step={0.5}
+                  display={`${reconfigConfig.operatorCooldown.toFixed(1)}s`}
+                  onChange={v => onReconfigChange({ operatorCooldown: v })}
+                />
+                <CtrlSlider
+                  icon="⊕" label="Escala atração (matriz)"
+                  hint="Fator de escala para atração na fase shift (matrixAttractScale). 1 = neutro."
+                  value={reconfigConfig.matrixAttractScale ?? 1} min={0.3} max={1.5} step={0.05}
+                  onChange={v => onReconfigChange({ matrixAttractScale: v })}
+                />
+                <CtrlSlider
+                  icon="⊖" label="Escala repulsão (matriz)"
+                  hint="Fator de escala para repulsão na fase shift (matrixRepelScale). 1 = neutro."
+                  value={reconfigConfig.matrixRepelScale ?? 1} min={0.3} max={1.5} step={0.05}
+                  onChange={v => onReconfigChange({ matrixRepelScale: v })}
                 />
               </div>
             )}
@@ -747,7 +821,7 @@ export function ComplexityPanel({
               Parâmetros: recursividade (influenceStrength), hologramático (depositStrength)
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px' }}>
-            <SectionHeader label="Campo / Ambiente" open={secField} onToggle={() => setSecFld(v => !v)} accent={`${TEAL}88`} />
+            <SectionHeader label="Campo · Ambiente (Eco)" open={secField} onToggle={() => setSecFld(v => !v)} accent={`${TEAL}88`} />
             {secField && (
               <div>
                 <CtrlSlider

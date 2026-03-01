@@ -27,6 +27,22 @@ export interface EnergyConfig {
   
   // Energia inicial
   startEnergy: number; // energia inicial para novas partículas (1.0-2.0)
+
+  // PATCH 02 — Ciclo celular (3 fases) + campo nutriente
+  /** Se true, reprodução só ocorre na fase G2/M (phase === 2). */
+  cellCycleEnabled: boolean;
+  /** Velocidade do ciclo: progresso por frame (ex.: 0.015 ≈ 2–3 s por ciclo completo). */
+  cellCycleRate: number;
+  /** Ganho de energia por frame ao amostrar o campo nutriente em (x,y). */
+  nutrientFromFieldGain: number;
+  /** Amostra nutriente no ponto (x,y). Se não definido, não há alimentação do campo. */
+  sampleNutrient?: (x: number, y: number) => number;
+  /** Deposita nutriente no ponto (x,y) ao reproduzir ou morrer. */
+  depositNutrient?: (x: number, y: number, amount: number) => void;
+  /** Quanto depositar no campo ao reproduzir (ex.: 0.1). */
+  depositNutrientOnReproduce: number;
+  /** Quanto depositar no campo ao morrer (ex.: 0.15). */
+  depositNutrientOnDeath: number;
 }
 
 export const createEnergyConfig = (): EnergyConfig => ({
@@ -41,12 +57,47 @@ export const createEnergyConfig = (): EnergyConfig => ({
   mutationChance: 0.05,
   deathThreshold: 0.2,
   startEnergy: 1.2,
+  /** Desligado por padrão: reprodução por energia não exige fase M. Mitose continua sendo uma das ocorrências. */
+  cellCycleEnabled: false,
+  cellCycleRate: 0.018,
+  nutrientFromFieldGain: 0.012,
+  depositNutrientOnReproduce: 0.08,
+  depositNutrientOnDeath: 0.12,
 });
 
 // Spatial hash para feeding (reutilizado entre frames)
 let feedingSpatialHash: SpatialHash | null = null;
 let lastFeedRadius = 0;
 let lastMaxCount = 0;
+
+/** Fases do ciclo celular: 0=G1 (crescimento), 1=S (síntese), 2=G2/M (pronto para dividir) */
+export const CELL_PHASE_G1 = 0;
+export const CELL_PHASE_S = 1;
+export const CELL_PHASE_M = 2;
+
+/**
+ * PATCH 02 — Avança o ciclo celular (3 fases). Só divide quando phase === CELL_PHASE_M.
+ * Progresso acelera com energia (mais energia = ciclo mais rápido).
+ */
+export const stepCellCycle = (
+  state: MicroState,
+  config: EnergyConfig,
+  dt: number = 1 / 60
+): void => {
+  if (!config.cellCycleEnabled || !state.cellCyclePhase || !state.cellCycleProgress) return;
+  const threshold = config.reproductionThreshold;
+  for (let i = 0; i < state.count; i++) {
+    const energy = state.energy[i];
+    if (energy <= 0) continue;
+    // Taxa proporcional à energia (acima do threshold acelera)
+    const rate = config.cellCycleRate * (0.6 + 0.5 * Math.min(1, energy / (threshold || 1)));
+    state.cellCycleProgress[i] += rate * dt * 60; // normalizado por 1 frame
+    if (state.cellCycleProgress[i] >= 1) {
+      state.cellCycleProgress[i] = 0;
+      state.cellCyclePhase[i] = (state.cellCyclePhase[i] + 1) % 3; // 0 -> 1 -> 2 -> 0
+    }
+  }
+};
 
 /**
  * Atualiza sistema de energia: alimentação, reprodução, morte
@@ -78,6 +129,14 @@ export const updateEnergy = (
     
     const speed = Math.sqrt(state.vx[i] * state.vx[i] + state.vy[i] * state.vy[i]);
     state.energy[i] -= speed * config.motionCost;
+  }
+
+  // 1b) PATCH 02 — Alimentação do campo nutriente (se disponível)
+  if (config.sampleNutrient && config.nutrientFromFieldGain > 0) {
+    for (let i = 0; i < state.count; i++) {
+      const nut = config.sampleNutrient(state.x[i], state.y[i]);
+      if (nut > 0) state.energy[i] += config.nutrientFromFieldGain * nut;
+    }
   }
   
   // 2) Alimentação: partículas ganham energia de partículas próximas que são atraídas
@@ -143,14 +202,28 @@ export const updateEnergy = (
   }
   
   // 3) Reprodução: partículas com energia suficiente se dividem
-  // Limita taxa de reprodução para prevenir explosão (max 5% da população por frame)
+  // PATCH 02: só divide na fase G2/M (cellCyclePhase === 2) quando cellCycleEnabled
+  const canReproduce = (i: number) => {
+    if (!state.cellCyclePhase) return true;
+    if (!config.cellCycleEnabled) return true;
+    return state.cellCyclePhase[i] === CELL_PHASE_M;
+  };
   const maxReproductions = Math.max(1, Math.floor(state.count * 0.05));
-  const childrenToAdd: Array<{ x: number; y: number; vx: number; vy: number; type: number; energy: number }> = [];
+  const childrenToAdd: Array<{ x: number; y: number; vx: number; vy: number; type: number; energy: number; parentIdx: number }> = [];
   
   for (let i = 0; i < state.count && childrenToAdd.length < maxReproductions; i++) {
-    if (state.energy[i] >= config.reproductionThreshold && state.count + childrenToAdd.length < maxCapacity) {
+    if (state.energy[i] >= config.reproductionThreshold && state.count + childrenToAdd.length < maxCapacity && canReproduce(i)) {
       // Pai perde energia
       state.energy[i] -= config.reproductionCost;
+      // PATCH 02: deposita nutriente no ambiente ao reproduzir
+      if (config.depositNutrient && config.depositNutrientOnReproduce > 0) {
+        config.depositNutrient(state.x[i], state.y[i], config.depositNutrientOnReproduce);
+      }
+      // PATCH 02: reset ciclo celular do pai (volta a G1)
+      if (state.cellCyclePhase) {
+        state.cellCyclePhase[i] = CELL_PHASE_G1;
+        state.cellCycleProgress[i] = 0;
+      }
       
       // Cria filho próximo
       const angle = rng.next() * Math.PI * 2;
@@ -158,7 +231,6 @@ export const updateEnergy = (
       
       let childType = state.type[i];
       if (rng.next() < config.mutationChance) {
-        // Mutação: filho é de tipo diferente
         const typesCount = matrix.attract.length;
         childType = rng.int(0, typesCount - 1);
       }
@@ -170,16 +242,17 @@ export const updateEnergy = (
         vy: state.vy[i] * 0.5,
         type: childType,
         energy: state.energy[i] * config.childEnergyRatio,
+        parentIdx: i,
       });
       
       births++;
     }
   }
   
-  // Adiciona filhos ao estado
+  // Adiciona filhos ao estado (herdam linhagem, colônia, plasticidade do pai)
   for (const child of childrenToAdd) {
     if (state.count >= maxCapacity) break;
-    
+    const p = child.parentIdx;
     const idx = state.count;
     state.x[idx] = child.x;
     state.y[idx] = child.y;
@@ -188,23 +261,38 @@ export const updateEnergy = (
     state.type[idx] = child.type;
     state.energy[idx] = child.energy;
     
-    // Inicializa outros campos
-    if (state.geneA) state.geneA[idx] = state.geneA[Math.floor(rng.next() * state.count)] || 0;
-    if (state.geneB) state.geneB[idx] = state.geneB[Math.floor(rng.next() * state.count)] || 0;
-    if (state.geneC) state.geneC[idx] = state.geneC[Math.floor(rng.next() * state.count)] || 0;
-    if (state.geneD) state.geneD[idx] = state.geneD[Math.floor(rng.next() * state.count)] || 0;
-    if (state.archetypeId) state.archetypeId[idx] = state.archetypeId[Math.floor(rng.next() * state.count)] || 0;
+    if (state.geneA) state.geneA[idx] = state.geneA[p];
+    if (state.geneB) state.geneB[idx] = state.geneB[p];
+    if (state.geneC) state.geneC[idx] = state.geneC[p];
+    if (state.geneD) state.geneD[idx] = state.geneD[p];
+    if (state.archetypeId) state.archetypeId[idx] = state.archetypeId[p];
     if (state.age) state.age[idx] = 0;
     if (state.size) state.size[idx] = 1.0;
+    // PATCH 02 — EvolutionStack: herda do pai
+    if (state.lineageId) state.lineageId[idx] = state.lineageId[p];
+    if (state.plasticity0) {
+      state.plasticity0[idx] = state.plasticity0[p];
+      state.plasticity1[idx] = state.plasticity1[p];
+      state.plasticity2[idx] = state.plasticity2[p];
+      state.plasticity3[idx] = state.plasticity3[p];
+      state.plasticity4[idx] = state.plasticity4[p];
+      state.plasticity5[idx] = state.plasticity5[p];
+    }
+    if (state.colonyId) state.colonyId[idx] = state.colonyId[p];
+    if (state.lastRewardSignal) state.lastRewardSignal[idx] = 0;
+    if (state.cellCyclePhase) state.cellCyclePhase[idx] = CELL_PHASE_G1;
+    if (state.cellCycleProgress) state.cellCycleProgress[idx] = 0;
     
     state.count++;
   }
   
   // 4) Morte: remove partículas com energia baixa
-  // Itera de trás para frente para remover com segurança
+  // PATCH 02: deposita nutriente no ambiente ao morrer
   for (let i = state.count - 1; i >= 0; i--) {
     if (state.energy[i] < config.deathThreshold) {
-      // Remove trocando com a última partícula
+      if (config.depositNutrient && config.depositNutrientOnDeath > 0) {
+        config.depositNutrient(state.x[i], state.y[i], config.depositNutrientOnDeath);
+      }
       const last = state.count - 1;
       if (i !== last) {
         state.x[i] = state.x[last];
@@ -213,8 +301,6 @@ export const updateEnergy = (
         state.vy[i] = state.vy[last];
         state.type[i] = state.type[last];
         state.energy[i] = state.energy[last];
-        
-        // Copia outros campos
         if (state.geneA) state.geneA[i] = state.geneA[last];
         if (state.geneB) state.geneB[i] = state.geneB[last];
         if (state.geneC) state.geneC[i] = state.geneC[last];
@@ -222,6 +308,19 @@ export const updateEnergy = (
         if (state.archetypeId) state.archetypeId[i] = state.archetypeId[last];
         if (state.age) state.age[i] = state.age[last];
         if (state.size) state.size[i] = state.size[last];
+        if (state.lineageId) state.lineageId[i] = state.lineageId[last];
+        if (state.plasticity0) {
+          state.plasticity0[i] = state.plasticity0[last];
+          state.plasticity1[i] = state.plasticity1[last];
+          state.plasticity2[i] = state.plasticity2[last];
+          state.plasticity3[i] = state.plasticity3[last];
+          state.plasticity4[i] = state.plasticity4[last];
+          state.plasticity5[i] = state.plasticity5[last];
+        }
+        if (state.colonyId) state.colonyId[i] = state.colonyId[last];
+        if (state.lastRewardSignal) state.lastRewardSignal[i] = state.lastRewardSignal[last];
+        if (state.cellCyclePhase) state.cellCyclePhase[i] = state.cellCyclePhase[last];
+        if (state.cellCycleProgress) state.cellCycleProgress[i] = state.cellCycleProgress[last];
       }
       state.count--;
       deaths++;

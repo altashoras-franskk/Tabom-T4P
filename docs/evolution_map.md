@@ -65,12 +65,12 @@ LOOP DE RETROAÇÃO (por RAF frame, a cada intervalFrames):
 | `size`         | Float32       | [0.5, 2.0]      | Tamanho visual (evoluído pela energia) |
 | `geneA–D`      | Float32       | [0, 1]          | Genoma (4 alelos; classifica arquétipo)|
 | `archetypeId`  | Uint16        | [0, N]          | ID de arquétipo detectado              |
-
-**Ausente ainda (necessário para EvolutionStack):**
-- `lineageId` — ID de linhagem para especiação
-- `plasticity[0..5]` — parâmetros plásticos (aprendizado)
-- `colonyId` — ID de colônia (para módulo de colônias)
-- `lastRewardSignal` — recompensa recente (para Hebb-lite)
+| `lineageId`    | Uint32        | [1, ∞]          | ID de linhagem (especiação) — PATCH 02 |
+| `plasticity0–5`| Float32       | [0, 1]          | Parâmetros plásticos (Hebb-lite) — PATCH 02 |
+| `colonyId`     | Uint16        | [0, N]          | ID de colônia — PATCH 02               |
+| `lastRewardSignal` | Float32   | ℝ               | Recompensa recente (aprendizado) — PATCH 02 |
+| `cellCyclePhase`   | Uint8     | 0=G1, 1=S, 2=M  | Fase do ciclo celular — PATCH 02       |
+| `cellCycleProgress`| Float32   | [0, 1]          | Progresso dentro da fase — PATCH 02   |
 
 ---
 
@@ -112,11 +112,12 @@ RAF frame
 │   │   ├─ force loop (O(N) grid)
 │   │   └─ integrate + wrap
 │   ├─ restoreParams
+│   └─ stepCellCycle                 [MÓDULO: energy] PATCH 02
 │   └─ updateEnergy                   [MÓDULO: energy]
 │       ├─ decay per agent
-│       ├─ feed (spatial hash)
-│       ├─ reproduce (births)
-│       └─ die (deaths)
+│       ├─ feed from field (nutrient) + spatial hash
+│       ├─ reproduce (só em fase G2/M; deposita nutriente)
+│       └─ die (deposita nutriente)
 │
 ├─ FieldLayers update                 [MÓDULO: field]
 │   ├─ agent → field injection
@@ -160,7 +161,7 @@ Os módulos abaixo serão adicionados via feature flags (PATCH 02–06):
 
 ```
 PATCH 01 ✅ — Telemetria + ComplexityLens + timers por módulo
-PATCH 02 — Ciclo celular (3 fases) + campo nutriente básico
+PATCH 02 ✅ — Ciclo celular (3 fases: G1→S→G2/M) + campo nutriente (feed + deposit on reproduce/death) + EvolutionStack (lineageId, plasticity0–5, colonyId, lastRewardSignal)
 PATCH 03 — Morte por causa (fome/idade/conflito) + presets calibrados
 PATCH 04 — Plasticidade (2–4 params por agente) + Hebb-lite
 PATCH 05 — lineageId + especiação rara + cor por linhagem

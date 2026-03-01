@@ -15,7 +15,7 @@ import { createMatrix, randomizeMatrix, softenMatrix, symmetrizeMatrix, invertMa
 import { updateParticleLife, applyImpulse, applyWind, applyWhiteHole, applyBlackHole, applyVortex, applyFreeze, applyChaos, applyQuake, applyNova, applyMagnetize, getMicroPerfStats } from '../sim/micro/particleLife';
 import { updateParticleLifeWithField } from '../sim/micro/recursiveFieldWrapper';
 import { microPresets } from '../sim/micro/presets';
-import { updateEnergy, createEnergyConfig } from '../sim/micro/energy';
+import { updateEnergy, createEnergyConfig, stepCellCycle } from '../sim/micro/energy';
 import { createFieldState, createFieldConfig, sampleField, FieldState, FieldConfig, depositField, depositFieldRadius } from '../sim/field/fieldState';
 import { updateField } from '../sim/field/fieldUpdate';
 import { depositMicroMetrics } from '../sim/field/fieldSampling';
@@ -28,7 +28,7 @@ import type { Observables } from '../sim/metrics/observables';
 import { createChronicle, addBeat, Chronicle } from '../story/beats';
 import { createUndoBuffer, takeSnapshot, canUndo as canUndoFunc, undo as undoFunc, UndoBuffer } from '../engine/undo';
 import { createSnapshot, restoreSnapshot, SimulationSnapshot } from '../engine/snapshot';
-import { initWebGLRenderer, renderWebGL, setRenderConfig, WebGLRenderer } from '../render/webgl/renderer';
+import { initWebGLRenderer, renderWebGL, setRenderConfig, WebGLRenderer, WebGLBondsConfig } from '../render/webgl/renderer';
 import { renderCanvas2D } from '../render/canvas2d/renderer2d';
 import { renderFieldHeatmap, renderFieldLayersHeatmap, renderArtifacts, renderBrushCursor, renderMiniStatus, renderSigilOverlay, renderSigilPings } from '../render/overlays';
 import { renderBonds, renderTrails, updateTrails, clearTrails, BondsConfig, TrailsConfig } from '../render/bondsOverlay';
@@ -660,10 +660,10 @@ const App: React.FC = () => {
   const [loops, setLoops] = useState<LoopMetrics | null>(null);
   const loopUpdateCounterRef = useRef(0);
   
-  // Bonds & Trails overlay (OTIMIZAÇÃO: Bonds desabilitado por padrão)
-  const [showBonds, setShowBonds] = useState(false);
-  const [bondsDistance, setBondsDistance] = useState(0.10); // Normalized distance (0-2 range)
-  const [bondsOpacity, setBondsOpacity] = useState(0.10); // 10% opacity
+  // Bonds & Trails overlay — carrega com bonds ligado (baixa distância/opacidade) para ver entanglements
+  const [showBonds, setShowBonds] = useState(true);
+  const [bondsDistance, setBondsDistance] = useState(0.07); // Normalized: só vizinhos bem próximos (mais clean)
+  const [bondsOpacity, setBondsOpacity] = useState(0.18); // 18% opacity — sutil, não pesa
   const [showTrails, setShowTrails] = useState(false); // OTIMIZAÇÃO: Trails desabilitado por padrão
   const [trailsLength, setTrailsLength] = useState(20);
   const [trailsOpacity, setTrailsOpacity] = useState(0.10); // 10% opacity
@@ -1360,9 +1360,8 @@ const App: React.FC = () => {
         microConfigRef.current.mutationRate = L.mutationRate;
         microConfigRef.current.typeStability = L.typeStability;
         
-        // Reconfig
-        // (coupling explicit + real)
-        reconfigConfigRef.current.mutationStrength = L.reconfigEnabled ? L.reconfigRate : 0;
+        // Reconfig (mutationStrength controlado pelo painel; só zera quando Reconfig desligado)
+        if (!L.reconfigEnabled) reconfigConfigRef.current.mutationStrength = 0;
         reconfigStateRef.current.mutationAmount = L.reconfigAmount;
         
         // COMPLEXITY LENS / OR CHOZER: Apply feedback modulation (non-destructive save + restore)
@@ -1431,6 +1430,19 @@ const App: React.FC = () => {
           // Map dial → energy mutation chance & death threshold
           e.mutationChance = 0.02 + L.mutationDial * 0.18;       // 0.02..0.20
           e.deathThreshold = 0.18 + (1 - L.mutationDial) * 0.12; // stable worlds die less
+
+          // PATCH 02 — Ciclo celular (opcional) + campo nutriente. cellCycleEnabled=false: reprodução por energia livre; mitose é uma das ocorrências.
+          e.cellCycleEnabled = false;
+          e.cellCycleRate = 0.018;
+          e.nutrientFromFieldGain = 0.012;
+          e.depositNutrientOnReproduce = 0.08;
+          e.depositNutrientOnDeath = 0.12;
+          const FL = fieldLayersRef.current;
+          e.sampleNutrient = (x, y) => sampleLayer(FL, 'nutrient', x, y);
+          e.depositNutrient = (x, y, amount) => addToLayer(FL, 'nutrient', x, y, amount);
+
+          const simulatedDt = stepCount * BASE_STEP;
+          stepCellCycle(microStateRef.current, e, simulatedDt);
 
           const _t_en0 = performance.now();
           const res = updateEnergy(
@@ -1850,6 +1862,7 @@ const App: React.FC = () => {
           reconfigConfigRef.current.mutationStrength,
           reconfigConfigRef.current.speciationRate,
           reconfigConfigRef.current.institutionRate,
+          reconfigConfigRef.current.operatorCooldown,
           rngRef.current,
           timeRef.current.elapsed
         );
@@ -2508,30 +2521,40 @@ const App: React.FC = () => {
       
       // Disable main trails when overlay bonds/trails are active
       const useMainTrails = trails && !showBonds && !showTrails;
-      
+      // Bonds desenhados no overlay (garantido visível)
       renderWebGL(
         webglRendererRef.current,
         microStateRef.current,
         microConfigRef.current.typesCount,
         dimensions.width,
         dimensions.height,
-        useMainTrails
+        useMainTrails,
+        null
       );
     } else if (ctx2dRef.current) {
-      // Disable main trails when overlay bonds/trails are active
+      // 2D fallback: ensure canvas buffer size matches dimensions so drawing is correct
+      const c = canvas;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const bufW = Math.floor(dimensions.width * dpr);
+      const bufH = Math.floor(dimensions.height * dpr);
+      if (c.width !== bufW || c.height !== bufH) {
+        c.width = bufW;
+        c.height = bufH;
+        ctx2dRef.current.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
       const useMainTrails = trails && !showBonds && !showTrails;
-      
       renderCanvas2D(
-        ctx2dRef.current, 
-        microStateRef.current, 
-        dimensions.width, 
-        dimensions.height, 
+        ctx2dRef.current,
+        microStateRef.current,
+        dimensions.width,
+        dimensions.height,
         useMainTrails,
         renderMode,
         streakLength,
         perfConfigRef.current.renderQuality,
         dotSize
       );
+      // Bonds desenhados no overlay (garantido visível)
     }
 
     // Render overlays on separate canvas
@@ -2574,15 +2597,15 @@ const App: React.FC = () => {
       // Artifacts
       renderArtifacts(ctx, reconfigStateRef.current.artifacts, rW, rH);
 
-      // Bonds overlay
+      // Bonds no overlay (garantido visível; WebGL pode não ter line program em alguns contextos)
       if (showBonds) {
         const bondsConfig: BondsConfig = {
           enabled: true,
           maxDistance: bondsDistance,
           opacity: bondsOpacity,
-          thickness: 1.5,
+          thickness: 2,
         };
-        renderBonds(ctx, microStateRef.current, bondsConfig, paletteIndex);
+        renderBonds(ctx, microStateRef.current, bondsConfig, paletteIndex, rW, rH);
       }
 
       // Trails overlay
@@ -2748,8 +2771,11 @@ const App: React.FC = () => {
     // Update regime display
     setCurrentRegime(preset.name);
 
-    // Reset particles with zeroed velocities
+    // Reset particles with zeroed velocities (novo universo = reset total)
     microStateRef.current.count = 0;
+    if (typeof microStateRef.current.nextLineageId === 'number') {
+      microStateRef.current.nextLineageId = 1;
+    }
     clearTrails(); // Clear trails on reset
     spawnParticles(
       microStateRef.current, 
@@ -2798,7 +2824,12 @@ const App: React.FC = () => {
   
   // PATCH 04.5: Life config update handler
   const onLifeChange = (patch: Partial<LifeConfig>) => {
-    setLife(prev => applyLifeDial({ ...prev, ...patch }));
+    setLife(prev => {
+      const next = applyLifeDial({ ...prev, ...patch });
+      if (patch.reconfigEnabled && next.reconfigEnabled)
+        reconfigConfigRef.current.mutationStrength = next.reconfigRate;
+      return next;
+    });
   };
   
   const loadCreativePresetById = (presetId: string) => {
@@ -2879,8 +2910,11 @@ const App: React.FC = () => {
       }
     }
     
-    // Reset particles
+    // Reset particles (novo universo)
     microStateRef.current.count = 0;
+    if (typeof microStateRef.current.nextLineageId === 'number') {
+      microStateRef.current.nextLineageId = 1;
+    }
     clearTrails();
     const safeParticleCount = Math.min(preset.particleCount, 800);
     spawnParticles(
@@ -2973,8 +3007,11 @@ const App: React.FC = () => {
     baseMatrixRef.current = createMatrix(preset.typesCount);
     copyMatrix(matrixRef.current, baseMatrixRef.current);
     
-    // Reset particles
+    // Reset particles (novo universo)
     microStateRef.current.count = 0;
+    if (typeof microStateRef.current.nextLineageId === 'number') {
+      microStateRef.current.nextLineageId = 1;
+    }
     clearTrails();
     const safeCount = Math.min(preset.particleCount, 1000);
     spawnParticles(
@@ -4183,7 +4220,7 @@ const App: React.FC = () => {
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 pointer-events-none"
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', zIndex: 2 }}
         />
 
         {/* 3D canvas — overlays the 2D render when viewMode='3D', hidden for Psyche Lab */}
@@ -4394,8 +4431,8 @@ const App: React.FC = () => {
               microConfigRef.current.metamorphosisEnabled = (L.mode === 'EVOLUTIVE' || L.mode === 'FULL');
               microConfigRef.current.mutationRate = L.mutationRate;
               microConfigRef.current.typeStability = L.typeStability;
+              if (!L.reconfigEnabled) reconfigConfigRef.current.mutationStrength = 0;
               reconfigStateRef.current.mutationAmount = L.reconfigAmount;
-              reconfigConfigRef.current.mutationStrength = L.reconfigEnabled ? L.reconfigRate : 0;
               
               if (recursiveFieldRef.current?.cfg?.enabled) {
                 updateParticleLifeWithField(

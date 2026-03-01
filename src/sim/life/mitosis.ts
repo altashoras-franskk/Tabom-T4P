@@ -160,7 +160,29 @@ export const performMitosis = (
       state.energy[newIdx] = state.energy[srcIdx] * 0.5;
       state.energy[srcIdx] *= 0.5;
     }
-    
+    // PATCH 02 — EvolutionStack: herda linhagem/colônia/plasticidade; novo ciclo
+    if (state.lineageId) state.lineageId[newIdx] = state.lineageId[srcIdx];
+    if (state.plasticity0) {
+      state.plasticity0[newIdx] = state.plasticity0[srcIdx];
+      state.plasticity1[newIdx] = state.plasticity1[srcIdx];
+      state.plasticity2[newIdx] = state.plasticity2[srcIdx];
+      state.plasticity3[newIdx] = state.plasticity3[srcIdx];
+      state.plasticity4[newIdx] = state.plasticity4[srcIdx];
+      state.plasticity5[newIdx] = state.plasticity5[srcIdx];
+    }
+    if (state.colonyId) state.colonyId[newIdx] = state.colonyId[srcIdx];
+    if (state.lastRewardSignal) state.lastRewardSignal[newIdx] = 0;
+    if (state.cellCyclePhase) state.cellCyclePhase[newIdx] = 0;
+    if (state.cellCycleProgress) state.cellCycleProgress[newIdx] = 0;
+    if (state.geneA) state.geneA[newIdx] = state.geneA[srcIdx];
+    if (state.geneB) state.geneB[newIdx] = state.geneB[srcIdx];
+    if (state.geneC) state.geneC[newIdx] = state.geneC[srcIdx];
+    if (state.geneD) state.geneD[newIdx] = state.geneD[srcIdx];
+    if (state.archetypeId) state.archetypeId[newIdx] = state.archetypeId[srcIdx];
+    if (state.age) state.age[newIdx] = 0;
+    if (state.size) state.size[newIdx] = state.size[srcIdx];
+    if (state.mutationPotential) state.mutationPotential[newIdx] = state.mutationPotential[srcIdx];
+
     state.count++;
   }
   
