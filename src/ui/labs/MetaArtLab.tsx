@@ -2890,12 +2890,13 @@ export const MetaArtLab: React.FC<Props> = ({ active }) => {
           )}
         </div>
 
-        {/* ── Right Panel — always on top so sliders/params work with any canvas background */}
+        {/* ── Right Panel — always on top so sliders/params work with any canvas background; minHeight:0 so flex allows scroll */}
         {!cinematic && rightPanel !== null && (
           <div style={{
-            width: rightWidth, flexShrink: 0, display: 'flex', flexDirection: 'column',
+            width: rightWidth, flexShrink: 0, minHeight: 0, maxHeight: '100%',
+            display: 'flex', flexDirection: 'column',
             borderLeft: `1px solid ${BORDER}`,
-            background: BG, overflowY: 'auto',
+            background: BG, overflowY: 'auto', overflowX: 'hidden',
             position: 'relative', zIndex: 15,
           }}>
             {rightPanel === 'layers' && (

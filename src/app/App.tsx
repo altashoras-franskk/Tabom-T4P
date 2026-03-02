@@ -120,6 +120,7 @@ import { MEME_COLORS } from '../sim/sociogenesis/sociogenesisTypes';
 import { CanvasRecorder, RecorderState } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
 import { TelemetryHUD } from './components/TelemetryHUD';
+import { DraggablePanel } from './components/DraggablePanel';
 
 const ADMIN_MODE_KEY = 't4p_admin_mode_v1';
 const ADMIN_PASSWORD = 'morin2026';
@@ -1297,7 +1298,14 @@ const App: React.FC = () => {
         animationId = requestAnimationFrame(loop);
         return;
       }
+
+      // Render primeiro: canvas atualiza antes da simulação pesada (evita “congelar” quando energia ligada)
+      const renderStart = performance.now();
+      render();
+      if (view3dRef.current.mode === '3D' && activeLab !== 'psycheLab') render3D();
+      const frameRenderMs = performance.now() - renderStart;
       
+      try {
       // FPS monitor and auto-downgrade (check every 240 frames = ~4-8 seconds)
       frameCount++;
       if (frameCount >= 240) {
@@ -1333,13 +1341,21 @@ const App: React.FC = () => {
         time,
         reconfigIntervalSec
       );
-      
 
+      // Com energia ligada e população alta, reduzir steps por frame para evitar congelamento
+      const energyOn = microConfigRef.current.energyEnabled;
+      const n = microStateRef.current.count;
+      const effectiveStepCount =
+        energyOn && n > 550 ? Math.min(stepCount, 1) : stepCount;
 
       const simStart = performance.now();
 
+      // Vital rates this frame (B/s, D/s, Mut/s, deaths by cause) — accumulated then sent to tickVitalRates once per frame
+      let frameBirths = 0, frameDeaths = 0, frameMutations = 0;
+      let frameDeathsByStarvation = 0, frameDeathsByAge = 0, frameDeathsByCollision = 0, frameDeathsByPredation = 0;
+
       // Micro steps (fixed timestep)
-      for (let i = 0; i < stepCount; i++) {
+      for (let i = 0; i < effectiveStepCount; i++) {
         // Update config dt to BASE_STEP
         microConfigRef.current.dt = BASE_STEP;
         
@@ -1457,6 +1473,11 @@ const App: React.FC = () => {
 
           const births  = res.births  ?? 0;
           const deaths  = res.deaths  ?? 0;
+          const mutations = res.mutations ?? 0;
+          frameBirths += births;
+          frameDeaths += deaths;
+          frameMutations += mutations;
+          frameDeathsByStarvation += deaths; // energy death = fome
           if (births) {
             lifeStatsRef.current.births += births;
             populationAccumulator.current.births += births;
@@ -1465,7 +1486,6 @@ const App: React.FC = () => {
             lifeStatsRef.current.deaths += deaths;
             populationAccumulator.current.deaths += deaths;
           }
-          tickVitalRates(vitalAccRef.current, 1000 / 60, births, deaths, 0);
         }
       }
 
@@ -1962,6 +1982,7 @@ const App: React.FC = () => {
           );
           
           if (result.success && result.message) {
+            frameBirths += result.childrenCount ?? 0;
             // Update stats
             setStats(prev => ({
               ...prev,
@@ -2004,6 +2025,25 @@ const App: React.FC = () => {
             }
           }
         }
+      }
+
+      // Vital rates: advance window every frame (B/s, D/s, Mut/s, deaths by cause); when energy off, frame* stay 0
+      if (activeLab === 'complexityLife') {
+        tickVitalRates(
+          vitalAccRef.current,
+          1000 / 60,
+          frameBirths,
+          frameDeaths,
+          frameMutations,
+          {
+            deathsByStarvation: frameDeathsByStarvation,
+            deathsByAge: frameDeathsByAge,
+            deathsByCollision: frameDeathsByCollision,
+            deathsByPredation: frameDeathsByPredation,
+          },
+        );
+        // LIVE lê complexityLensRef.current — sincronizar vitalRates para a telemetria funcionar
+        complexityLensRef.current.vitalRates = { ...vitalAccRef.current.lastRates };
       }
 
       // Update trails if enabled
@@ -2435,12 +2475,8 @@ const App: React.FC = () => {
         }
       }
 
-      // Render
-      const renderStart = performance.now();
-      render();
-      if (view3dRef.current.mode === '3D' && activeLab !== 'psycheLab') render3D();
-      const renderEnd = performance.now();
-      const renderMs = renderEnd - renderStart;
+      // Métricas (render já foi feito no início do frame)
+      const renderMs = frameRenderMs;
 
       const microStats = getMicroPerfStats();
 
@@ -2457,6 +2493,12 @@ const App: React.FC = () => {
         perfAccumRef.current.simMs = 0;
         perfAccumRef.current.renderMs = 0;
         perfAccumRef.current.frames = 0;
+      }
+
+      } catch (err) {
+        console.error('[complexityLife loop]', err);
+        render();
+        if (view3dRef.current.mode === '3D' && activeLab !== 'psycheLab') render3D();
       }
 
       animationId = requestAnimationFrame(loop);
@@ -4172,20 +4214,46 @@ const App: React.FC = () => {
     handlePointerUp(e);
   };
 
-  // ── Recording handlers (Complexity Life Lab) ──────────────────────────────
+  // ── Recording handlers (Complexity Life Lab) — overlay = same as LIVE telemetry ──
   const handleRecStart = useCallback((opts?: { format?: string; quality?: string }) => {
     recorderRef.current?.start(
       () => viewMode === '3D'
         ? [canvasRef.current, overlayCanvasRef.current, canvas3dRef.current]
         : [canvasRef.current, overlayCanvasRef.current],
-      () => ({
-        labName: 'Complexity Life Lab',
-        lines: [
-          `partículas: ${microStateRef.current.count}  ·  espécies: ${microConfigRef.current.typesCount}`,
-          `qualidade: ${simQuality}  ·  fps: ${Math.round(timeRef.current.fps)}`,
-          currentDNA ? `dna: ${dnaToString(currentDNA).slice(0, 28)}` : `regime: ${currentRegime}`,
-        ],
-      }),
+      () => {
+        const N = microStateRef.current.count;
+        const T = microConfigRef.current.typesCount;
+        const fps = Math.round(timeRef.current.fps ?? 0);
+        if (COMPLEXITY_LENS) {
+          const snap = complexityLensRef.current;
+          const m = snap.metrics;
+          const f = snap.forces;
+          const mo = snap.morin;
+          const vr = snap.vitalRates;
+          const pct = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 99);
+          return {
+            labName: 'Complexity Life Lab',
+            lines: [
+              `N ${N} · T ${T} · ${fps} fps · ${snap.systemPhase}`,
+              `B/s ${vr.birthsPerSec.toFixed(1)} D/s ${vr.deathsPerSec.toFixed(1)} Mut/s ${vr.mutationsPerSec.toFixed(1)} · ♥${pct(snap.systemHealth)}% ◈${pct(snap.emergenceIndex)}%`,
+              `Mortes/s: fome ${vr.deathsByStarvation.toFixed(1)} idade ${vr.deathsByAge.toFixed(1)} col ${vr.deathsByCollision.toFixed(1)} pred ${vr.deathsByPredation.toFixed(1)}`,
+            ],
+            rightLines: [
+              `Meadows: Var ${pct(m.variedade)} Coes ${pct(m.coesao)} Atr ${pct(m.atrito)} Res ${pct(m.resiliencia)} Pers ${pct(m.persistencia)} Met ${pct(m.metabolismo)}`,
+              `Forças: Pert ${pct(f.perturbacao)} Auto ${pct(f.autoOrganizacao)} Amp ${pct(f.amplificacao)} Reg ${pct(f.regulacao)} Coer ${pct(f.coerencia)}`,
+              `Morin: Di ${pct(mo.dialogica)} Rec ${pct(mo.recursivo)} Hol ${pct(mo.hologramatico)} S-D ${pct(mo.sapiensDemens)} Tet ${pct(mo.tetralogia)}`,
+            ],
+          };
+        }
+        return {
+          labName: 'Complexity Life Lab',
+          lines: [
+            `partículas: ${N}  ·  espécies: ${T}`,
+            `qualidade: ${simQuality}  ·  fps: ${fps}`,
+            currentDNA ? `dna: ${dnaToString(currentDNA).slice(0, 28)}` : `regime: ${currentRegime}`,
+          ],
+        };
+      },
       30, undefined,
       { format: (opts?.format ?? 'auto') as any, quality: (opts?.quality ?? 'standard') as any },
     );
@@ -4239,35 +4307,68 @@ const App: React.FC = () => {
         />
         </div>{/* end canvasInnerRef */}
 
-        {/* Recording button — Complexity Life Lab only */}
+        {/* ── TELEMETRY HUD — Complexity Life Lab (draggable) ─────────────────────────────── */}
         {activeLab === 'complexityLife' && (
-          <RecordingButton
-            state={recState}
-            elapsed={recElapsed}
-            onStart={handleRecStart}
-            onStop={handleRecStop}
-            showOptions
-            className="absolute bottom-4 right-4 z-20"
-          />
+          <DraggablePanel
+            id="cl_telemetry"
+            title="LIVE"
+            titleColor="#ffd400"
+            defaultX={16}
+            defaultY={typeof window !== 'undefined' ? window.innerHeight - 140 : 400}
+            zIndex={32}
+            width={240}
+            persist
+          >
+            <div style={{ padding: '4px 8px 8px' }}>
+              <TelemetryHUD
+                embedded
+                compact
+                getLines={() => {
+                  const N = microStateRef.current.count;
+                  const T = microConfigRef.current.typesCount;
+                  const fps = Math.round(timeRef.current.fps ?? 0);
+                  if (COMPLEXITY_LENS) {
+                    const snap = complexityLensRef.current;
+                    const m = snap.metrics;
+                    const f = snap.forces;
+                    const mo = snap.morin;
+                    const vr = snap.vitalRates;
+                    const pct = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 99);
+                    return [
+                      `N ${N} · T ${T} · ${fps} fps · ${snap.systemPhase}`,
+                      `B/s ${vr.birthsPerSec.toFixed(1)} D/s ${vr.deathsPerSec.toFixed(1)} Mut/s ${vr.mutationsPerSec.toFixed(1)} · ♥${pct(snap.systemHealth)}% ◈${pct(snap.emergenceIndex)}%`,
+                      `Mortes/s: fome ${vr.deathsByStarvation.toFixed(1)} idade ${vr.deathsByAge.toFixed(1)} col ${vr.deathsByCollision.toFixed(1)} pred ${vr.deathsByPredation.toFixed(1)}`,
+                      `Meadows: Var ${pct(m.variedade)} Coes ${pct(m.coesao)} Atr ${pct(m.atrito)} Res ${pct(m.resiliencia)} Pers ${pct(m.persistencia)} Met ${pct(m.metabolismo)}`,
+                      `Forças: Pert ${pct(f.perturbacao)} Auto ${pct(f.autoOrganizacao)} Amp ${pct(f.amplificacao)} Reg ${pct(f.regulacao)} Coer ${pct(f.coerencia)}`,
+                      `Morin: Di ${pct(mo.dialogica)} Rec ${pct(mo.recursivo)} Hol ${pct(mo.hologramatico)} S-D ${pct(mo.sapiensDemens)} Tet ${pct(mo.tetralogia)}`,
+                    ];
+                  }
+                  return [
+                    `part. ${N} · esp. ${T} · ${simQuality} · ${fps} fps`,
+                    currentDNA ? `dna: ${dnaToString(currentDNA).slice(0, 22)}…` : `regime: ${currentRegime}`,
+                  ];
+                }}
+              />
+            </div>
+          </DraggablePanel>
         )}
 
-        {/* ── TELEMETRY HUD — Complexity Life Lab ─────────────────────────────── */}
-        {activeLab === 'complexityLife' && (
-          <TelemetryHUD
-            corner="bl"
-            bottomOffset={60}
-            getLines={() => [
-              `partículas: ${microStateRef.current.count}  ·  espécies: ${microConfigRef.current.typesCount}`,
-              `qualidade: ${simQuality}  ·  fps: ${Math.round(timeRef.current.fps ?? 0)}`,
-              currentDNA ? `dna: ${dnaToString(currentDNA).slice(0, 24)}` : `regime: ${currentRegime}`,
-            ]}
-          />
-        )}
-
-        {/* COMPLEXITY LENS (PATCH 01): Bottom-up feedback panel — Complexity Life Lab */}
+        {/* COMPLEXITY LENS (PATCH 01): Bottom-up feedback panel — Complexity Life Lab (draggable) */}
         {activeLab === 'complexityLife' && COMPLEXITY_LENS && (
-          <ComplexityPanel
-            lensState={complexitySnap}
+          <DraggablePanel
+            id="cl_complexity_panel"
+            title="Sistema Complexo"
+            titleColor="#22d3ee"
+            defaultX={8}
+            defaultY={72}
+            zIndex={32}
+            width={260}
+            maxHeight="calc(100vh - 120px)"
+            persist
+          >
+            <ComplexityPanel
+              embedded
+              lensState={complexitySnap}
             fps={timeRef.current.fps ?? 60}
             agentCount={microStateRef.current.count}
             vitalRates={complexitySnap.vitalRates}
@@ -4321,33 +4422,46 @@ const App: React.FC = () => {
               }));
             }}
           />
+          </DraggablePanel>
         )}
-        {/* Legacy Or Chozer panel — shown only when COMPLEXITY_LENS is false */}
+        {/* Legacy Or Chozer panel — shown only when COMPLEXITY_LENS is false (draggable) */}
         {activeLab === 'complexityLife' && !COMPLEXITY_LENS && (
-          <OrChozerPanel
-            feedbackState={feedbackSnap}
-            onConfigChange={(patch) => {
-              Object.assign(feedbackStateRef.current.config, patch);
-              setFeedbackSnap(prev => ({ ...prev, config: { ...feedbackStateRef.current.config } }));
-            }}
-            onResetMemory={() => {
-              resetFeedbackMemory(feedbackStateRef.current);
-              setFeedbackSnap(prev => ({
-                ...prev,
-                config:      { ...feedbackStateRef.current.config },
-                metrics:     { ...feedbackStateRef.current.metrics },
-                activations: { ...feedbackStateRef.current.activations },
-                modulation:  { ...feedbackStateRef.current.modulation },
-                phase:       feedbackStateRef.current.phase,
-                phaseLabel:  feedbackStateRef.current.phaseLabel,
-              }));
-            }}
-          />
+          <DraggablePanel
+            id="cl_orchozer"
+            title="Or Chozer"
+            titleColor="#ffd400"
+            defaultX={8}
+            defaultY={typeof window !== 'undefined' ? window.innerHeight - 320 : 200}
+            zIndex={32}
+            width={230}
+            persist
+          >
+            <OrChozerPanel
+              embedded
+              feedbackState={feedbackSnap}
+              onConfigChange={(patch) => {
+                Object.assign(feedbackStateRef.current.config, patch);
+                setFeedbackSnap(prev => ({ ...prev, config: { ...feedbackStateRef.current.config } }));
+              }}
+              onResetMemory={() => {
+                resetFeedbackMemory(feedbackStateRef.current);
+                setFeedbackSnap(prev => ({
+                  ...prev,
+                  config:      { ...feedbackStateRef.current.config },
+                  metrics:     { ...feedbackStateRef.current.metrics },
+                  activations: { ...feedbackStateRef.current.activations },
+                  modulation:  { ...feedbackStateRef.current.modulation },
+                  phase:       feedbackStateRef.current.phase,
+                  phaseLabel:  feedbackStateRef.current.phaseLabel,
+                }));
+              }}
+            />
+          </DraggablePanel>
         )}
 
-        {/* Viewport zoom indicator — Complexity Life */}
+        {/* Viewport zoom indicator — Complexity Life (right of record button) */}
         {activeLab === 'complexityLife' && (vpZoom < 0.99 || vpZoom > 1.01 || vpPanned) && (
-          <div className="absolute bottom-4 left-4 z-20 flex flex-col items-start gap-1 pointer-events-auto">
+          <div className="absolute bottom-4 left-[8.5rem] z-20 flex flex-col items-start gap-1 pointer-events-auto">
             <div className="flex items-center gap-1.5 px-2 py-1" style={{ background: 'rgba(0,0,0,0.92)', border: '1px dashed rgba(255,255,255,0.06)' }}>
               <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">zoom</span>
               <span className="text-[9px] font-mono text-cyan-300/70">{vpZoom.toFixed(2)}×</span>
@@ -4517,6 +4631,10 @@ const App: React.FC = () => {
             onOpenChronicle={() => setShowChronicle(true)}
             viewMode={viewMode}
             onViewModeToggle={() => setViewMode(v => v === '2D' ? '3D' : '2D')}
+            recState={activeLab === 'complexityLife' ? recState : undefined}
+            recElapsed={recElapsed}
+            onRecStart={activeLab === 'complexityLife' ? handleRecStart : undefined}
+            onRecStop={activeLab === 'complexityLife' ? handleRecStop : undefined}
           />
 
           {/* 3D Controls — floating bottom bar */}

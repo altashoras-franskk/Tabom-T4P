@@ -58,7 +58,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
   onView3DConfigChange,
 }) => {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const stateRef   = useRef<PsycheState>(createPsycheState(1200));
+  const stateRef   = useRef<PsycheState>(createPsycheState(2000));
   const configRef  = useRef<PsycheConfig>(defaultPsycheConfig());
   const rafRef     = useRef<number>(0);
   const lastFrameT = useRef<number>(0);
@@ -91,21 +91,33 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
   }, [recState]);
 
   const handleRecStart = useCallback((opts?: { format?: string; quality?: string }) => {
-    const state   = stateRef.current;
-    const presetN = getPresetName(presetId);
     recorderRef.current?.start(
       () => [
         viewMode === '3D' ? canvas3dRef.current : canvasRef.current,
       ],
-      () => ({
-        labName: 'Psyche Lab',
-        lines: [
-          `fase: ${state.phase}  ·  quanta: ${state.count}`,
-          `integração: ${(state.integrationIndex * 100).toFixed(0)}%  tensão: ${(state.tensionIndex * 100).toFixed(0)}%  frag: ${(state.fragmentationIndex * 100).toFixed(0)}%`,
-          `lens: ${configRef.current.lens}  ·  preset: ${presetN}`,
-          `dança: ${configRef.current.danceIntensity.toFixed(2)}  ·  arq.: ${state.archetypeActive.filter(Boolean).length} ativos`,
-        ],
-      }),
+      () => {
+        const s = stateRef.current;
+        const cfg = configRef.current;
+        const freud = freudMetricsRef.current;
+        const lacan = lacanMetricsRef.current;
+        const presetN = getPresetName(presetIdRef.current);
+        const archPct = s.archetypeStrength.map(v => Math.round(v * 100));
+        const rightLines: string[] = [
+          `Arq %: ${archPct.join(' ')}`,
+          `RSI: R ${(lacan.real * 100).toFixed(0)}% S ${(lacan.simbolico * 100).toFixed(0)}% I ${(lacan.imaginario * 100).toFixed(0)}%`,
+          `E ${(freud.eros * 100).toFixed(0)}% T ${(freud.thanatos * 100).toFixed(0)}% Rep ${(freud.repressao * 100).toFixed(0)}% Sub ${(freud.sublimacao * 100).toFixed(0)}%`,
+        ];
+        return {
+          labName: 'Psyche Lab',
+          lines: [
+            `fase: ${s.phase}  ·  quanta: ${s.count}`,
+            `integração: ${(s.integrationIndex * 100).toFixed(0)}%  tensão: ${(s.tensionIndex * 100).toFixed(0)}%  frag: ${(s.fragmentationIndex * 100).toFixed(0)}%`,
+            `lens: ${cfg.lens}  ·  preset: ${presetN}`,
+            `dança: ${cfg.danceIntensity.toFixed(2)}  ·  arq.: ${s.archetypeActive.filter(Boolean).length} ativos`,
+          ],
+          rightLines,
+        };
+      },
       30, undefined,
       { format: (opts?.format ?? 'auto') as any, quality: (opts?.quality ?? 'standard') as any },
     );
@@ -134,7 +146,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
   const [archetypesOn,   setArchetypesOn]   = useState(true);
   const [journeyOn,      setJourneyOn]      = useState(false);
   const [danceIntensity, setDanceIntensity] = useState(0.22);
-  const [quantaCount,    setQuantaCount]    = useState(1200);
+  const [quantaCount,    setQuantaCount]    = useState(2000);
   const [cinematicMode,  setCinematicMode]  = useState(false);
   const [running,        setRunning]        = useState(true);
 
@@ -180,6 +192,12 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
     real: 0.25, simbolico: 0.35, imaginario: 0.4,
     gozo: 0, falta: 0.5, sujeito: 0,
   });
+  const freudMetricsRef = useRef(freudMetrics);
+  const lacanMetricsRef = useRef(lacanMetrics);
+  const presetIdRef = useRef(presetId);
+  freudMetricsRef.current = freudMetrics;
+  lacanMetricsRef.current = lacanMetrics;
+  presetIdRef.current = presetId;
 
   const [archStrengths, setArchStrengths] = useState<number[]>([...stateRef.current.archetypeStrength]);
   const [archActive,    setArchActive]    = useState<boolean[]>([...stateRef.current.archetypeActive]);
@@ -560,7 +578,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
     config.lens        = lens;
     config.archetypesOn = archetypesOn;
 
-    const n = preset.quantaCount ?? 600;
+    const n = preset.quantaCount ?? 2000;
     resizeQuantaTo(state, n, config);
     setQuantaCount(n);
 
@@ -890,12 +908,13 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
         />
       )}
 
-      {/* Recording button */}
+      {/* Recording button (format/quality options like Complexity) */}
       <RecordingButton
         state={recState}
         elapsed={recElapsed}
         onStart={handleRecStart}
         onStop={handleRecStop}
+        showOptions
         className="fixed bottom-4 left-4 z-40"
       />
 

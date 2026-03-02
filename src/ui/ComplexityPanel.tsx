@@ -50,7 +50,7 @@ function SectionHeader({
       onClick={onToggle}
       style={{
         display: 'flex', alignItems: 'center', gap: 4,
-        fontFamily: DOTO, fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase',
+        fontFamily: DOTO, fontSize: 8, letterSpacing: '0.08em', textTransform: 'uppercase',
         color: accent ?? DIM,
         marginBottom: open ? 7 : 0, cursor: 'pointer', userSelect: 'none',
       }}
@@ -66,10 +66,10 @@ function MetricBar({ label, value, color, hint }: {
 }) {
   const pct = Math.round(value * 100);
   return (
-    <div style={{ marginBottom: 4 }} title={hint}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1.5 }}>
-        <span style={{ fontFamily: MONO, fontSize: 9, color: DIM, letterSpacing: '0.05em' }}>{label}</span>
-        <span style={{ fontFamily: MONO, fontSize: 9, color: color + 'bb' }}>{pct}%</span>
+    <div style={{ marginBottom: 3 }} title={hint}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
+        <span style={{ fontFamily: MONO, fontSize: 8, color: DIM, letterSpacing: '0.04em' }}>{label}</span>
+        <span style={{ fontFamily: MONO, fontSize: 8, color: color + 'bb' }}>{pct}%</span>
       </div>
       <div style={{ height: 2, background: 'rgba(255,255,255,0.04)' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg,${color}55,${color}aa)`, transition: 'width 0.3s' }} />
@@ -83,12 +83,12 @@ function ForceBar({ label, value, color, hint }: {
 }) {
   const pct = Math.round(value * 100);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }} title={hint}>
-      <span style={{ fontFamily: MONO, fontSize: 9, color: DIM2, width: 78, flexShrink: 0, letterSpacing: '0.03em' }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }} title={hint}>
+      <span style={{ fontFamily: MONO, fontSize: 8, color: DIM2, width: 72, flexShrink: 0, letterSpacing: '0.03em' }}>{label}</span>
       <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.04)' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg,${color}55,${color}aa)`, transition: 'width 0.25s' }} />
       </div>
-      <span style={{ fontFamily: MONO, fontSize: 9, color: color + '99', width: 22, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
+      <span style={{ fontFamily: MONO, fontSize: 8, color: color + '99', width: 20, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
     </div>
   );
 }
@@ -157,9 +157,9 @@ function TelRow({ label, value, unit, color }: {
   label: string; value: string | number; unit?: string; color?: string;
 }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3.5 }}>
-      <span style={{ fontFamily: MONO, fontSize: 9, color: DIM }}>{label}</span>
-      <span style={{ fontFamily: MONO, fontSize: 9.5, color: color ?? DIM2 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1.5 }}>
+      <span style={{ fontFamily: MONO, fontSize: 8, color: DIM }}>{label}</span>
+      <span style={{ fontFamily: MONO, fontSize: 8, color: color ?? DIM2 }}>
         {typeof value === 'number' ? value.toFixed(1) : value}
         {unit && <span style={{ color: DIM, fontSize: 8, marginLeft: 2 }}>{unit}</span>}
       </span>
@@ -200,6 +200,9 @@ export interface ComplexityPanelProps {
 
   targetParticleCount: number;
   onTargetParticleCountChange: (v: number) => void;
+
+  /** When true, panel is inside a DraggablePanel — no absolute positioning */
+  embedded?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,6 +217,7 @@ export function ComplexityPanel({
   reconfigConfig, onReconfigChange,
   maintainPopulation, onMaintainPopulationChange,
   targetParticleCount, onTargetParticleCountChange,
+  embedded = false,
 }: ComplexityPanelProps) {
   const [open,         setOpen]     = useState(() => {
     try {
@@ -264,12 +268,8 @@ export function ComplexityPanel({
     <div
       data-ui-overlay="true"
       style={{
-        position: 'absolute',
-        bottom: 72,           // clear above zoom indicator (which is bottom-4 ≈ 16px)
-        left: 8,
-        zIndex: 30,
-        width: 240,
-        maxHeight: 'calc(100vh - 160px)',
+        ...(embedded ? { position: 'relative', width: '100%' } : { position: 'absolute', bottom: 72, left: 8, zIndex: 30, width: 240 }),
+        maxHeight: embedded ? '70vh' : 'calc(100vh - 160px)',
         background: 'rgba(6,8,12,0.96)',
         border: `1px dashed ${cfg.enabled ? `${TEAL}22` : 'rgba(255,255,255,0.06)'}`,
         transition: 'border-color 0.3s',
@@ -397,7 +397,7 @@ export function ComplexityPanel({
                     Parâmetros efetivos = base + retroação (Δ). Nasc./mortes exigem Energia ligada.
                   </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', marginBottom: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', marginBottom: 4 }}>
                   <TelRow label="FPS" value={Math.round(fps)} color={FPS_COLOR} />
                   <TelRow label="Agentes" value={agentCount} />
                   <TelRow label="Nascimentos" value={vitalRates.birthsPerSec.toFixed(1)} unit="/s" color="#60ff90" />
@@ -409,6 +409,15 @@ export function ComplexityPanel({
                     unit="/s"
                     color={bal >= 0 ? '#60ff90' : '#ff7060'}
                   />
+                </div>
+                <div style={{ fontFamily: DOTO, fontSize: 7.5, color: 'rgba(255,255,255,0.12)', marginBottom: 3, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Mortes/s por causa (Meadows)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', marginBottom: 6 }}>
+                  <TelRow label="Fome" value={vitalRates.deathsByStarvation.toFixed(1)} unit="/s" color="#ff6050" />
+                  <TelRow label="Idade" value={vitalRates.deathsByAge.toFixed(1)} unit="/s" color="#ffa050" />
+                  <TelRow label="Colisão" value={vitalRates.deathsByCollision.toFixed(1)} unit="/s" color="#ffc840" />
+                  <TelRow label="Predação" value={vitalRates.deathsByPredation.toFixed(1)} unit="/s" color="#c080ff" />
                 </div>
                 <div>
                   <div style={{ fontFamily: DOTO, fontSize: 8, color: 'rgba(255,255,255,0.14)', marginBottom: 3, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
@@ -430,8 +439,8 @@ export function ComplexityPanel({
           {/* ──────────────────────────────────────────────────────────────
               SECÇÃO: ESTADO EMERGENTE (read-only)
           ────────────────────────────────────────────────────────────── */}
-          <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Estado Emergente · Hologramático" open={secMetrics} onToggle={() => setSecMet(v => !v)} />
+          <div style={{ padding: '6px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
+            <SectionHeader label="Meadows · Estado Emergente" open={secMetrics} onToggle={() => setSecMet(v => !v)} />
             {secMetrics && (
               <div>
                 <MetricBar label="Variedade" value={metrics.variedade} color="#c080ff" hint="Diversidade de tipos no espaço. Alta variedade = alto potencial de resiliência (Lei de Ashby)." />
@@ -442,9 +451,9 @@ export function ComplexityPanel({
                 <MetricBar label="Metabolismo" value={metrics.metabolismo} color="#80c0ff" hint="Fluxo de energia cinética. Stocks e flows — vitalidade do sistema." />
 
                 {/* Forces compact */}
-                <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '6px 0' }} />
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '5px 0' }} />
                 <div style={{ marginBottom: 0 }}>
-                  <div style={{ fontFamily: DOTO, fontSize: 8, color: DIM, marginBottom: 5, letterSpacing: '0.09em', textTransform: 'uppercase' }}>Forças Ativas</div>
+                  <div style={{ fontFamily: DOTO, fontSize: 7.5, color: DIM, marginBottom: 4, letterSpacing: '0.09em', textTransform: 'uppercase' }}>Meadows · Forças (R/B loops)</div>
                   <ForceBar label="Perturbação" value={forces.perturbacao} color="#e0c860" hint="Desordem criativa. Injeta imprevisibilidade — motor de emergência." />
                   <ForceBar label="Auto-Org" value={forces.autoOrganizacao} color="#6090e0" hint="Consolida estruturas espontâneas. Padrão sem controle externo." />
                   <ForceBar label="Amplificação" value={forces.amplificacao} color="#50e080" hint="Loop de reforço R. Crescimento se auto-alimenta." />
@@ -480,8 +489,8 @@ export function ComplexityPanel({
               SECÇÃO: MORIN — ÍNDICES PROFUNDOS
               Dialogica, Recursivo, Hologramático, Sapiens/Demens, Tetralogia
           ────────────────────────────────────────────────────────────── */}
-          <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Morin · Complexidade" open={secMorin} onToggle={() => setSecMorin(v => !v)} accent="#00d4aa88" />
+          <div style={{ padding: '6px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
+            <SectionHeader label="Morin · Índices de Complexidade" open={secMorin} onToggle={() => setSecMorin(v => !v)} accent="#00d4aa88" />
             {secMorin && (
               <div>
                 <ForceBar label="Dialógica" value={morin.dialogica} color="#c080ff"

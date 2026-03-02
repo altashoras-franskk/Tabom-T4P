@@ -1,6 +1,8 @@
 import React from 'react';
 import { Play, Pause, RotateCcw, Undo2, BookOpen, Trophy, FileText, BookText, Eye, EyeOff, Layers, Box, LayoutGrid, KeyRound } from 'lucide-react';
 import { useI18n } from '../i18n/context';
+import { RecordingButton } from '../app/components/recording/RecordingButton';
+import type { RecorderState } from '../app/components/recording/canvasRecorder';
 
 export type LabId =
   | 'complexityLife'
@@ -60,6 +62,11 @@ interface TopHUDProps {
   onOpenChronicle?: () => void;
   onToggleHideUI?: () => void;
   onViewModeToggle?: () => void;
+  /** Recording — when set, show RecordingButton in bar (Complexity Life) */
+  recState?: RecorderState;
+  recElapsed?: number;
+  onRecStart?: (opts?: { format?: string; quality?: string }) => void;
+  onRecStop?: () => void;
 }
 
 const FIELD_LAYER_KEYS = [
@@ -148,6 +155,10 @@ export const TopHUD: React.FC<TopHUDProps> = ({
   onOpenChronicle,
   onToggleHideUI,
   onViewModeToggle,
+  recState,
+  recElapsed = 0,
+  onRecStart,
+  onRecStop,
 }) => {
   const { t, locale, setLocale } = useI18n();
   const ALL_LAB_TABS: { id: LabId; labelKey: string }[] = [
@@ -404,6 +415,20 @@ export const TopHUD: React.FC<TopHUDProps> = ({
                   ))}
                 </div>
               )}
+            </>
+          )}
+
+          {/* Recording — Complexity Life: always visible in bar */}
+          {activeLab === 'complexityLife' && onRecStart && onRecStop && (
+            <>
+              <div className="w-px h-3" style={{ borderLeft: '1px dashed rgba(255,255,255,0.12)' }} />
+              <RecordingButton
+                state={recState ?? 'idle'}
+                elapsed={recElapsed}
+                onStart={onRecStart}
+                onStop={onRecStop}
+                showOptions
+              />
             </>
           )}
 

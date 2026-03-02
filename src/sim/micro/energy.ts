@@ -109,11 +109,12 @@ export const updateEnergy = (
   config: EnergyConfig,
   rng: { next: () => number; int: (min: number, max: number) => number },
   maxCapacity: number
-): { births: number; deaths: number } => {
-  if (!config.enabled) return { births: 0, deaths: 0 };
+): { births: number; deaths: number; mutations: number } => {
+  if (!config.enabled) return { births: 0, deaths: 0, mutations: 0 };
   
   let births = 0;
   let deaths = 0;
+  let mutations = 0;
   
   // Inicializa array de energia se necessário
   if (!state.energy || state.energy.length < maxCapacity) {
@@ -159,18 +160,21 @@ export const updateEnergy = (
   const feedRadiusSq = config.feedRadius * config.feedRadius;
   const matrixSize = matrix.attract.length;
   const neighbors: number[] = [];
-  
-  // Para cada partícula, verifica apenas vizinhos próximos
-  for (let i = 0; i < state.count; i++) {
+  // Evita O(N²) quando partículas se agrupam: processar no máximo N vizinhos por partícula
+  const MAX_FEED_NEIGHBORS = 28;
+  // Com muitas partículas, alimentar só uma parte por frame (alternada) para manter fps
+  const feedStep = state.count > 900 ? 2 : 1;
+  const feedStart = feedStep === 2 ? (state.count % 2) : 0;
+
+  for (let i = feedStart; i < state.count; i += feedStep) {
     const ti = state.type[i];
     if (ti >= matrixSize) continue;
-    
-    // Encontra vizinhos usando spatial hash
+
     neighbors.length = 0;
     queryNeighbors(feedingSpatialHash, state.x[i], state.y[i], (idx: number) => {
-      neighbors.push(idx);
-    });
-    
+      if (neighbors.length < MAX_FEED_NEIGHBORS) neighbors.push(idx);
+    }, MAX_FEED_NEIGHBORS);
+
     for (const j of neighbors) {
       if (j <= i) continue; // Evita duplicatas
       
@@ -208,7 +212,8 @@ export const updateEnergy = (
     if (!config.cellCycleEnabled) return true;
     return state.cellCyclePhase[i] === CELL_PHASE_M;
   };
-  const maxReproductions = Math.max(1, Math.floor(state.count * 0.05));
+  // Limite por frame para não explodir população e travar (evita runaways)
+  const maxReproductions = Math.min(14, Math.max(1, Math.floor(state.count * 0.03)));
   const childrenToAdd: Array<{ x: number; y: number; vx: number; vy: number; type: number; energy: number; parentIdx: number }> = [];
   
   for (let i = 0; i < state.count && childrenToAdd.length < maxReproductions; i++) {
@@ -233,6 +238,7 @@ export const updateEnergy = (
       if (rng.next() < config.mutationChance) {
         const typesCount = matrix.attract.length;
         childType = rng.int(0, typesCount - 1);
+        mutations++;
       }
       
       childrenToAdd.push({
@@ -327,7 +333,7 @@ export const updateEnergy = (
     }
   }
   
-  return { births, deaths };
+  return { births, deaths, mutations };
 };
 
 /**

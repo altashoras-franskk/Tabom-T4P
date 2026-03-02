@@ -181,7 +181,7 @@ export interface LacanMetrics {
 
 export function defaultPsycheConfig(): PsycheConfig {
   return {
-    quantaTarget:   1200,
+    quantaTarget:   2000,
     danceIntensity: 0.20,
     flowGain:       0.30,
     damping:        2.0,

@@ -32,7 +32,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.11, maxSpeed: 0.10, breathPeriod: 32, selfPull: 0.28, damping: 4.5, linkMaxTtl: 3.5 },
     archetypeStrengths: { SELF: 0.6, WISE_ONE: 0.5 },
     archetypeActive: ['SELF', 'WISE_ONE', 'MOTHER', 'ANIMA'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
   {
     id: 'ego-inflation',
@@ -43,7 +43,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.19, maxSpeed: 0.16, breathPeriod: 14, selfPull: 0.06, damping: 3.0 },
     archetypeStrengths: { HERO: 0.95, PERSONA: 0.90, FATHER: 0.80, SELF: 0.10, SHADOW: 0.30 },
     archetypeActive: ['HERO', 'PERSONA', 'FATHER', 'SELF', 'SHADOW'],
-    quantaCount: 700,
+    quantaCount: 2000,
   },
   {
     id: 'return-of-shadow',
@@ -54,7 +54,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.22, maxSpeed: 0.18, breathPeriod: 12, selfPull: 0.12, damping: 3.5, linkValDiff: 0.20 },
     archetypeStrengths: { SHADOW: 0.95, FATHER: 0.85, DESTROYER: 0.60, SELF: 0.20, HERO: 0.25 },
     archetypeActive: ['SHADOW', 'FATHER', 'DESTROYER', 'SELF', 'HERO', 'PERSONA'],
-    quantaCount: 750,
+    quantaCount: 2000,
   },
   {
     id: 'anima-bridge',
@@ -65,7 +65,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.14, maxSpeed: 0.12, breathPeriod: 22, selfPull: 0.32, damping: 4.5, linkRadius: 0.09, linkProbability: 0.006, linkMaxTtl: 4.0 },
     archetypeStrengths: { ANIMA: 0.95, SELF: 0.80, LOVER: 0.75, CHILD: 0.60, WISE_ONE: 0.65 },
     archetypeActive: ['ANIMA', 'SELF', 'LOVER', 'CHILD', 'WISE_ONE', 'MOTHER'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
   {
     id: 'trickster-breakthrough',
@@ -76,7 +76,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.32, maxSpeed: 0.26, breathPeriod: 9, selfPull: 0.14, damping: 2.0, linkMaxTtl: 1.2, linkRadius: 0.055 },
     archetypeStrengths: { TRICKSTER: 0.95, DESTROYER: 0.75, CHILD: 0.80, SHADOW: 0.65, ANIMA: 0.60 },
     archetypeActive: ['TRICKSTER', 'DESTROYER', 'CHILD', 'SHADOW', 'ANIMA'],
-    quantaCount: 800,
+    quantaCount: 2000,
   },
   {
     id: 'red-book-journey',
@@ -87,7 +87,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.17, maxSpeed: 0.13, breathPeriod: 20, selfPull: 0.22, damping: 3.5, linkMaxTtl: 3.0 },
     archetypeStrengths: {},
     archetypeActive: ['SELF','SHADOW','ANIMA','TRICKSTER','HERO','MOTHER','FATHER','WISE_ONE','CHILD','LOVER','DESTROYER','PERSONA'],
-    quantaCount: 700,
+    quantaCount: 2000,
     journeyMode: true,
   },
 
@@ -101,7 +101,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.27, maxSpeed: 0.22, breathPeriod: 7, selfPull: 0.08, damping: 2.5, linkMaxTtl: 0.8, linkRadius: 0.05 },
     archetypeStrengths: { SHADOW: 1.0, DESTROYER: 0.90, TRICKSTER: 0.70, SELF: 0.05 },
     archetypeActive: ['SHADOW', 'DESTROYER', 'TRICKSTER'],
-    quantaCount: 900,
+    quantaCount: 2000,
   },
   {
     id: 'albedo',
@@ -112,7 +112,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.09, maxSpeed: 0.07, breathPeriod: 45, selfPull: 0.42, damping: 5.5, linkMaxTtl: 5.5, linkProbability: 0.008 },
     archetypeStrengths: { ANIMA: 0.95, SELF: 0.85, WISE_ONE: 0.80, MOTHER: 0.70 },
     archetypeActive: ['ANIMA', 'SELF', 'WISE_ONE', 'MOTHER', 'CHILD'],
-    quantaCount: 550,
+    quantaCount: 2000,
   },
   {
     id: 'rubedo',
@@ -123,7 +123,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.16, maxSpeed: 0.12, breathPeriod: 26, selfPull: 0.50, damping: 4.5, linkRadius: 0.10, linkProbability: 0.010, linkMaxTtl: 4.5 },
     archetypeStrengths: { SELF: 1.0, ANIMA: 0.80, HERO: 0.75, WISE_ONE: 0.85, LOVER: 0.75 },
     archetypeActive: ['SELF','ANIMA','HERO','WISE_ONE','LOVER','MOTHER','CHILD'],
-    quantaCount: 700,
+    quantaCount: 2000,
   },
 
   // ── Estados Extremos (recalibrados) ───────────────────────────────────────
@@ -136,7 +136,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.34, maxSpeed: 0.28, breathPeriod: 6, selfPull: 0.04, damping: 2.0, linkMaxTtl: 0.5 },
     archetypeStrengths: { DESTROYER: 0.95, SHADOW: 0.85, CHILD: 0.60, SELF: 0.02 },
     archetypeActive: ['DESTROYER', 'SHADOW', 'CHILD'],
-    quantaCount: 1000,
+    quantaCount: 2000,
   },
   {
     id: 'oceanic-feeling',
@@ -147,7 +147,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.07, maxSpeed: 0.06, breathPeriod: 55, selfPull: 0.18, damping: 5.5, linkRadius: 0.14, linkProbability: 0.012, linkMaxTtl: 7.0 },
     archetypeStrengths: { SELF: 0.50, MOTHER: 0.85, CHILD: 0.80, LOVER: 0.70, WISE_ONE: 0.60 },
     archetypeActive: ['SELF','MOTHER','CHILD','LOVER','WISE_ONE'],
-    quantaCount: 800,
+    quantaCount: 2000,
   },
   {
     id: 'ego-dissolution',
@@ -158,7 +158,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.24, maxSpeed: 0.19, breathPeriod: 13, selfPull: 0.06, damping: 2.5, linkRadius: 0.12, linkMaxTtl: 1.5 },
     archetypeStrengths: { TRICKSTER: 0.80, CHILD: 0.90, ANIMA: 0.70, SHADOW: 0.60, SELF: 0.30 },
     archetypeActive: ['TRICKSTER','CHILD','ANIMA','SHADOW','SELF'],
-    quantaCount: 800,
+    quantaCount: 2000,
   },
 
   // ── Teoria & Trauma (recalibrados) ────────────────────────────────────────
@@ -171,7 +171,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.15, maxSpeed: 0.11, breathPeriod: 17, selfPull: 0.08, damping: 3.5, linkValDiff: 0.10 },
     archetypeStrengths: { PERSONA: 1.0, HERO: 0.90, SHADOW: 0.05, ANIMA: 0.20, SELF: 0.10 },
     archetypeActive: ['PERSONA', 'HERO', 'FATHER'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
   {
     id: 'trauma-freeze',
@@ -182,7 +182,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.04, maxSpeed: 0.04, breathPeriod: 80, selfPull: 0.35, damping: 7.0, linkMaxTtl: 9.0 },
     archetypeStrengths: { SHADOW: 0.70, FATHER: 0.80, CHILD: 0.90, SELF: 0.30 },
     archetypeActive: ['SHADOW', 'FATHER', 'CHILD'],
-    quantaCount: 500,
+    quantaCount: 2000,
   },
   {
     id: 'grief-processing',
@@ -193,7 +193,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.19, maxSpeed: 0.15, breathPeriod: 16, selfPull: 0.22, damping: 3.5, linkMaxTtl: 2.5 },
     archetypeStrengths: { CHILD: 0.85, SHADOW: 0.70, MOTHER: 0.75, DESTROYER: 0.65, SELF: 0.40 },
     archetypeActive: ['CHILD','SHADOW','MOTHER','DESTROYER','SELF','LOVER'],
-    quantaCount: 650,
+    quantaCount: 2000,
   },
 
   // ── Estados de Expansão (recalibrados) ────────────────────────────────────
@@ -206,7 +206,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.12, maxSpeed: 0.09, breathPeriod: 28, selfPull: 0.26, damping: 4.5, linkRadius: 0.10, linkProbability: 0.007 },
     archetypeStrengths: { WISE_ONE: 0.90, MOTHER: 0.85, CHILD: 0.80, TRICKSTER: 0.60, SELF: 0.70 },
     archetypeActive: ['WISE_ONE','MOTHER','CHILD','TRICKSTER','SELF','ANIMA'],
-    quantaCount: 750,
+    quantaCount: 2000,
   },
   {
     id: 'kundalini',
@@ -217,7 +217,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.21, maxSpeed: 0.16, breathPeriod: 10, selfPull: 0.55, damping: 3.5, linkRadius: 0.06 },
     archetypeStrengths: { HERO: 0.85, SELF: 0.90, DESTROYER: 0.60, WISE_ONE: 0.70, MOTHER: 0.65 },
     archetypeActive: ['HERO','SELF','DESTROYER','WISE_ONE','MOTHER'],
-    quantaCount: 700,
+    quantaCount: 2000,
   },
   {
     id: 'synchronicity',
@@ -228,7 +228,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.14, maxSpeed: 0.10, breathPeriod: 20, selfPull: 0.28, damping: 3.5, linkRadius: 0.16, linkProbability: 0.003, linkMaxTtl: 5.5, linkValDiff: 0.60 },
     archetypeStrengths: { TRICKSTER: 0.85, WISE_ONE: 0.80, SELF: 0.75, CHILD: 0.70 },
     archetypeActive: ['TRICKSTER','WISE_ONE','SELF','CHILD','ANIMA'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
   {
     id: 'flow-state',
@@ -239,7 +239,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.17, maxSpeed: 0.14, breathPeriod: 24, selfPull: 0.42, damping: 2.5, linkRadius: 0.08, linkMaxTtl: 4.0 },
     archetypeStrengths: { HERO: 0.80, SELF: 0.90, TRICKSTER: 0.50, CHILD: 0.70, WISE_ONE: 0.75 },
     archetypeActive: ['HERO','SELF','TRICKSTER','CHILD','WISE_ONE'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
   {
     id: 'mystical-union',
@@ -250,7 +250,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.08, maxSpeed: 0.06, breathPeriod: 50, selfPull: 0.62, damping: 5.5, linkRadius: 0.12, linkProbability: 0.010, linkMaxTtl: 7.0 },
     archetypeStrengths: { SELF: 1.0, WISE_ONE: 0.90, LOVER: 0.85, MOTHER: 0.80, CHILD: 0.80 },
     archetypeActive: ['SELF','WISE_ONE','LOVER','MOTHER','CHILD','ANIMA'],
-    quantaCount: 650,
+    quantaCount: 2000,
   },
   {
     id: 'hero-complete',
@@ -261,7 +261,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.13, maxSpeed: 0.10, breathPeriod: 28, selfPull: 0.40, damping: 4.0, linkMaxTtl: 4.5, linkRadius: 0.09 },
     archetypeStrengths: { HERO: 0.85, SELF: 0.90, WISE_ONE: 0.85, CHILD: 0.75, LOVER: 0.70, TRICKSTER: 0.55 },
     archetypeActive: ['HERO','SELF','WISE_ONE','CHILD','LOVER','TRICKSTER','MOTHER'],
-    quantaCount: 650,
+    quantaCount: 2000,
   },
   {
     id: 'creative-fire',
@@ -272,7 +272,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.28, maxSpeed: 0.23, breathPeriod: 9, selfPull: 0.22, damping: 2.0, linkRadius: 0.07, linkMaxTtl: 1.3, linkProbability: 0.009 },
     archetypeStrengths: { TRICKSTER: 0.90, ANIMA: 0.85, CHILD: 0.85, DESTROYER: 0.65, SELF: 0.50 },
     archetypeActive: ['TRICKSTER','ANIMA','CHILD','DESTROYER','SELF','LOVER'],
-    quantaCount: 850,
+    quantaCount: 2000,
   },
 
   // ── Estados Estáveis — frozenFlow = true ─────────────────────────────────
@@ -290,7 +290,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { SELF: 1.0, WISE_ONE: 0.85, MOTHER: 0.70, CHILD: 0.50 },
     archetypeActive: ['SELF', 'WISE_ONE', 'MOTHER'],
-    quantaCount: 500,
+    quantaCount: 2000,
   },
   {
     id: 'mente-ansiosa',
@@ -306,7 +306,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { FATHER: 0.95, SHADOW: 0.75, DESTROYER: 0.55, SELF: 0.05, HERO: 0.30 },
     archetypeActive: ['FATHER', 'SHADOW', 'DESTROYER'],
-    quantaCount: 700,
+    quantaCount: 2000,
   },
   {
     id: 'mente-hedonista',
@@ -322,7 +322,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { LOVER: 1.0, CHILD: 0.85, TRICKSTER: 0.60, MOTHER: 0.75, SHADOW: 0.10, FATHER: 0.05 },
     archetypeActive: ['LOVER', 'CHILD', 'TRICKSTER', 'MOTHER'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -339,7 +339,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.06, maxSpeed: 0.05, breathPeriod: 45, selfPull: 0.10, damping: 6.5, linkMaxTtl: 1.2, linkRadius: 0.06 },
     archetypeStrengths: { SHADOW: 0.90, DESTROYER: 0.70, CHILD: 0.80, SELF: 0.15, MOTHER: 0.30 },
     archetypeActive: ['SHADOW', 'DESTROYER', 'CHILD'],
-    quantaCount: 500,
+    quantaCount: 2000,
   },
   {
     id: 'hipomania',
@@ -350,7 +350,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.26, maxSpeed: 0.22, breathPeriod: 8, selfPull: 0.18, damping: 2.5, linkRadius: 0.09, linkProbability: 0.010, linkMaxTtl: 2.5 },
     archetypeStrengths: { HERO: 0.90, LOVER: 0.85, TRICKSTER: 0.80, CHILD: 0.75, SELF: 0.50, DESTROYER: 0.30 },
     archetypeActive: ['HERO','LOVER','TRICKSTER','CHILD','SELF'],
-    quantaCount: 800,
+    quantaCount: 2000,
   },
   {
     id: 'toc-compulsao',
@@ -361,7 +361,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.14, maxSpeed: 0.11, breathPeriod: 6, selfPull: 0.05, damping: 3.0, linkRadius: 0.06, linkValDiff: 0.08, linkMaxTtl: 1.8, springK: 0.85 },
     archetypeStrengths: { FATHER: 1.0, PERSONA: 0.90, SHADOW: 0.60, HERO: 0.70, SELF: 0.10 },
     archetypeActive: ['FATHER', 'PERSONA', 'HERO', 'SHADOW'],
-    quantaCount: 650,
+    quantaCount: 2000,
   },
   {
     id: 'dissociacao',
@@ -372,7 +372,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.10, maxSpeed: 0.08, breathPeriod: 30, selfPull: 0.04, damping: 5.0, linkRadius: 0.04, linkProbability: 0.002, linkValDiff: 0.08, linkMaxTtl: 0.8 },
     archetypeStrengths: { SHADOW: 0.80, CHILD: 0.90, PERSONA: 0.75, DESTROYER: 0.50, SELF: 0.10 },
     archetypeActive: ['SHADOW', 'CHILD', 'PERSONA'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
   {
     id: 'apego-ansioso',
@@ -383,7 +383,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.16, maxSpeed: 0.14, breathPeriod: 5, selfPull: 0.08, damping: 1.8, linkRadius: 0.07, linkMaxTtl: 1.0, linkValDiff: 0.25 },
     archetypeStrengths: { CHILD: 1.0, MOTHER: 0.80, SHADOW: 0.65, DESTROYER: 0.40, FATHER: 0.55 },
     archetypeActive: ['CHILD', 'MOTHER', 'SHADOW', 'FATHER'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
 
   // ── Jungiana Avançada ────────────────────────────────────────────────────
@@ -400,7 +400,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { SELF: 1.0, WISE_ONE: 0.80, ANIMA: 0.80, HERO: 0.70, MOTHER: 0.75, SHADOW: 0.65, CHILD: 0.70, LOVER: 0.75, TRICKSTER: 0.60, FATHER: 0.65, DESTROYER: 0.55, PERSONA: 0.60 },
     archetypeActive: ['SELF','WISE_ONE','ANIMA','HERO','MOTHER','SHADOW','CHILD','LOVER','TRICKSTER','FATHER','DESTROYER','PERSONA'],
-    quantaCount: 700,
+    quantaCount: 2000,
   },
   {
     id: 'inflacao-self',
@@ -411,7 +411,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.20, maxSpeed: 0.18, breathPeriod: 12, selfPull: 0.90, damping: 1.5, linkRadius: 0.05, linkMaxTtl: 0.6 },
     archetypeStrengths: { SELF: 1.0, HERO: 0.90, WISE_ONE: 0.85, FATHER: 0.80, PERSONA: 0.75 },
     archetypeActive: ['SELF','HERO','WISE_ONE','FATHER','PERSONA'],
-    quantaCount: 800,
+    quantaCount: 2000,
   },
   {
     id: 'sonho-lucido',
@@ -422,7 +422,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.15, maxSpeed: 0.12, breathPeriod: 18, selfPull: 0.30, damping: 3.5, linkRadius: 0.09, linkMaxTtl: 3.5, linkProbability: 0.008 },
     archetypeStrengths: { ANIMA: 0.90, TRICKSTER: 0.80, CHILD: 0.85, HERO: 0.70, WISE_ONE: 0.75, SELF: 0.65 },
     archetypeActive: ['ANIMA','TRICKSTER','CHILD','HERO','WISE_ONE'],
-    quantaCount: 650,
+    quantaCount: 2000,
   },
 
   // ── Contemplativo / Neurológico ───────────────────────────────────────────
@@ -439,7 +439,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { SELF: 0.60, WISE_ONE: 0.55, MOTHER: 0.50, HERO: 0.40, SHADOW: 0.40, CHILD: 0.45, ANIMA: 0.50 },
     archetypeActive: ['SELF','WISE_ONE','MOTHER','CHILD'],
-    quantaCount: 550,
+    quantaCount: 2000,
   },
   {
     id: 'estado-hipnotico',
@@ -454,7 +454,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { WISE_ONE: 1.0, SELF: 0.80, ANIMA: 0.70, PERSONA: 0.60, SHADOW: 0.20 },
     archetypeActive: ['WISE_ONE','SELF','ANIMA'],
-    quantaCount: 500,
+    quantaCount: 2000,
   },
   {
     id: 'meditacao-theta',
@@ -469,7 +469,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { SELF: 1.0, WISE_ONE: 0.90, MOTHER: 0.80, ANIMA: 0.75 },
     archetypeActive: ['SELF','WISE_ONE','MOTHER'],
-    quantaCount: 450,
+    quantaCount: 2000,
   },
 
   // ── Ciclos de Vida ────────────────────────────────────────────────────────
@@ -482,7 +482,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.18, maxSpeed: 0.16, breathPeriod: 10, selfPull: 0.12, damping: 2.5, linkRadius: 0.08, linkMaxTtl: 1.5, spawnRate: 8, deathAge: 20 },
     archetypeStrengths: { CHILD: 1.0, MOTHER: 0.85, LOVER: 0.60, TRICKSTER: 0.70, SELF: 0.30 },
     archetypeActive: ['CHILD','MOTHER','TRICKSTER','LOVER'],
-    quantaCount: 700,
+    quantaCount: 2000,
   },
   {
     id: 'velhice-integrada',
@@ -497,7 +497,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { WISE_ONE: 1.0, SELF: 0.85, MOTHER: 0.80, CHILD: 0.65, HERO: 0.50, ANIMA: 0.70 },
     archetypeActive: ['WISE_ONE','SELF','MOTHER','CHILD'],
-    quantaCount: 500,
+    quantaCount: 2000,
   },
 
   // ── Afetivo-Relacional ────────────────────────────────────────────────────
@@ -510,7 +510,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.13, maxSpeed: 0.11, breathPeriod: 14, selfPull: 0.28, damping: 4.0, linkRadius: 0.11, linkProbability: 0.012, linkMaxTtl: 5.0 },
     archetypeStrengths: { LOVER: 1.0, ANIMA: 0.90, CHILD: 0.75, MOTHER: 0.80, SELF: 0.65, HERO: 0.60 },
     archetypeActive: ['LOVER','ANIMA','CHILD','MOTHER','SELF'],
-    quantaCount: 650,
+    quantaCount: 2000,
   },
   {
     id: 'desamor',
@@ -521,7 +521,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.14, maxSpeed: 0.11, breathPeriod: 22, selfPull: 0.14, damping: 3.5, linkRadius: 0.07, linkMaxTtl: 1.8, linkValDiff: 0.30 },
     archetypeStrengths: { SHADOW: 0.85, DESTROYER: 0.70, CHILD: 0.80, ANIMA: 0.30, SELF: 0.35, LOVER: 0.20 },
     archetypeActive: ['SHADOW','DESTROYER','CHILD','ANIMA','SELF'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
   {
     id: 'amor-materno',
@@ -536,7 +536,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { MOTHER: 1.0, CHILD: 0.90, SELF: 0.75, LOVER: 0.70, ANIMA: 0.65, WISE_ONE: 0.60 },
     archetypeActive: ['MOTHER','CHILD','SELF','LOVER'],
-    quantaCount: 600,
+    quantaCount: 2000,
   },
 
   // ── Estados Limítrofes / Criativos ────────────────────────────────────────
@@ -549,7 +549,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.22, maxSpeed: 0.18, breathPeriod: 12, selfPull: 0.35, damping: 2.8, linkRadius: 0.14, linkProbability: 0.008, linkMaxTtl: 3.5, linkValDiff: 0.55 },
     archetypeStrengths: { TRICKSTER: 0.95, WISE_ONE: 0.90, SELF: 0.80, CHILD: 0.75, ANIMA: 0.70 },
     archetypeActive: ['TRICKSTER','WISE_ONE','SELF','CHILD','ANIMA'],
-    quantaCount: 650,
+    quantaCount: 2000,
   },
   {
     id: 'incubacao-criativa',
@@ -564,7 +564,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     },
     archetypeStrengths: { TRICKSTER: 0.70, ANIMA: 0.80, CHILD: 0.75, WISE_ONE: 0.65, SHADOW: 0.50, SELF: 0.55 },
     archetypeActive: ['TRICKSTER','ANIMA','CHILD','WISE_ONE','SHADOW'],
-    quantaCount: 550,
+    quantaCount: 2000,
   },
   {
     id: 'psicose-limiar',
@@ -575,7 +575,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.35, maxSpeed: 0.30, breathPeriod: 4, selfPull: 0.02, damping: 1.5, linkMaxTtl: 0.3, linkRadius: 0.06, spawnRate: 7, deathAge: 15 },
     archetypeStrengths: { DESTROYER: 1.0, SHADOW: 0.90, TRICKSTER: 0.75, CHILD: 0.70, SELF: 0.05, HERO: 0.20 },
     archetypeActive: ['DESTROYER','SHADOW','TRICKSTER','CHILD'],
-    quantaCount: 950,
+    quantaCount: 2000,
   },
   {
     id: 'sabedoria-trickster',
@@ -586,7 +586,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.20, maxSpeed: 0.16, breathPeriod: 11, selfPull: 0.25, damping: 2.5, linkRadius: 0.08, linkMaxTtl: 2.5, linkProbability: 0.007 },
     archetypeStrengths: { TRICKSTER: 0.95, WISE_ONE: 0.85, SHADOW: 0.70, SELF: 0.75, CHILD: 0.65, DESTROYER: 0.55 },
     archetypeActive: ['TRICKSTER','WISE_ONE','SHADOW','SELF','CHILD'],
-    quantaCount: 700,
+    quantaCount: 2000,
   },
   {
     id: 'complexo-paterno',
@@ -597,7 +597,7 @@ export const PSYCHE_PRESETS: PsychePreset[] = [
     config: { danceIntensity: 0.17, maxSpeed: 0.14, breathPeriod: 14, selfPull: 0.10, damping: 3.5, linkRadius: 0.07, linkValDiff: 0.18, linkMaxTtl: 2.5 },
     archetypeStrengths: { FATHER: 1.0, PERSONA: 0.85, HERO: 0.75, SHADOW: 0.70, CHILD: 0.40, SELF: 0.25 },
     archetypeActive: ['FATHER','PERSONA','HERO','SHADOW','CHILD'],
-    quantaCount: 650,
+    quantaCount: 2000,
   },
 ];
 

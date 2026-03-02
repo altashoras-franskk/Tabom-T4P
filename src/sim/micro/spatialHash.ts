@@ -39,29 +39,33 @@ export const insertParticle = (hash: SpatialHash, idx: number, x: number, y: num
   }
 };
 
+/** Optional maxResults: stop after this many callbacks to avoid O(N²) when particles cluster. */
 export const queryNeighbors = (
   hash: SpatialHash,
   x: number,
   y: number,
-  callback: (idx: number) => void
+  callback: (idx: number) => void,
+  maxResults?: number
 ): void => {
   const gx = Math.floor((x + 1) / hash.cellSize);
   const gy = Math.floor((y + 1) / hash.cellSize);
+  let n = 0;
+  const limit = maxResults ?? 1e9;
 
   // Check 3x3 neighborhood
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
+  for (let dy = -1; dy <= 1 && n < limit; dy++) {
+    for (let dx = -1; dx <= 1 && n < limit; dx++) {
       const nx = gx + dx;
       const ny = gy + dy;
-      
+
       if (nx >= 0 && nx < hash.gridWidth && ny >= 0 && ny < hash.gridHeight) {
         const cellIdx = ny * hash.gridWidth + nx;
-        
-        // Walk the linked list for this cell
+
         let particleIdx = hash.head[cellIdx];
-        while (particleIdx !== -1) {
+        while (particleIdx !== -1 && n < limit) {
           callback(particleIdx);
           particleIdx = hash.next[particleIdx];
+          n++;
         }
       }
     }

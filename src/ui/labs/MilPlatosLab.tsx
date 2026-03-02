@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { DraggablePanel } from '../../app/components/DraggablePanel';
+import { TelemetryHUD } from '../../app/components/TelemetryHUD';
+import { RecordingButton } from '../../app/components/recording/RecordingButton';
+import { CanvasRecorder, type RecorderState } from '../../app/components/recording/canvasRecorder';
 import type {
   MPParams, MPMetrics, MPOverlay, MPToolId, MPTab,
   PlateauSnapshot, RhizomeEdge,
@@ -181,6 +184,43 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
   const [showJornada, setShowJornada] = useState(false);
   const [jornadaStep, setJornadaStep] = useState(0);
   const [jornadaAnswers, setJornadaAnswers] = useState<number[]>([]);
+  const [recState, setRecState] = useState<RecorderState>('idle');
+  const [recElapsed, setRecElapsed] = useState(0);
+
+  const recorderRef = useRef<CanvasRecorder | null>(null);
+  useEffect(() => {
+    recorderRef.current = new CanvasRecorder(setRecState);
+    return () => recorderRef.current?.dispose();
+  }, []);
+  useEffect(() => {
+    if (recState !== 'recording') { setRecElapsed(0); return; }
+    const id = setInterval(() => setRecElapsed(recorderRef.current?.elapsed ?? 0), 500);
+    return () => clearInterval(id);
+  }, [recState]);
+
+  const handleRecStart = useCallback((opts?: { format?: string; quality?: string }) => {
+    recorderRef.current?.start(
+      () => {
+        const v = viewModeRef.current;
+        const c2 = canvasRef.current;
+        const c3 = canvas3dRef.current;
+        return v === '3d' && c3 ? [c3] : c2 ? [c2] : [];
+      },
+      () => {
+        const m = metricsRef.current;
+        return {
+          labName: 'Mil Platôs',
+          lines: [
+            `Platô: ${m.plateauLabel} · K=${m.K.toFixed(2)}`,
+            `Afetos ${m.nAffects} · Órgãos ${m.nOrgans} · Nós ${m.nRhizomeNodes} · Arestas ${m.nRhizomeEdges}`,
+            `Hub ${(m.hubDominance * 100).toFixed(0)}% · Intens ${(m.meanIntensity * 100).toFixed(0)}% · Entropia ${(m.fieldEntropy * 100).toFixed(0)}%`,
+          ],
+        };
+      },
+      30, undefined, opts,
+    );
+  }, []);
+  const handleRecStop = useCallback(() => recorderRef.current?.stop(), []);
 
   paramsRef.current = params;
   runningRef.current = running;
@@ -379,17 +419,40 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
           </DraggablePanel>
         )}
 
+        {/* LIVE telemetry — full CsO/Rizoma/Platô metrics (compact) */}
+        <DraggablePanel id="mp_telemetry" title="LIVE" titleColor={ACCENT} defaultX={12} defaultY={typeof window !== 'undefined' ? window.innerHeight - 220 : 380} zIndex={35} width={260} persist>
+          <div style={{ padding: '4px 8px 8px' }}>
+            <TelemetryHUD
+              embedded
+              compact
+              accentColor={ACCENT}
+              getLines={() => {
+                const m = metricsRef.current;
+                const p = paramsRef.current;
+                const pct = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 99);
+                return [
+                  `FPS ${m.fps.toFixed(0)} · ${m.plateauLabel} · K=${m.K.toFixed(2)}`,
+                  `CsO: afetos ${m.nAffects} órgãos ${m.nOrgans} · Rizoma: nós ${m.nRhizomeNodes} arestas ${m.nRhizomeEdges}`,
+                  `Hub ${pct(m.hubDominance)} Platô ${pct(m.plateauScore)} Intens ${pct(m.meanIntensity)} Entropia ${pct(m.fieldEntropy)} Memória ${pct(m.memoryLoad)}`,
+                  `Ruptura ${m.ruptureRate.toFixed(2)} Crueldade ${pct(m.crueltyPressure)}`,
+                  `Params: org ${pct(p.organismo)} intens ${pct(p.intensidade)} desorg ${pct(p.desorganizacao)} mult ${pct(p.multiplicidade)} fuga ${pct(p.linhasDeFuga)}`,
+                ];
+              }}
+            />
+          </div>
+        </DraggablePanel>
+
         {/* Draggable legend */}
-        <DraggablePanel id="mp_legend" title="LEGENDA" titleColor="rgba(255,255,255,0.25)" defaultX={12} defaultY={Math.max(200,window.innerHeight-200)} zIndex={35} width={160}>
-          <div style={{ padding: '4px 8px 6px', fontSize: 6.5, fontFamily: MONO, color: 'rgba(255,255,255,0.35)', lineHeight: 1.7 }}>
-            <div><span style={{ color: '#60a5fa' }}>&#9675;</span> Orgaos (estratificacao)</div>
-            <div><span style={{ color: '#fbbf24' }}>&#8226;</span> Afetos (intensidades)</div>
-            <div><span style={{ color: '#34d399' }}>&#9670;</span> Nos rizoma (entradas)</div>
-            <div><span style={{ color: '#60a5fa' }}>&#8212;</span> Conexoes rizoma</div>
+        <DraggablePanel id="mp_legend" title="LEGENDA" titleColor="rgba(255,255,255,0.25)" defaultX={12} defaultY={Math.max(200,window.innerHeight-200)} zIndex={35} width={150}>
+          <div style={{ padding: '3px 6px 5px', fontSize: 6, fontFamily: MONO, color: 'rgba(255,255,255,0.32)', lineHeight: 1.6 }}>
+            <div><span style={{ color: '#60a5fa' }}>&#9675;</span> Orgaos (estrato)</div>
+            <div><span style={{ color: '#fbbf24' }}>&#8226;</span> Afetos (intens.)</div>
+            <div><span style={{ color: '#34d399' }}>&#9670;</span> Nos rizoma</div>
+            <div><span style={{ color: '#60a5fa' }}>&#8212;</span> Conexoes</div>
             <div><span style={{ color: '#a78bfa' }}>- -</span> Linhas de fuga</div>
-            <div><span style={{ color: 'rgba(99,102,241,0.5)' }}>&#9632;</span> Consistencia (azul)</div>
-            <div><span style={{ color: 'rgba(251,191,36,0.5)' }}>&#9632;</span> Territorio (ambar)</div>
-            <div style={{ marginTop: 2, color: 'rgba(255,255,255,0.15)' }}>clique = inspecionar</div>
+            <div><span style={{ color: 'rgba(99,102,241,0.5)' }}>&#9632;</span> Consistencia</div>
+            <div><span style={{ color: 'rgba(251,191,36,0.5)' }}>&#9632;</span> Territorio</div>
+            <div style={{ marginTop: 1, color: 'rgba(255,255,255,0.12)', fontSize: 5.5 }}>clique = inspecionar</div>
           </div>
         </DraggablePanel>
 
@@ -400,7 +463,16 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
       <div className="flex-shrink-0 overflow-y-auto" style={{ width: 300, borderLeft: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.93)', padding: '52px 10px 16px' }}>
         <div style={{ fontFamily: DOTO, fontSize: 15, fontWeight: 700, color: ACCENT, marginBottom: 1 }}>MIL PLATOS</div>
         <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.30)', marginBottom: 6, lineHeight: 1.4 }}>Clique em qualquer elemento para inspecionar. Scroll = zoom. Alt+arraste = pan.</div>
-        <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}><MiniBtn label={running ? 'II' : '>'} onClick={() => setRunning(!running)} /><MiniBtn label="R" onClick={() => resetWorld(params)} /><div style={{ flex: 1 }} /><MiniBtn label="+ Plato" onClick={captureSnapshot} /><MiniBtn label="Jornada" onClick={() => { setShowJornada(true); setJornadaStep(0); setJornadaAnswers([]); }} /></div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6, alignItems: 'center' }}>
+          <MiniBtn label={running ? 'II' : '>'} onClick={() => setRunning(!running)} />
+          <MiniBtn label="R" onClick={() => resetWorld(params)} />
+          <div style={{ flex: 1 }} />
+          <div style={{ flexShrink: 0 }}>
+            <RecordingButton state={recState} elapsed={recElapsed} onStart={handleRecStart} onStop={handleRecStop} showOptions />
+          </div>
+          <MiniBtn label="+ Plato" onClick={captureSnapshot} />
+          <MiniBtn label="Jornada" onClick={() => { setShowJornada(true); setJornadaStep(0); setJornadaAnswers([]); }} />
+        </div>
 
         <Hdr label="EIXO CsO" />
         <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.25)', display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}><span>Corpo c/ Orgaos</span><span>CsO</span></div>

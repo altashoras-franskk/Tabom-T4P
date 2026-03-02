@@ -37,8 +37,10 @@ export interface RecordingOptions {
 }
 
 export interface RecordingParams {
-  labName:  string;
-  lines:    string[];
+  labName:   string;
+  lines:     string[];
+  /** Optional right-side panel (e.g. telemetry) — only drawn in exported video */
+  rightLines?: string[];
 }
 
 const QUALITY_BITRATE: Record<RecordQuality, number> = {
@@ -248,22 +250,46 @@ export class CanvasRecorder {
     }
 
     // BOTTOM-LEFT: parameter lines
-    if (params.lines.length === 0) return;
-    ctx.save();
-    ctx.font = '10px monospace';
-    const maxTW = Math.max(...params.lines.map(l => ctx.measureText(l).width));
-    const bgH   = params.lines.length * LINE_H + 10;
-    const bgY   = H - bgH - PAD + 2;
-    ctx.globalAlpha = 0.60;
-    ctx.fillStyle   = 'rgba(7,5,14,0.88)';
-    ctx.beginPath(); ctx.roundRect(PAD - 6, bgY - 4, maxTW + 18, bgH, 5); ctx.fill();
-    ctx.globalAlpha = 0.88;
-    for (let i = 0; i < params.lines.length; i++) {
-      const y = H - PAD - (params.lines.length - 1 - i) * LINE_H;
-      ctx.fillStyle = i === 0 ? 'rgba(196,181,253,0.92)' : 'rgba(210,200,255,0.80)';
-      ctx.fillText(params.lines[i], PAD, y);
+    if (params.lines.length > 0) {
+      ctx.save();
+      ctx.font = '10px monospace';
+      const maxTW = Math.max(...params.lines.map(l => ctx.measureText(l).width));
+      const bgH   = params.lines.length * LINE_H + 10;
+      const bgY   = H - bgH - PAD + 2;
+      ctx.globalAlpha = 0.60;
+      ctx.fillStyle   = 'rgba(7,5,14,0.88)';
+      ctx.beginPath(); ctx.roundRect(PAD - 6, bgY - 4, maxTW + 18, bgH, 5); ctx.fill();
+      ctx.globalAlpha = 0.88;
+      for (let i = 0; i < params.lines.length; i++) {
+        const y = H - PAD - (params.lines.length - 1 - i) * LINE_H;
+        ctx.fillStyle = i === 0 ? 'rgba(196,181,253,0.92)' : 'rgba(210,200,255,0.80)';
+        ctx.fillText(params.lines[i], PAD, y);
+      }
+      ctx.restore();
     }
-    ctx.restore();
+
+    // BOTTOM-RIGHT: telemetry (video export only — archetype %, RSI, Freud)
+    const rightLines = params.rightLines;
+    if (rightLines?.length) {
+      ctx.save();
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'right';
+      const maxRW = Math.max(...rightLines.map(l => ctx.measureText(l).width));
+      const rPad = PAD + 8;
+      const rBgH = rightLines.length * (LINE_H - 1) + 10;
+      const rBgY = H - rBgH - PAD + 2;
+      ctx.globalAlpha = 0.60;
+      ctx.fillStyle   = 'rgba(7,5,14,0.88)';
+      ctx.beginPath(); ctx.roundRect(W - maxRW - rPad - 10, rBgY - 4, maxRW + 18, rBgH, 5); ctx.fill();
+      ctx.globalAlpha = 0.88;
+      for (let i = 0; i < rightLines.length; i++) {
+        const y = H - PAD - (rightLines.length - 1 - i) * (LINE_H - 1);
+        ctx.fillStyle = i === 0 ? 'rgba(196,181,253,0.92)' : 'rgba(200,190,255,0.78)';
+        ctx.fillText(rightLines[i], W - rPad, y);
+      }
+      ctx.textAlign = 'left';
+      ctx.restore();
+    }
   }
 
   // ── Finalize & download ──────────────────────────────────────────────────

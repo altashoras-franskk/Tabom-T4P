@@ -55,6 +55,9 @@ interface LabConfig {
   statusKey: 'lab_status_alpha' | 'lab_status_experimental' | ''; enabled: boolean;
 }
 
+/** Quando true, login fica desabilitado: as 9 ferramentas iniciais ficam liberadas para qualquer um. */
+const LOGIN_DISABLED = true;
+
 const LABS_CONFIG: LabConfig[] = [
   { id: 'complexityLife', num: '01.', symbol: '\u{1F71B}', tag: 'FOUNDATION', tagColor: '#ffd400', statusKey: 'lab_status_alpha', enabled: true },
   { id: 'metaArtLab', num: '02.', symbol: '\u{1F762}', tag: 'GENERATIVE ART', tagColor: '#ff0084', statusKey: 'lab_status_experimental', enabled: true },
@@ -584,7 +587,7 @@ export function HomePage({
       <BoidsBackground active={true} />
       {(() => {
         const hasAdmin = !!onOpenAdmin;
-        const showEntrar = !user;
+        const showEntrar = !LOGIN_DISABLED && !user;
         if (!hasAdmin && !showEntrar) return null;
         return (
           <div className="fixed top-3 right-3 z-20 flex items-center gap-2">
@@ -769,7 +772,7 @@ export function HomePage({
         <section id="labs-section" className="snap-start pb-24 pt-16 px-4 md:px-12 max-w-[1600px] mx-auto w-full">
           <div className="mb-16 border-b border-dashed border-white/10 pb-4">
             <h3 className="text-zinc-500 text-sm tracking-widest" style={{ fontFamily: MONO }}>{t('home_availableTools')}</h3>
-            {!user && (
+            {!LOGIN_DISABLED && !user && (
               <p style={{ marginTop: 8, fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
                 {t('home_entrarToAccess')}
               </p>
@@ -779,8 +782,12 @@ export function HomePage({
             {LABS.map((lab, idx) => (
               <motion.div key={lab.id} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }} transition={{ delay: idx * 0.04, duration: 0.5 }}
-                className={`group border-t border-dashed border-white/10 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start transition-colors ${user ? 'hover:bg-white/5 cursor-pointer' : 'opacity-70 cursor-default'} ${(!lab.enabled && !adminMode) ? 'opacity-40' : ''}`}
+                className={`group border-t border-dashed border-white/10 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start transition-colors ${(lab.enabled || adminMode) ? 'hover:bg-white/5 cursor-pointer' : 'opacity-70 cursor-default'} ${(!lab.enabled && !adminMode) ? 'opacity-40' : ''}`}
                 onClick={() => {
+                  if (LOGIN_DISABLED) {
+                    if (lab.enabled || adminMode) onEnterLab(lab.id);
+                    return;
+                  }
                   if (!user) {
                     setShowAuthModal(true);
                     return;

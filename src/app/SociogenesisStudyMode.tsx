@@ -9,6 +9,7 @@ import { Play, Pause, RotateCcw, ArrowLeft, ChevronDown, X } from 'lucide-react'
 import { CanvasRecorder, RecorderState, RecordingOptions } from './components/recording/canvasRecorder';
 import { RecordingButton } from './components/recording/RecordingButton';
 import { TelemetryHUD } from './components/TelemetryHUD';
+import { DraggablePanel } from './components/DraggablePanel';
 import {
   createStudyConfig, createStudyMetrics, createStudySymbols, createStudyWorldState,
   GROUP_COLORS, defaultGroupProfiles,
@@ -1187,11 +1188,10 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
             )}
           </div>
 
-          {/* Group + Archetype legend — bottom right */}
-          <div className="absolute bottom-5 right-5 flex flex-col items-end gap-3 pointer-events-none max-w-[200px]">
-            {/* Símbolos sobre agentes (papéis / roles) — ícones em cima dos agentes no canvas */}
+          {/* Group + Archetype legend — bottom right (compact, complete) */}
+          <div className="absolute bottom-5 right-5 flex flex-col items-end gap-2 pointer-events-none max-w-[180px]">
             <div className="flex flex-col items-end gap-0.5">
-              <div className="text-[8px] uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }} title="Ícones que aparecem em cima de alguns agentes">Símbolos sobre agentes</div>
+              <div className="text-[6.5px] uppercase tracking-widest mb-0.5" style={{ color: 'rgba(255,255,255,0.22)', fontFamily: MONO }}>Papéis</div>
               {([
                 { role: 'leader' as const, sym: '●', color: '#fbbf24' },
                 { role: 'authority' as const, sym: '◆', color: '#60a5fa' },
@@ -1202,36 +1202,34 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
                 { role: 'rebel' as const, sym: '⁄', color: '#f87171' },
                 { role: 'priest' as const, sym: '○', color: '#c084fc' },
               ]).map(({ role, sym, color }) => (
-                <div key={role} className="flex items-center gap-2" style={{ fontFamily: MONO }} title={getRoleLabel(role, true)}>
-                  <span className="text-[9px] text-right" style={{ color: 'rgba(255,255,255,0.5)' }}>{getRoleLabel(role)}</span>
-                  <span className="text-[10px] shrink-0" style={{ color }}>{sym}</span>
+                <div key={role} className="flex items-center gap-1.5" style={{ fontFamily: MONO }} title={getRoleLabel(role, true)}>
+                  <span className="text-[7px] text-right" style={{ color: 'rgba(255,255,255,0.45)' }}>{getRoleLabel(role)}</span>
+                  <span className="text-[8px] shrink-0" style={{ color }}>{sym}</span>
                 </div>
               ))}
             </div>
-            {/* Groups (sociedades / nichos) */}
-            <div className="flex flex-col items-end gap-1">
-              <div className="text-[8px] uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}>Grupos</div>
+            <div className="flex flex-col items-end gap-0.5">
+              <div className="text-[6.5px] uppercase tracking-widest mb-0.5" style={{ color: 'rgba(255,255,255,0.22)', fontFamily: MONO }}>Grupos</div>
               {Array.from({ length: cfgRef.current.groupCount }).map((_, g) => {
                 const profiles = cfgRef.current.groupProfiles ?? defaultGroupProfiles(cfgRef.current.groupCount);
                 const gp = profiles[g];
                 return (
-                  <div key={g} className="flex items-center gap-2" style={{ fontFamily: MONO }}>
-                    <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.45)' }}>{gp ? gp.name : `G${g}`}</span>
-                    <span className="text-[7px] uppercase" style={{ color: 'rgba(255,255,255,0.2)' }}>{gp?.sphere ?? ''}</span>
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: GROUP_COLORS[g] }} />
+                  <div key={g} className="flex items-center gap-1.5" style={{ fontFamily: MONO }}>
+                    <span className="text-[7px]" style={{ color: 'rgba(255,255,255,0.4)' }}>{gp ? gp.name : `G${g}`}</span>
+                    <span className="text-[6px] uppercase" style={{ color: 'rgba(255,255,255,0.18)' }}>{gp?.sphere ?? ''}</span>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: GROUP_COLORS[g] }} />
                   </div>
                 );
               })}
             </div>
-            {/* Arquétipos presentes (muda conforme simulação) */}
             {archetypesUI.length > 0 && (
               <div className="flex flex-col items-end gap-0.5">
-                <div className="text-[8px] uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}>Arquétipos presentes</div>
+                <div className="text-[6.5px] uppercase tracking-widest mb-0.5" style={{ color: 'rgba(255,255,255,0.22)', fontFamily: MONO }}>Arquétipos</div>
                 {archetypesUI.slice(0, 8).map((arch, i) => (
-                  <div key={i} className="flex items-center gap-2" style={{ fontFamily: MONO }}>
-                    <span className="text-[9px] text-right truncate max-w-[120px]" style={{ color: 'rgba(255,255,255,0.5)' }} title={arch.label}>{arch.label}</span>
-                    <span className="text-[8px] shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }}>{arch.count}</span>
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: arch.color }} />
+                  <div key={i} className="flex items-center gap-1.5" style={{ fontFamily: MONO }}>
+                    <span className="text-[7px] text-right truncate max-w-[100px]" style={{ color: 'rgba(255,255,255,0.45)' }} title={arch.label}>{arch.label}</span>
+                    <span className="text-[7px] shrink-0" style={{ color: 'rgba(255,255,255,0.28)' }}>{arch.count}</span>
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: arch.color }} />
                   </div>
                 ))}
               </div>
@@ -1940,19 +1938,39 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
         </div>
       </div>
 
-      {/* ── TELEMETRY HUD ─────────────────────────────────────────────────────── */}
-      <TelemetryHUD
-        corner="br"
-        getLines={() => {
-          const m = metricsRef.current;
-          return [
-            `fase: ${m?.phase ?? '—'}  ·  agentes: ${agentsRef.current.length}`,
-            `coesão: ${((m?.cohesion ?? 0) * 100).toFixed(0)}%  polariz.: ${((m?.polarization ?? 0) * 100).toFixed(0)}%  conflito: ${((m?.conflict ?? 0) * 100).toFixed(0)}%`,
-            `lens: ${lensRef.current}  ·  cenário: ${scenario}`,
-            `totens: ${symbolsRef.current.totems.length}  tabus: ${symbolsRef.current.tabus.length}  rituais: ${symbolsRef.current.rituals.length}`,
-          ];
-        }}
-      />
+      {/* ── TELEMETRY HUD (complete Meadows/Morin-style, compact) ───────────────── */}
+      <DraggablePanel
+        id="socio_telemetry"
+        title="LIVE"
+        titleColor="#ff6b9d"
+        defaultX={16}
+        defaultY={typeof window !== 'undefined' ? window.innerHeight - 200 : 400}
+        zIndex={32}
+        width={260}
+        persist
+      >
+        <div style={{ padding: '4px 8px 8px' }}>
+          <TelemetryHUD
+            embedded
+            compact
+            accentColor="#ff6b9d"
+            getLines={() => {
+              const m = metricsRef.current;
+              const sym = symbolsRef.current;
+              const cfg = cfgRef.current;
+              const pct = (v: number) => Math.round(Math.max(0, Math.min(1, v ?? 0)) * 99);
+              return [
+                `N ${agentsRef.current.length} · G ${cfg.groupCount} · ${m?.phase ?? '—'} · lens: ${lensRef.current}`,
+                `Símbolos: totens ${sym.totems.length} tabus ${sym.tabus.length} rituais ${sym.rituals.length}`,
+                `Meadows: Coes ${pct(m?.cohesion)} Polar ${pct(m?.polarization)} Confl ${pct(m?.conflict)} Cons ${pct(m?.consensus)}`,
+                `Líderes ${m?.leaderCount ?? 0} rebeldes ${m?.rebelCount ?? 0} · crença ${pct(m?.meanBelief)} medo ${pct(m?.meanFear)} entropia ${pct(m?.entropy ?? 0.5)}`,
+                `Morin: Percep ${pct(m?.meanPerception)} Ética ${pct(m?.meanEthics)} Hybris ${pct(m?.meanHybris)} Fervor ${pct(m?.meanFervor)}`,
+                `Morin: Compreens ${pct(m?.meanUnderstanding)} Entang ${pct(m?.meanEntanglement)} Eco ${pct(m?.ecoHealth ?? 1)} · cenário: ${scenario}`,
+              ];
+            }}
+          />
+        </div>
+      </DraggablePanel>
     </div>
   );
 };

@@ -44,11 +44,12 @@ export const clearField = (state: FieldState): void => {
   state.mythic.fill(0);
 };
 
+/** Periodic (toroidal) indexing so edges don't accumulate more deposit than center. */
 export const getFieldIndex = (x: number, y: number, width: number, height: number): number => {
   const gx = Math.floor(((x + 1) / 2) * width);
   const gy = Math.floor(((y + 1) / 2) * height);
-  const cx = Math.max(0, Math.min(width - 1, gx));
-  const cy = Math.max(0, Math.min(height - 1, gy));
+  const cx = ((gx % width) + width) % width;
+  const cy = ((gy % height) + height) % height;
   return cy * width + cx;
 };
 

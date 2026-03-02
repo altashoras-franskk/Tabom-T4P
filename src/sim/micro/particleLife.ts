@@ -127,6 +127,8 @@ export const updateParticleLife = (
     // sigilOath reduces drag (path persistence), sigilRift increases drag
     const dragLocal = config.drag * (1 + volatility * 0.35 - cohesion * 0.20 + sigilRift * 0.22 - sigilOath * 0.14);
 
+    // Limite de vizinhos evita O(N²) e congela quando partículas se agrupam (crítico para energia ligada)
+    const MAX_NEIGHBORS_FORCE = 48;
     queryNeighbors(spatialHash, xi, yi, (j) => {
       if (i === j) return;
 
@@ -205,7 +207,7 @@ export const updateParticleLife = (
       fy[i] += dy * invDistSoft * forceMag;
 
       lastInteractionsApplied++;
-    });
+    }, MAX_NEIGHBORS_FORCE);
 
     // MORIN ENTROPY NOISE: add tiny deterministic force based on entropy
     // PATCH R1: sigilRift increases noise, sigilBond reduces it (K_SIGIL)
@@ -213,6 +215,16 @@ export const updateParticleLife = (
     const noise = (entropy + (sigilRift - sigilBond) * K_SIGIL) * 0.015;
     fx[i] += (rngMicro.next() - 0.5) * noise;
     fy[i] += (rngMicro.next() - 0.5) * noise;
+
+    // Soft centering: gentle pull toward center when far from origin (avoids edge accumulation)
+    const rSq = xi * xi + yi * yi;
+    const R2_EDGE = 0.82 * 0.82;
+    if (rSq > R2_EDGE && rSq > 1e-8) {
+      const r = Math.sqrt(rSq);
+      const strength = 0.022 * (1 - R2_EDGE / rSq); // stronger as we approach boundary
+      fx[i] -= (xi / r) * strength;
+      fy[i] -= (yi / r) * strength;
+    }
 
     // E) Field creates deterministic wander (not random walk!)
     if (scarcity > 0.3) {
@@ -298,11 +310,12 @@ export const updateParticleLife = (
       if (state.y[i] > 1) state.y[i] -= 2;
       if (state.y[i] < -1) state.y[i] += 2;
     } else {
-      // Bounce
-      if (state.x[i] > 1) { state.x[i] = 1; state.vx[i] *= -0.5; }
-      if (state.x[i] < -1) { state.x[i] = -1; state.vx[i] *= -0.5; }
-      if (state.y[i] > 1) { state.y[i] = 1; state.vy[i] *= -0.5; }
-      if (state.y[i] < -1) { state.y[i] = -1; state.vy[i] *= -0.5; }
+      // Bounce: nudge slightly inward and reflect so particles don't stick to walls
+      const margin = 0.98;
+      if (state.x[i] > 1) { state.x[i] = margin; state.vx[i] *= -0.72; }
+      if (state.x[i] < -1) { state.x[i] = -margin; state.vx[i] *= -0.72; }
+      if (state.y[i] > 1) { state.y[i] = margin; state.vy[i] *= -0.72; }
+      if (state.y[i] < -1) { state.y[i] = -margin; state.vy[i] *= -0.72; }
     }
   }
   

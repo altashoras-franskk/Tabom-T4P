@@ -22,6 +22,10 @@ interface Props {
   visible?: boolean;
   /** Accent color for dot and LIVE label (e.g. phase color to match bar/ball) */
   accentColor?: string;
+  /** When true, render inside a parent (e.g. DraggablePanel) — no fixed position, pointerEvents auto */
+  embedded?: boolean;
+  /** When true, use smaller font (7px) and tighter spacing for dense telemetry (Meadows/Morin) */
+  compact?: boolean;
 }
 
 const MONO = "'IBM Plex Mono', monospace";
@@ -34,6 +38,8 @@ export const TelemetryHUD: React.FC<Props> = ({
   bottomOffset = 0,
   visible      = true,
   accentColor  = DEFAULT_ACCENT,
+  embedded     = false,
+  compact      = false,
 }) => {
   const [lines, setLines] = useState<string[]>(() => getLines());
   const cbRef = useRef(getLines);
@@ -49,16 +55,18 @@ export const TelemetryHUD: React.FC<Props> = ({
   const isRight  = corner.endsWith('r');
   const isBottom = corner.startsWith('b');
 
-  const pos: React.CSSProperties = {
-    position:  'fixed',
-    zIndex:    29,
-    right:     isRight  ? 16      : undefined,
-    left:      !isRight ? 16      : undefined,
-    bottom:    isBottom ? 16 + bottomOffset : undefined,
-    top:       !isBottom ? 16     : undefined,
-    pointerEvents: 'none',
-    userSelect:    'none',
-  };
+  const pos: React.CSSProperties = embedded
+    ? { position: 'relative', width: '100%', pointerEvents: 'auto', userSelect: 'none' }
+    : {
+        position:  'fixed',
+        zIndex:    29,
+        right:     isRight  ? 16      : undefined,
+        left:      !isRight ? 16      : undefined,
+        bottom:    isBottom ? 16 + bottomOffset : undefined,
+        top:       !isBottom ? 16     : undefined,
+        pointerEvents: 'none',
+        userSelect:    'none',
+      };
 
   return (
     <div style={pos}>
@@ -73,17 +81,17 @@ export const TelemetryHUD: React.FC<Props> = ({
         maxWidth:       280,
       }}>
         {/* Header row — dot and LIVE use accentColor (e.g. phase color) */}
-        <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:4 }}>
+        <div style={{ display:'flex', alignItems:'center', gap: compact ? 3 : 5, marginBottom: compact ? 2 : 4 }}>
           <span style={{
-            width:5, height:5, borderRadius:'50%',
+            width: compact ? 4 : 5, height: compact ? 4 : 5, borderRadius:'50%',
             background: `${accentColor}80`,
             flexShrink: 0,
             animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
           }} />
           <span style={{
-            fontSize:    6,
+            fontSize:    compact ? 5 : 6,
             color:       `${accentColor}99`,
-            letterSpacing: '0.18em',
+            letterSpacing: compact ? '0.12em' : '0.18em',
             textTransform: 'uppercase',
           }}>
             LIVE
@@ -93,12 +101,12 @@ export const TelemetryHUD: React.FC<Props> = ({
         {/* Parameter lines */}
         {lines.map((line, i) => (
           <div key={i} style={{
-            fontSize:      9,
-            lineHeight:    1.55,
-            letterSpacing: '0.02em',
+            fontSize:      compact ? 7 : 9,
+            lineHeight:    compact ? 1.35 : 1.55,
+            letterSpacing: compact ? '0.01em' : '0.02em',
             color: i === 0
-              ? 'rgba(255,255,255,0.68)'
-              : 'rgba(255,255,255,0.40)',
+              ? 'rgba(255,255,255,0.72)'
+              : 'rgba(255,255,255,0.42)',
             whiteSpace:    'nowrap',
             overflow:      'hidden',
             textOverflow:  'ellipsis',

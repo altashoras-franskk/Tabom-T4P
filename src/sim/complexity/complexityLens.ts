@@ -131,6 +131,13 @@ export function createVitalAccumulator(): VitalAccumulator {
 
 const VITAL_WINDOW_MS = 1000; // calcula taxas a cada ~1s
 
+export interface VitalDeathCauses {
+  deathsByStarvation?: number;
+  deathsByAge?: number;
+  deathsByCollision?: number;
+  deathsByPredation?: number;
+}
+
 /** Atualiza acumulador com os eventos do frame e retorna taxas se janela expirou. */
 export function tickVitalRates(
   acc: VitalAccumulator,
@@ -138,10 +145,17 @@ export function tickVitalRates(
   births: number,
   deaths: number,
   mutations: number,
+  deathCauses?: VitalDeathCauses,
 ): void {
   acc.births    += births;
   acc.deaths    += deaths;
   acc.mutations += mutations;
+  if (deathCauses) {
+    acc.deathsByStarvation += deathCauses.deathsByStarvation ?? 0;
+    acc.deathsByAge        += deathCauses.deathsByAge ?? 0;
+    acc.deathsByCollision  += deathCauses.deathsByCollision ?? 0;
+    acc.deathsByPredation  += deathCauses.deathsByPredation ?? 0;
+  }
   acc.windowMs  += frameMs;
 
   if (acc.windowMs >= VITAL_WINDOW_MS) {

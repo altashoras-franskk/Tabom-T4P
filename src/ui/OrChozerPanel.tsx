@@ -72,9 +72,11 @@ interface OrChozerPanelProps {
   feedbackState: FeedbackState;
   onConfigChange: (patch: Partial<FeedbackConfig>) => void;
   onResetMemory: () => void;
+  /** When true, panel is inside a DraggablePanel — no absolute positioning */
+  embedded?: boolean;
 }
 
-export function OrChozerPanel({ feedbackState, onConfigChange, onResetMemory }: OrChozerPanelProps) {
+export function OrChozerPanel({ feedbackState, onConfigChange, onResetMemory, embedded }: OrChozerPanelProps) {
   const [open, setOpen]               = useState(false);
   const [vizOpen, setVizOpen]         = useState(true);
   const [sefirotOpen, setSefirotOpen] = useState(true);
@@ -85,7 +87,7 @@ export function OrChozerPanel({ feedbackState, onConfigChange, onResetMemory }: 
 
   return (
     <div style={{
-      position: 'absolute', bottom: 48, left: 8, zIndex: 30, width: 220,
+      ...(embedded ? { position: 'relative', width: '100%' } : { position: 'absolute', bottom: 48, left: 8, zIndex: 30, width: 220 }),
       background: 'rgba(0,0,0,0.94)',
       border: `1px dashed ${config.enabled ? `${ACCENT}18` : 'rgba(255,255,255,0.06)'}`,
       overflow: 'hidden',

@@ -155,7 +155,7 @@ const CAMADAS_LACAN = [
 
 const QUANTA_MIN = 200;
 const QUANTA_MAX = 2000;
-const QUANTA_DEFAULT = 1200;
+const QUANTA_DEFAULT = 2000;
 
 const BG_PRESETS: { hex: string; label: string }[] = [
   { hex: '#000000', label: 'Preto' },
