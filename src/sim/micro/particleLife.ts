@@ -272,11 +272,18 @@ export const updateParticleLife = (
       }
 
       // Speed clamp
-      const speedSq = state.vx[i] * state.vx[i] + state.vy[i] * state.vy[i];
+      let speedSq = state.vx[i] * state.vx[i] + state.vy[i] * state.vy[i];
       if (speedSq > config.speedClamp * config.speedClamp) {
         const speed = Math.sqrt(speedSq);
         state.vx[i] = (state.vx[i] / speed) * config.speedClamp;
         state.vy[i] = (state.vy[i] / speed) * config.speedClamp;
+      } else if (speedSq < 1e-10) {
+        // Thermal nudge: evita partículas congeladas quando forças se cancelam (ex. em aglomerados).
+        // Velocidade nunca fica exatamente zero para sempre.
+        const angle = rngMicro.next() * Math.PI * 2;
+        const thermal = 0.0012 * (0.5 + rngMicro.next());
+        state.vx[i] = Math.cos(angle) * thermal;
+        state.vy[i] = Math.sin(angle) * thermal;
       }
 
       // Update position
@@ -300,7 +307,9 @@ export const updateParticleLife = (
       }
     } else {
       // Food is stationary but has slow decay in energy
-      state.energy[i] = Math.max(0.1, state.energy[i] * 0.999);
+      if (config.energyEnabled) {
+        state.energy[i] = Math.max(0.1, state.energy[i] * 0.999);
+      }
     }
 
     // Wrap

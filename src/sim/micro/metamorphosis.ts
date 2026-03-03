@@ -29,15 +29,18 @@ export const updateMetamorphosis = (
     const volatility = field.volatility || 0;
     const nutrient = field.nutrient || 0.5;
 
-    // A) SIZE EVOLUTION: particles grow/shrink based on energy
-    const targetSize = 0.7 + state.energy[i] * 0.6; // 0.7-1.3 range
+    // When energy system is off, don't touch state.energy (no decay, no drift, no size-from-energy)
+    const energyVal = config.energyEnabled ? state.energy[i] : 1.0;
+
+    // A) SIZE EVOLUTION: particles grow/shrink based on energy (or 1.0 when energy off)
+    const targetSize = 0.7 + energyVal * 0.6; // 0.7-1.3 range
     const sizeSpeed = 0.02;
     state.size[i] += (targetSize - state.size[i]) * sizeSpeed;
     state.size[i] = Math.max(0.5, Math.min(2.0, state.size[i]));
 
     // B) MUTATION POTENTIAL: accumulates from various pressures
     // Pressure from high energy (readiness to evolve)
-    const energyPressure = Math.max(0, (state.energy[i] - 1.5) / 1.5);
+    const energyPressure = Math.max(0, (energyVal - 1.5) / 1.5);
 
     // Pressure from field chaos
     const fieldPressure = (entropy * 0.5 + volatility * 0.3) * 0.3;
@@ -62,11 +65,11 @@ export const updateMetamorphosis = (
       let newType = oldType;
 
       // Rule 1: HIGH ENERGY → Evolve forward (evolution)
-      if (state.energy[i] > 1.5) {
+      if (energyVal > 1.5) {
         newType = (oldType + 1) % config.typesCount;
       }
       // Rule 2: LOW ENERGY → Revert to "simpler" type (de-evolution)
-      else if (state.energy[i] < 0.5) {
+      else if (energyVal < 0.5) {
         newType = Math.max(0, oldType - 1);
       }
       // Rule 3: HIGH CHAOS FIELD → Random mutation (chaos-driven)
@@ -76,7 +79,7 @@ export const updateMetamorphosis = (
       // Rule 4: OLD AGE → Die and respawn as random type (rebirth)
       else if (state.age[i] > 1800) { // 30 seconds
         newType = rng.int(0, config.typesCount - 1);
-        state.energy[i] = 1.0; // Reset energy
+        if (config.energyEnabled) state.energy[i] = 1.0; // Reset energy
       }
 
       // Apply mutation
@@ -87,8 +90,8 @@ export const updateMetamorphosis = (
         state.mutationPotential[i] = 0;
         state.age[i] = 0;
         
-        // Consume some energy
-        state.energy[i] *= 0.7;
+        // Consume some energy (only when energy system is on)
+        if (config.energyEnabled) state.energy[i] *= 0.7;
         
         // Visual feedback: size pulse
         state.size[i] = Math.min(2.0, state.size[i] * 1.3);
@@ -98,18 +101,12 @@ export const updateMetamorphosis = (
       }
     }
 
-    // D) NUTRIENT ABSORPTION: particles gain energy from nutrient-rich fields
-    if (nutrient > 0.6) {
-      state.energy[i] += (nutrient - 0.6) * 0.002;
-    }
-    
-    // Energy decay (metabolism)
+    // D) NUTRIENT ABSORPTION + decay only when energy system is on
     if (config.energyEnabled) {
+      if (nutrient > 0.6) state.energy[i] += (nutrient - 0.6) * 0.002;
       state.energy[i] *= (1 - config.energyDecay);
+      state.energy[i] = Math.max(0.1, Math.min(3.0, state.energy[i]));
     }
-    
-    // Clamp energy
-    state.energy[i] = Math.max(0.1, Math.min(3.0, state.energy[i]));
   }
 };
 

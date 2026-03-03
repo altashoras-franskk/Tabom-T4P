@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useI18n } from '../i18n/context';
 
 interface WelcomeModalProps {
   onStart: () => void;
@@ -11,6 +12,7 @@ const MONO = "'IBM Plex Mono', monospace";
 const ACCENT = '#ffd400';
 
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart, onSkip }) => {
+  const { t } = useI18n();
   const [hoverStart, setHoverStart] = useState(false);
   const [hoverSkip, setHoverSkip] = useState(false);
 
@@ -139,7 +141,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart, onSkip }) =
                 cursor: 'pointer', transition: 'all 0.2s',
               }}
             >
-              Iniciar Guia
+              {t('guide_start')}
             </button>
             <button
               onClick={onSkip}
@@ -154,7 +156,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart, onSkip }) =
                 cursor: 'pointer', transition: 'all 0.2s',
               }}
             >
-              Explorar sozinho
+              {t('guide_skip')}
             </button>
           </div>
         </div>

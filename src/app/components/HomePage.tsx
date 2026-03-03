@@ -58,16 +58,17 @@ interface LabConfig {
 /** Quando true, login fica desabilitado: as 9 ferramentas iniciais ficam liberadas para qualquer um. */
 const LOGIN_DISABLED = true;
 
+// Ordem: 01–03 = ferramentas liberadas; 04+ = cinza e bloqueadas (allowedLabs controla quem é clicável)
 const LABS_CONFIG: LabConfig[] = [
   { id: 'complexityLife', num: '01.', symbol: '\u{1F71B}', tag: 'FOUNDATION', tagColor: '#ffd400', statusKey: 'lab_status_alpha', enabled: true },
-  { id: 'metaArtLab', num: '02.', symbol: '\u{1F762}', tag: 'GENERATIVE ART', tagColor: '#ff0084', statusKey: 'lab_status_experimental', enabled: true },
+  { id: 'sociogenesis', num: '02.', symbol: '\u{1F755}', tag: 'SOCIOLOGIA', tagColor: '#9f1111', statusKey: 'lab_status_experimental', enabled: true },
   { id: 'psycheLab', num: '03.', symbol: '\u25C8', tag: 'NEURAL FIELDS', tagColor: '#8b5cf6', statusKey: 'lab_status_alpha', enabled: true },
-  { id: 'musicLab', num: '04.', symbol: '\u{1F770}', tag: 'INSTRUMENT', tagColor: '#37b2da', statusKey: 'lab_status_alpha', enabled: true },
-  { id: 'rhizomeLab', num: '05.', symbol: '\u{1F709}', tag: 'EPISTEMIC SEARCH', tagColor: '#10d45b', statusKey: 'lab_status_alpha', enabled: true },
-  { id: 'alchemyLab', num: '06.', symbol: '\u{1F701}', tag: 'ALCHEMY + CHEMISTRY', tagColor: '#d6552d', statusKey: 'lab_status_alpha', enabled: true },
-  { id: 'treeOfLife', num: '07.', symbol: '\u{1F739}', tag: 'HERMETIC QABALAH', tagColor: '#601480', statusKey: 'lab_status_alpha', enabled: true },
-  { id: 'sociogenesis', num: '08.', symbol: '\u{1F755}', tag: 'SOCIOLOGIA', tagColor: '#9f1111', statusKey: 'lab_status_experimental', enabled: true },
-  { id: 'milPlatos', num: '09.', symbol: '\u22C6', tag: 'CsO LENS', tagColor: '#6366f1', statusKey: 'lab_status_experimental', enabled: true },
+  { id: 'metaArtLab', num: '04.', symbol: '\u{1F762}', tag: 'GENERATIVE ART', tagColor: '#ff0084', statusKey: 'lab_status_experimental', enabled: false },
+  { id: 'musicLab', num: '05.', symbol: '\u{1F770}', tag: 'INSTRUMENT', tagColor: '#37b2da', statusKey: 'lab_status_alpha', enabled: false },
+  { id: 'rhizomeLab', num: '06.', symbol: '\u{1F709}', tag: 'EPISTEMIC SEARCH', tagColor: '#10d45b', statusKey: 'lab_status_alpha', enabled: false },
+  { id: 'alchemyLab', num: '07.', symbol: '\u{1F701}', tag: 'ALCHEMY + CHEMISTRY', tagColor: '#d6552d', statusKey: 'lab_status_alpha', enabled: false },
+  { id: 'treeOfLife', num: '08.', symbol: '\u{1F739}', tag: 'HERMETIC QABALAH', tagColor: '#601480', statusKey: 'lab_status_alpha', enabled: false },
+  { id: 'milPlatos', num: '09.', symbol: '\u22C6', tag: 'CsO LENS', tagColor: '#6366f1', statusKey: 'lab_status_experimental', enabled: false },
   { id: 'languageLab', num: '10.', symbol: '\u{1F714}', tag: '', tagColor: '#191919', statusKey: '', enabled: false },
   { id: 'asimovTheater', num: '11.', symbol: '\u{1F733}', tag: '', tagColor: '#191919', statusKey: '', enabled: false },
   { id: 'physicsSandbox', num: '12.', symbol: '\u{1F719}', tag: '', tagColor: '#141414', statusKey: '', enabled: false },
@@ -551,13 +552,18 @@ export function HomePage({
   onAuthChange,
   onEnterLab,
   onOpenAdmin,
+  onExitAdmin,
   adminMode = false,
+  allowedLabs,
 }: {
   user: AuthUser | null;
   onAuthChange: (user: AuthUser | null) => void;
   onEnterLab: (id: LabId) => void;
   onOpenAdmin?: () => void;
+  onExitAdmin?: () => void;
   adminMode?: boolean;
+  /** When set, only these labs are clickable (and others appear disabled). Omit to use LABS_CONFIG.enabled. */
+  allowedLabs?: LabId[];
 }) {
   const { t, locale, setLocale } = useI18n();
   const [introFinished, setIntroFinished] = useState(false);
@@ -571,7 +577,8 @@ export function HomePage({
     name: t(`lab_${c.id}_name` as StringKey),
     description: t(`lab_${c.id}_desc` as StringKey),
     statusLabel: c.statusKey ? t(c.statusKey) : '',
-  })), [t]);
+    enabled: allowedLabs ? (allowedLabs.includes(c.id) || adminMode) : (c.enabled || adminMode),
+  })), [t, allowedLabs, adminMode]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -588,10 +595,11 @@ export function HomePage({
       {(() => {
         const hasAdmin = !!onOpenAdmin;
         const showEntrar = !LOGIN_DISABLED && !user;
-        if (!hasAdmin && !showEntrar) return null;
+        const showTopBar = hasAdmin || showEntrar || true; // always show so locale selector is visible
+        if (!showTopBar) return null;
         return (
           <div className="fixed top-3 right-3 z-20 flex items-center gap-2">
-            {/* Language EN | PT */}
+            {/* Language selector: EN = full site in English, PT = full site in Portuguese */}
             <select
               value={locale}
               onChange={(e) => setLocale(e.target.value as 'en' | 'pt-BR')}
@@ -614,10 +622,10 @@ export function HomePage({
             )}
             {hasAdmin && (
               <button
-                onClick={onOpenAdmin}
+                onClick={() => { if (adminMode && onExitAdmin) onExitAdmin(); else onOpenAdmin?.(); }}
                 className="px-3 py-2 rounded-xl border border-dashed border-white/15 bg-black/60 hover:bg-white/5 transition-colors"
                 style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: adminMode ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}
-                title={adminMode ? t('home_admin_title') : t('home_admin_title_off')}
+                title={adminMode ? t('home_admin_exit') : t('home_admin_title_off')}
               >
                 {adminMode ? t('home_admin_on') : t('home_admin')}
               </button>
@@ -779,10 +787,12 @@ export function HomePage({
             )}
           </div>
           <div className="grid gap-0">
-            {LABS.map((lab, idx) => (
+            {LABS.map((lab, idx) => {
+              const isBlocked = !lab.enabled && !adminMode;
+              return (
               <motion.div key={lab.id} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }} transition={{ delay: idx * 0.04, duration: 0.5 }}
-                className={`group border-t border-dashed border-white/10 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start transition-colors ${(lab.enabled || adminMode) ? 'hover:bg-white/5 cursor-pointer' : 'opacity-70 cursor-default'} ${(!lab.enabled && !adminMode) ? 'opacity-40' : ''}`}
+                className={`group border-t border-dashed border-white/10 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start transition-colors ${(lab.enabled || adminMode) ? 'hover:bg-white/5 cursor-pointer' : 'cursor-default'} ${isBlocked ? 'opacity-50 grayscale' : ''}`}
                 onClick={() => {
                   if (LOGIN_DISABLED) {
                     if (lab.enabled || adminMode) onEnterLab(lab.id);
@@ -794,22 +804,22 @@ export function HomePage({
                   }
                   if (lab.enabled || adminMode) onEnterLab(lab.id);
                 }}>
-                <div className="col-span-1 md:col-span-1 text-2xl text-zinc-600 font-light" style={{ fontFamily: MONO }}>{lab.num}</div>
+                <div className={`col-span-1 md:col-span-1 text-2xl font-light ${isBlocked ? 'text-zinc-500' : 'text-zinc-600'}`} style={{ fontFamily: MONO }}>{lab.num}</div>
                 <div className="col-span-1 md:col-span-4 flex items-center gap-4">
-                  <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all" style={{ color: lab.tagColor }}>{lab.symbol}</span>
-                  <h4 className="text-2xl md:text-3xl font-light uppercase tracking-tight" style={{ fontFamily: DOTO }}>{lab.name}</h4>
+                  <span className={`text-3xl transition-all ${(lab.enabled || adminMode) ? 'filter grayscale group-hover:grayscale-0' : 'grayscale'}`} style={{ color: lab.tagColor }}>{lab.symbol}</span>
+                  <h4 className={`text-2xl md:text-3xl font-light uppercase tracking-tight ${isBlocked ? 'text-zinc-500' : ''}`} style={{ fontFamily: DOTO }}>{lab.name}</h4>
                 </div>
                 <div className="col-span-1 md:col-span-3 flex flex-col gap-2">
-                  {lab.tag && <span className="text-[10px] tracking-widest uppercase font-bold" style={{ color: lab.tagColor, fontFamily: MONO }}>[{lab.tag}]</span>}
-                  <span className="text-[10px] text-zinc-600 tracking-widest uppercase" style={{ fontFamily: MONO }}>
-                    {(!lab.enabled && !adminMode) ? (lab.statusLabel || t('home_locked')) : (lab.statusLabel || '')}
+                  {lab.tag && <span className={`text-[10px] tracking-widest uppercase font-bold ${isBlocked ? 'text-zinc-500' : ''}`} style={isBlocked ? { fontFamily: MONO } : { color: lab.tagColor, fontFamily: MONO }}>[{lab.tag}]</span>}
+                  <span className={`text-[10px] tracking-widest uppercase ${isBlocked ? 'text-zinc-500' : 'text-zinc-600'}`} style={{ fontFamily: MONO }}>
+                    {isBlocked ? (lab.statusLabel || t('home_locked')) : (lab.statusLabel || '')}
                   </span>
                 </div>
                 <div className="col-span-1 md:col-span-4">
-                  <p className="text-xs text-zinc-400 leading-relaxed uppercase" style={{ fontFamily: MONO }}>{lab.description}</p>
+                  <p className={`text-xs leading-relaxed uppercase ${isBlocked ? 'text-zinc-500' : 'text-zinc-400'}`} style={{ fontFamily: MONO }}>{lab.description}</p>
                 </div>
               </motion.div>
-            ))}
+            );})}
             <div className="border-t border-dashed border-white/10" />
           </div>
         </section>

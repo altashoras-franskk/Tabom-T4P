@@ -124,6 +124,8 @@ import { DraggablePanel } from './components/DraggablePanel';
 
 const ADMIN_MODE_KEY = 't4p_admin_mode_v1';
 const ADMIN_PASSWORD = 'morin2026';
+/** When true, any user can enter allowed labs without signing in; only allowedLabs (e.g. 3 labs) are shown. */
+const LOGIN_DISABLED = true;
 
 // OR CHOZER: Bottom-up feedback engine (kept for legacy / feature-flag fallback)
 import {
@@ -140,6 +142,9 @@ import {
   recordModuleMs,
 } from '../sim/complexity/complexityLens';
 import { ComplexityPanel } from '../ui/ComplexityPanel';
+
+// Sistema de energia desativado no Complexity Life Lab (mitose e reconfig continuam ativos)
+const ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB = true;
 
 // ECONOMY-LITE
 import {
@@ -164,6 +169,7 @@ import { stepField as stepRecursiveField, getFieldStats as getRecursiveFieldStat
 
 // ── Asimov Theater password gate ──────────────────────────────────────────────
 function AsimovGate({ onUnlock }: { onUnlock: () => void }) {
+  const { t } = useI18n();
   const [pw, setPw] = React.useState('');
   const [error, setError] = React.useState(false);
   const handleSubmit = (e: React.FormEvent) => {
@@ -192,12 +198,13 @@ function AsimovGate({ onUnlock }: { onUnlock: () => void }) {
           color: 'rgba(255,255,255,0.6)', marginBottom: 6,
         }}>Asimov Theater</div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 24 }}>
-          Acesso restrito. Insira a senha para continuar.
+          {t('gate_restrictedDesc')}
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8 }}>
           <input
             type="password" value={pw} onChange={e => setPw(e.target.value)}
-            placeholder="Senha..." autoFocus
+            placeholder={t('adminGate_placeholder')}
+            autoFocus
             style={{
               flex: 1, padding: '8px 12px', borderRadius: 6,
               background: 'rgba(255,255,255,0.05)',
@@ -210,11 +217,11 @@ function AsimovGate({ onUnlock }: { onUnlock: () => void }) {
             padding: '8px 16px', borderRadius: 6, cursor: 'pointer',
             background: 'rgba(124,111,205,0.15)', border: '1px solid rgba(124,111,205,0.3)',
             color: 'rgba(124,111,205,0.9)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
-          }}>Entrar</button>
+          }}>{t('home_entrar')}</button>
         </form>
         {error && (
           <div style={{ marginTop: 12, fontSize: 10, color: 'rgba(255,80,80,0.7)' }}>
-            Senha incorreta.
+            {t('adminGate_wrongPassword')}
           </div>
         )}
       </div>
@@ -517,6 +524,7 @@ const App: React.FC = () => {
   } as any) as FieldLayersConfig);
   const reconfigStateRef = useRef<ReconfigState>(createReconfigState());
   const reconfigConfigRef = useRef<ReconfigConfig>(createReconfigConfig());
+  const initialSpawnDoneRef = useRef(false); // so we auto-spawn once when entering Complexity Life empty
   const chronicleRef = useRef<Chronicle>(createChronicle());
   const undoBufferRef = useRef<UndoBuffer>(createUndoBuffer());
   const codexStateRef = useRef<CodexState>(createCodexState());
@@ -565,7 +573,19 @@ const App: React.FC = () => {
   const [life, setLife] = useState(() => applyLifeDial(DEFAULT_LIFE));
   const lifeRef = useRef(life);
   useEffect(() => { lifeRef.current = life; }, [life]);
-  
+
+  // Sync micro/reconfig refs from initial life once (first frame uses panel defaults)
+  useEffect(() => {
+    const L = lifeRef.current;
+    microConfigRef.current.foodEnabled = L.foodEnabled;
+    microConfigRef.current.foodRatio = L.foodRatio;
+    microConfigRef.current.energyEnabled = !ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB && L.energyEnabled;
+    microConfigRef.current.metamorphosisEnabled = (L.mode === 'EVOLUTIVE' || L.mode === 'FULL');
+    microConfigRef.current.mutationRate = (L.mode === 'EVOLUTIVE' || L.mode === 'FULL') ? L.mutationRate : 0;
+    microConfigRef.current.typeStability = (L.mode === 'EVOLUTIVE' || L.mode === 'FULL') ? L.typeStability : 1;
+    reconfigStateRef.current.mutationAmount = L.reconfigAmount;
+  }, []);
+
   const lifeStatsRef = useRef(createLifeStats());
   const [lifeStatsUI, setLifeStatsUI] = useState(lifeStatsRef.current);
   
@@ -662,13 +682,13 @@ const App: React.FC = () => {
   const [loops, setLoops] = useState<LoopMetrics | null>(null);
   const loopUpdateCounterRef = useRef(0);
   
-  // Bonds & Trails overlay — carrega com bonds ligado (baixa distância/opacidade) para ver entanglements
+  // Bonds & Trails overlay — default: Conexões ON (dist 0.08, opacity 0.15), Rastros OFF
   const [showBonds, setShowBonds] = useState(true);
-  const [bondsDistance, setBondsDistance] = useState(0.15); // Acima do core de repulsão (beta*rmax≈0.072) → bonds aparecem
-  const [bondsOpacity, setBondsOpacity] = useState(0.28); // 28% opacity — visível mas não pesado
-  const [showTrails, setShowTrails] = useState(false); // OTIMIZAÇÃO: Trails desabilitado por padrão
+  const [bondsDistance, setBondsDistance] = useState(0.08);
+  const [bondsOpacity, setBondsOpacity] = useState(0.15);
+  const [showTrails, setShowTrails] = useState(false);
   const [trailsLength, setTrailsLength] = useState(20);
-  const [trailsOpacity, setTrailsOpacity] = useState(0.10); // 10% opacity
+  const [trailsOpacity, setTrailsOpacity] = useState(0.10);
   
   // AI Narrator status
   const [narrativeStatus, setNarrativeStatus] = useState<string>('');
@@ -786,16 +806,11 @@ const App: React.FC = () => {
   const leadersRef = useRef<Leader[]>([]);
   const lastLeaderDetectRef = useRef(0);
 
+  /** Only these 3 labs are accessible to non-admin users. All others stay in code but are hidden and not enterable. */
   const PUBLIC_LABS: LabId[] = [
     'complexityLife',
-    'metaArtLab',
-    'musicLab',
-    'rhizomeLab',
-    'alchemyLab',
-    'treeOfLife',
     'sociogenesis',
     'psycheLab',
-    'milPlatos',
   ];
 
   const ALL_LABS_ORDER: LabId[] = [
@@ -819,6 +834,13 @@ const App: React.FC = () => {
   }, [adminMode]);
 
   const availableLabs = adminMode ? ALL_LABS_ORDER : PUBLIC_LABS;
+
+  // If current lab is not in allowed list (e.g. after disabling non-3 labs), switch to first allowed
+  useEffect(() => {
+    if (!availableLabs.includes(activeLab)) {
+      setActiveLab(availableLabs[0] ?? 'complexityLife');
+    }
+  }, [availableLabs, activeLab]);
 
   // Background gradient
   const [background, setBackground] = useState('radial-gradient(circle, #000000 0%, #000000 100%)');
@@ -1342,13 +1364,47 @@ const App: React.FC = () => {
         reconfigIntervalSec
       );
 
+      // PATCH 04.5 (fix): apply Life config EVERY frame (even when stepCount === 0)
+      // Otherwise toggles can look OFF while stale refs keep systems running.
+      const lifeCfg = lifeRef.current;
+      microConfigRef.current.foodEnabled = lifeCfg.foodEnabled;
+      microConfigRef.current.foodRatio = lifeCfg.foodRatio;
+      microConfigRef.current.energyEnabled = !ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB && lifeCfg.energyEnabled;
+      microConfigRef.current.energyDecay = lifeCfg.energyDecay;
+      microConfigRef.current.energyFeedRate = lifeCfg.energyFeedRate;
+      microConfigRef.current.energyReproThreshold = lifeCfg.energyReproThreshold;
+      {
+        const evoOn = lifeCfg.mode === 'EVOLUTIVE' || lifeCfg.mode === 'FULL';
+        microConfigRef.current.metamorphosisEnabled = evoOn;
+        microConfigRef.current.mutationRate = evoOn ? lifeCfg.mutationRate : 0;
+        microConfigRef.current.typeStability = evoOn ? lifeCfg.typeStability : 1;
+      }
+      reconfigStateRef.current.mutationAmount = lifeCfg.reconfigAmount;
+
+      // Snapshot lens state once per frame (used by multiple modules)
+      const lensState = complexityLensRef.current;
+
       // Com energia ligada e população alta, reduzir steps por frame para evitar congelamento
-      const energyOn = microConfigRef.current.energyEnabled;
+      const energyOn = !ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB && lifeCfg.energyEnabled;
       const n = microStateRef.current.count;
       const effectiveStepCount =
         energyOn && n > 550 ? Math.min(stepCount, 1) : stepCount;
+      const simulatedDt = effectiveStepCount * BASE_STEP;
 
       const simStart = performance.now();
+
+      // Comida ligada mas sem partículas food? Converte uma fração em food para efeito imediato do toggle
+      if (lifeCfg.foodEnabled && n > 0) {
+        let foodCount = 0;
+        for (let i = 0; i < n; i++) if (microStateRef.current.type[i] === FOOD_TYPE) foodCount++;
+        if (foodCount === 0) {
+          const toConvert = Math.min(n, Math.max(1, Math.floor(n * lifeCfg.foodRatio)));
+          for (let k = 0; k < toConvert; k++) {
+            const idx = rngRef.current.int(0, n - 1);
+            if (microStateRef.current.type[idx] !== FOOD_TYPE) microStateRef.current.type[idx] = FOOD_TYPE;
+          }
+        }
+      }
 
       // Vital rates this frame (B/s, D/s, Mut/s, deaths by cause) — accumulated then sent to tickVitalRates once per frame
       let frameBirths = 0, frameDeaths = 0, frameMutations = 0;
@@ -1366,24 +1422,23 @@ const App: React.FC = () => {
         microConfigRef.current.foodEnabled = L.foodEnabled;
         microConfigRef.current.foodRatio = L.foodRatio;
         
-        // Energy system
-        microConfigRef.current.energyEnabled = L.energyEnabled;
+        // Energy system (desativado por flag no Complexity Life Lab)
+        microConfigRef.current.energyEnabled = !ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB && L.energyEnabled;
         microConfigRef.current.energyDecay = L.energyDecay;
         microConfigRef.current.energyFeedRate = L.energyFeedRate;
         microConfigRef.current.energyReproThreshold = L.energyReproThreshold;
         
-        // Metamorphosis
-        microConfigRef.current.metamorphosisEnabled = (L.mode === 'EVOLUTIVE' || L.mode === 'FULL');
-        microConfigRef.current.mutationRate = L.mutationRate;
-        microConfigRef.current.typeStability = L.typeStability;
-        
-        // Reconfig (mutationStrength controlado pelo painel; só zera quando Reconfig desligado)
-        if (!L.reconfigEnabled) reconfigConfigRef.current.mutationStrength = 0;
+        // Metamorphosis — when mode is OFF, zero evolution so nothing mutates
+        const evolutionOn = L.mode === 'EVOLUTIVE' || L.mode === 'FULL';
+        microConfigRef.current.metamorphosisEnabled = evolutionOn;
+        microConfigRef.current.mutationRate = evolutionOn ? L.mutationRate : 0;
+        microConfigRef.current.typeStability = evolutionOn ? L.typeStability : 1;
+
+        // Reconfig amplitude (used by operators); rates stay in reconfigConfigRef sliders
         reconfigStateRef.current.mutationAmount = L.reconfigAmount;
         
         // COMPLEXITY LENS / OR CHOZER: Apply feedback modulation (non-destructive save + restore)
         // Uses shared FeedbackState via complexityLensRef.feedback
-        const lensState = complexityLensRef.current;
         const fbEnabled = lensState.feedback.config.enabled;
         const savedParams = fbEnabled
           ? applyModulation(microConfigRef.current, lensState.feedback.modulation)
@@ -1434,19 +1489,18 @@ const App: React.FC = () => {
         
       }
       
-      // H) Energy/reproduction system (run ONCE per frame; avoids stepCount× cost/freezes)
-      {
-        const L = lifeRef.current;
+      // H) Energy/reproduction system — only when ENERGY is ON (desativado por flag no Complexity Lab)
+      if (!ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB && lifeCfg.energyEnabled) {
         const e = energyConfigRef.current;
-        e.enabled = microConfigRef.current.energyEnabled;
-        if (e.enabled) {
-          e.baseDecay = L.energyDecay;
-          e.feedRate = L.energyFeedRate;
-          e.reproductionThreshold = L.energyReproThreshold;
+        e.enabled = true;
+        microConfigRef.current.energyEnabled = true;
+        e.baseDecay = lifeCfg.energyDecay;
+        e.feedRate = lifeCfg.energyFeedRate;
+        e.reproductionThreshold = lifeCfg.energyReproThreshold;
 
           // Map dial → energy mutation chance & death threshold
-          e.mutationChance = 0.02 + L.mutationDial * 0.18;       // 0.02..0.20
-          e.deathThreshold = 0.18 + (1 - L.mutationDial) * 0.12; // stable worlds die less
+        e.mutationChance = 0.02 + lifeCfg.mutationDial * 0.18;       // 0.02..0.20
+        e.deathThreshold = 0.18 + (1 - lifeCfg.mutationDial) * 0.12; // stable worlds die less
 
           // PATCH 02 — Ciclo celular (opcional) + campo nutriente. cellCycleEnabled=false: reprodução por energia livre; mitose é uma das ocorrências.
           e.cellCycleEnabled = false;
@@ -1458,8 +1512,7 @@ const App: React.FC = () => {
           e.sampleNutrient = (x, y) => sampleLayer(FL, 'nutrient', x, y);
           e.depositNutrient = (x, y, amount) => addToLayer(FL, 'nutrient', x, y, amount);
 
-          const simulatedDt = stepCount * BASE_STEP;
-          stepCellCycle(microStateRef.current, e, simulatedDt);
+        stepCellCycle(microStateRef.current, e, simulatedDt);
 
           const _t_en0 = performance.now();
           const res = updateEnergy(
@@ -1478,15 +1531,17 @@ const App: React.FC = () => {
           frameDeaths += deaths;
           frameMutations += mutations;
           frameDeathsByStarvation += deaths; // energy death = fome
-          if (births) {
-            lifeStatsRef.current.births += births;
-            populationAccumulator.current.births += births;
-          }
-          if (deaths) {
-            lifeStatsRef.current.deaths += deaths;
-            populationAccumulator.current.deaths += deaths;
-          }
+        if (births) {
+          lifeStatsRef.current.births += births;
+          populationAccumulator.current.births += births;
         }
+        if (deaths) {
+          lifeStatsRef.current.deaths += deaths;
+          populationAccumulator.current.deaths += deaths;
+        }
+      } else {
+        // Garantia: com energia desligada nunca rodamos decay/morte por energia
+        microConfigRef.current.energyEnabled = false;
       }
 
       // Update Field Layers (Meadows Engine) - inject from micro world
@@ -1513,8 +1568,7 @@ const App: React.FC = () => {
       }
 
       // Update field layers with diffusion, decay, and delays
-      // Use total simulated time this frame (stepCount * BASE_STEP)
-      const simulatedDt = stepCount * BASE_STEP;
+      // Use total simulated time this frame (effectiveStepCount * BASE_STEP)
       {
         const _t_fl0 = performance.now();
         updateFieldLayers(FL, fieldLayersCfg, simulatedDt);
@@ -1880,9 +1934,9 @@ const App: React.FC = () => {
           matrixRef.current,
           reconfigStateRef.current,
           detectorsRef.current,
-          reconfigConfigRef.current.mutationStrength,
-          reconfigConfigRef.current.speciationRate,
-          reconfigConfigRef.current.institutionRate,
+          lifeCfg.reconfigEnabled ? reconfigConfigRef.current.mutationStrength : 0,
+          lifeCfg.reconfigEnabled ? reconfigConfigRef.current.speciationRate : 0,
+          lifeCfg.reconfigEnabled ? reconfigConfigRef.current.institutionRate : 0,
           reconfigConfigRef.current.operatorCooldown,
           rngRef.current,
           timeRef.current.elapsed
@@ -1897,7 +1951,7 @@ const App: React.FC = () => {
         lastEmergenceObsRef.current = obs;
         const nowT = timeRef.current.elapsed;
         const events = detectEmergences(obs, nowT);
-        if (events.length > 0 && nowT - lastEmergenceApplyRef.current >= emergenceCooldownSec) {
+        if (lifeCfg.reconfigEnabled && events.length > 0 && nowT - lastEmergenceApplyRef.current >= emergenceCooldownSec) {
             applyEmergenceEvents(events, {
               micro: microStateRef.current,
               microConfig: microConfigRef.current,
@@ -1971,7 +2025,7 @@ const App: React.FC = () => {
           setForceUpdate((v) => v + 1);
         }
         
-        // Try mitosis if enabled
+        // Try mitosis when world DNA has mitosis rate (no gate by life.mode — restore previous behavior)
         if (currentDNA && currentDNA.mitosisRate > 0.01 && microStateRef.current.count < 1200) {
           const mitosisConfig = createMitosisConfig(currentDNA.mitosisRate);
           const result = performMitosis(
@@ -2395,7 +2449,7 @@ const App: React.FC = () => {
           worldLog.push({
             t: timeRef.current.elapsed,
             type: 'system',
-            title: '🔮 Estado do Universo',
+            title: `🔮 ${t('worldLog_title')}`,
             sigil: '📊',
             detail: stateInterpretation,
             meta: {
@@ -2803,6 +2857,15 @@ const App: React.FC = () => {
     microConfigRef.current.typesCount = preset.typesCount;
     Object.assign(microConfigRef.current, preset.config);
 
+    // Sync life state from preset so main loop doesn't overwrite (presets without energy stay off)
+    const lifePatch = {
+      foodEnabled: preset.config.foodEnabled ?? false,
+      energyEnabled: preset.config.energyEnabled ?? false,
+      foodRatio: preset.config.foodRatio ?? lifeRef.current.foodRatio,
+    };
+    setLife(prev => applyLifeDial({ ...prev, ...lifePatch }));
+    lifeRef.current = applyLifeDial({ ...lifeRef.current, ...lifePatch });
+
     matrixRef.current = createMatrix(preset.typesCount);
     preset.matrixInit(matrixRef.current);
     
@@ -2827,8 +2890,8 @@ const App: React.FC = () => {
       preset.particleCount, 
       rngRef.current, 
       preset.typesCount,
-      lifeRef.current.foodEnabled,
-      lifeRef.current.foodRatio
+      preset.config.foodEnabled ?? false,
+      preset.config.foodRatio ?? 0.15
     );
     // Give small random velocities for initial movement
     for (let i = 0; i < microStateRef.current.count; i++) {
@@ -2871,8 +2934,26 @@ const App: React.FC = () => {
   const onLifeChange = (patch: Partial<LifeConfig>) => {
     setLife(prev => {
       const next = applyLifeDial({ ...prev, ...patch });
-      if (patch.reconfigEnabled && next.reconfigEnabled)
-        reconfigConfigRef.current.mutationStrength = next.reconfigRate;
+      // Keep ref in sync immediately (animation loop reads lifeRef.current)
+      lifeRef.current = next;
+
+      // If FOOD is turned OFF, convert any existing FOOD_TYPE back to agents
+      if (prev.foodEnabled && patch.foodEnabled === false) {
+        const st = microStateRef.current;
+        const types = Math.max(1, microConfigRef.current.typesCount);
+        for (let i = 0; i < st.count; i++) {
+          if (st.type[i] === FOOD_TYPE) {
+            st.type[i] = rngRef.current.int(0, types - 1);
+            st.energy[i] = 1.0;
+          }
+        }
+      }
+
+      // If ENERGY is turned OFF, reset energies to neutral (prevents any perceived "drain" carry-over)
+      if (prev.energyEnabled && patch.energyEnabled === false) {
+        const st = microStateRef.current;
+        for (let i = 0; i < st.count; i++) st.energy[i] = 1.0;
+      }
       return next;
     });
   };
@@ -2904,6 +2985,7 @@ const App: React.FC = () => {
     rngRef.current = new SeededRNG(preset.seed);
     setCurrentSeed(preset.seed);
     setRandomPaletteSeed(preset.seed); // Update random palette colors
+    setPaletteIndex(PALETTES.length - 1); // Use Random (Color Theory) palette with preset seed
     
     // Apply configuration
     microConfigRef.current.typesCount = preset.typesCount;
@@ -2911,6 +2993,19 @@ const App: React.FC = () => {
     Object.assign(fieldConfigRef.current, preset.field);
     Object.assign(reconfigConfigRef.current, preset.reconfig);
     
+    // Sync life state from preset.micro so the main loop doesn't overwrite preset's energy/food choice
+    const lifePatch = {
+      foodEnabled: preset.micro.foodEnabled ?? lifeRef.current.foodEnabled,
+      energyEnabled: preset.micro.energyEnabled ?? lifeRef.current.energyEnabled,
+      foodRatio: preset.micro.foodRatio ?? lifeRef.current.foodRatio,
+      energyDecay: preset.micro.energyDecay ?? lifeRef.current.energyDecay,
+      energyFeedRate: preset.micro.energyFeedRate ?? lifeRef.current.energyFeedRate,
+      energyReproThreshold: preset.micro.energyReproThreshold ?? lifeRef.current.energyReproThreshold,
+      mode: (preset.micro.energyEnabled || preset.micro.foodEnabled) ? (lifeRef.current.mode === 'OFF' ? 'METABOLIC' : lifeRef.current.mode) : lifeRef.current.mode,
+    };
+    setLife(prev => applyLifeDial({ ...prev, ...lifePatch }));
+    lifeRef.current = applyLifeDial({ ...lifeRef.current, ...lifePatch });
+
     // Generate matrix based on style
     if (preset.matrix) {
       matrixRef.current = generatePresetMatrix(
@@ -2967,8 +3062,8 @@ const App: React.FC = () => {
       safeParticleCount,
       rngRef.current,
       preset.typesCount,
-      lifeRef.current.foodEnabled,
-      lifeRef.current.foodRatio
+      preset.micro.foodEnabled ?? false,
+      preset.micro.foodRatio ?? 0.15
     );
     
     // Update target count
@@ -3317,8 +3412,8 @@ const App: React.FC = () => {
     reconfigStateRef.current.artifacts = [];
     undoBufferRef.current.snapshots = [];
     
-    // Energy settings
-    microConfigRef.current.energyEnabled = dna.energyEnabled;
+    // Energy settings (desativado por flag no Complexity Life Lab)
+    microConfigRef.current.energyEnabled = !ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB && dna.energyEnabled;
     
     // Metamorphosis settings
     if (dna.metamorphosisEnabled !== undefined) {
@@ -3400,6 +3495,15 @@ const App: React.FC = () => {
         `Aguarde... novas espécies podem surgir a qualquer momento!`,
     });
   };
+
+  // Auto-spawn a default universe when entering Complexity Life with empty sim (so it "rolls" from first load)
+  useEffect(() => {
+    if (showHome || activeLab !== 'complexityLife') return;
+    if (initialSpawnDoneRef.current) return;
+    if (microStateRef.current.count > 0) return;
+    initialSpawnDoneRef.current = true;
+    newUniverseWithDNA();
+  }, [showHome, activeLab]);
 
   const handleRandomizeAll = () => {
     // New seed
@@ -3895,6 +3999,8 @@ const App: React.FC = () => {
   }, [selectedTotemKind, selectedTabooKind, selectedRitualKind]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    if (target?.closest?.('[data-ui-overlay]')) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -4375,22 +4481,23 @@ const App: React.FC = () => {
             moduleTelemetry={complexitySnap.moduleTelemetry}
             microConfig={{ ...microConfigRef.current }}
             fieldConfig={{ ...fieldConfigRef.current }}
-            life={lifeRef.current}
+            life={life}
             reconfigConfig={{ ...reconfigConfigRef.current }}
             maintainPopulation={maintainPopulation}
             onMaintainPopulationChange={setMaintainPopulation}
             targetParticleCount={targetParticleCountUI}
             onMicroChange={(patch) => {
               Object.assign(microConfigRef.current, patch);
+              setForceUpdate((v) => v + 1);
             }}
             onFieldChange={(patch) => {
               Object.assign(fieldConfigRef.current, patch);
+              setForceUpdate((v) => v + 1);
             }}
-            onLifeChange={(patch) => {
-              setLife(prev => applyLifeDial({ ...prev, ...patch }));
-            }}
+            onLifeChange={onLifeChange}
             onReconfigChange={(patch) => {
               Object.assign(reconfigConfigRef.current, patch);
+              setForceUpdate((v) => v + 1);
             }}
             onTargetParticleCountChange={(v) => {
               targetParticleCountRef.current = v;
@@ -4508,6 +4615,10 @@ const App: React.FC = () => {
             availableLabs={availableLabs}
             adminMode={adminMode}
             onOpenAdmin={() => setShowAdminGate(true)}
+            onExitAdmin={() => {
+              setAdminMode(false);
+              try { localStorage.removeItem(ADMIN_MODE_KEY); } catch { /* ignore */ }
+            }}
             socioStats={activeLab === 'sociogenesis' ? {
               totems: socioStateRef.current.totems.length,
               taboos: socioStateRef.current.taboos.length,
@@ -4554,14 +4665,15 @@ const App: React.FC = () => {
               const L = lifeRef.current;
               microConfigRef.current.foodEnabled = L.foodEnabled;
               microConfigRef.current.foodRatio = L.foodRatio;
-              microConfigRef.current.energyEnabled = L.energyEnabled;
+              microConfigRef.current.energyEnabled = !ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB && L.energyEnabled;
               microConfigRef.current.energyDecay = L.energyDecay;
               microConfigRef.current.energyFeedRate = L.energyFeedRate;
               microConfigRef.current.energyReproThreshold = L.energyReproThreshold;
-              microConfigRef.current.metamorphosisEnabled = (L.mode === 'EVOLUTIVE' || L.mode === 'FULL');
-              microConfigRef.current.mutationRate = L.mutationRate;
-              microConfigRef.current.typeStability = L.typeStability;
-              if (!L.reconfigEnabled) reconfigConfigRef.current.mutationStrength = 0;
+              const evolutionOn = L.mode === 'EVOLUTIVE' || L.mode === 'FULL';
+              microConfigRef.current.metamorphosisEnabled = evolutionOn;
+              microConfigRef.current.mutationRate = evolutionOn ? L.mutationRate : 0;
+              microConfigRef.current.typeStability = evolutionOn ? L.typeStability : 1;
+              // Reconfig amplitude only; rates stay in reconfigConfigRef sliders
               reconfigStateRef.current.mutationAmount = L.reconfigAmount;
               
               if (recursiveFieldRef.current?.cfg?.enabled) {
@@ -5311,8 +5423,9 @@ const App: React.FC = () => {
         <HomePage
           user={authUser}
           onAuthChange={setAuthUser}
+          allowedLabs={availableLabs}
           onEnterLab={(lab) => {
-            if (!authUser) {
+            if (!LOGIN_DISABLED && !authUser) {
               toast.info('Entre ou cadastre-se para acessar as ferramentas.', { duration: 3000 });
               return;
             }
@@ -5327,8 +5440,12 @@ const App: React.FC = () => {
             setActiveLab(lab);
             setShowHome(false);
           }}
-          onOpenAdmin={() => setShowAdminGate(true)}
-          adminMode={adminMode}
+            onOpenAdmin={() => setShowAdminGate(true)}
+            onExitAdmin={() => {
+              setAdminMode(false);
+              try { localStorage.removeItem(ADMIN_MODE_KEY); } catch { /* ignore */ }
+            }}
+            adminMode={adminMode}
         />
       )}
 

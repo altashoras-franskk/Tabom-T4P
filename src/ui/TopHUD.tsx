@@ -48,6 +48,7 @@ interface TopHUDProps {
   availableLabs?: LabId[];
   adminMode?: boolean;
   onOpenAdmin?: () => void;
+  onExitAdmin?: () => void;
   onTogglePlay: () => void;
   onStep: () => void;
   onSetSpeed: (speed: number) => void;
@@ -140,6 +141,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
   onGoHome,
   availableLabs,
   adminMode = false,
+  onExitAdmin,
   onOpenAdmin,
   onTogglePlay,
   onStep,
@@ -265,11 +267,11 @@ export const TopHUD: React.FC<TopHUDProps> = ({
           </select>
         </div>
 
-        {/* Admin mode */}
+        {/* Admin mode — click to open gate or exit admin */}
         {onOpenAdmin && (
           <button
-            onClick={onOpenAdmin}
-            title={adminMode ? t('topHud_admin_title') : t('topHud_admin_title_off')}
+            onClick={() => { if (adminMode && onExitAdmin) onExitAdmin(); else onOpenAdmin(); }}
+            title={adminMode ? t('topHud_admin_exit') : t('topHud_admin_title_off')}
             className="flex items-center gap-1 px-3 py-2 transition-all shrink-0"
             style={{
               borderLeft: '1px dashed rgba(255,255,255,0.06)',

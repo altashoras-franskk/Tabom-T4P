@@ -22,6 +22,7 @@ import {
   RefreshCw, Play, Pause, Settings, ChevronDown, ChevronRight,
   Zap, ZoomIn, ZoomOut, Maximize2,
 } from 'lucide-react';
+import { useI18n } from '../../i18n/context';
 
 const TWO_PI = Math.PI * 2;
 const TREE_W  = 540;
@@ -263,6 +264,185 @@ const GREAT_WORK_LORE = {
   text: 'When the Lightning Flash and the Serpent of Wisdom flow in simultaneous equilibrium — light descending and returning in harmony — the Great Work is accomplished. Each conscious act that elevates light from matter to spirit is an act of alchemy. The Tree in perfect balance represents the completed Magnum Opus. As the alchemists say: "Visita Interiora Terrae Rectificando Invenies Occultum Lapidem" — V.I.T.R.I.O.L.',
 };
 
+// ── Lore em português (PT-BR) ───────────────────────────────────────────────
+const SEPHIRAH_LORE_PT: Record<SephirahId, SephirahLore> = {
+  kether: {
+    world: 'Atziluth — Plano Arquetípico',
+    plane: 'A Luz Ilimitada / LVX',
+    divineName: 'Eheieh — "Eu Sou"',
+    archangel: 'Metatron — Anjo da Presença',
+    gdGrade: '10°=1□ Ipsissimus',
+    planet: 'Primum Mobile — os Primeiros Movimentos',
+    body: 'Coroa da Cabeça (Sahasrara)',
+    color: '#f0ece0',
+    summary: 'A Coroa — ponto da primeira emanação da Luz Ilimitada. Além do pensamento, além da forma.',
+    spiritual: 'Kether é o primeiro ponto em que o Infinito se concentra para criar. É consciência pura indiferenciada — o "Eu" antes de qualquer experiência. O grau Ipsissimus representa a unidade com o Todo. Como ensina a Tábua de Esmeralda: o que está em Cima é como o que está em Baixo — e Kether é o Cima último. Não pode ser apreendido pela mente, apenas tocado na mais profunda meditação.',
+    lightningFlash: 'Kether é a FONTE do Raio de Luz. A Luz Ilimitada (LVX) desce do não-manifestado, como um raio através das 10 Sefirót até aterrar em Malkuth. É a descida do espírito na matéria — a Grande Obra começa aqui.',
+    serpentOfWisdom: 'Quando a Serpente da Sabedoria retorna, Kether a RECEBE de volta, completando o ciclo sagrado. A luz volta à origem, transformada pela experiência plena da Criação. É a conclusão da Grande Obra — o Magnum Opus.',
+    practice: 'Observe como a carga de Kether flui para Chokmah e Binah. Use INVOCAR ou CLARIFICAR para iniciar o Raio de Luz. Alta coerência em Kether significa que a luz descendente flui livremente.',
+  },
+  chokmah: {
+    world: 'Atziluth — Plano Arquetípico',
+    plane: 'O Zodíaco / Estrelas Fixas',
+    divineName: 'Yah — o primeiro flash de consciência',
+    archangel: 'Ratziel — Segredo de Deus',
+    gdGrade: '9°=2□ Magus',
+    planet: 'Estrelas Fixas / Zodíaco',
+    body: 'Hemisfério direito — intuição criativa',
+    color: '#d0c8a0',
+    summary: 'Sabedoria — o flash primordial da existência, a força dinâmica da qual emerge toda possibilidade.',
+    spiritual: 'Chokmah é o Pai Superno — força masculina primordial, a primeira diferenciação. No grau Magus, usa-se a Palavra da criação. É Sabedoria não como conhecimento mas como o flash bruto do insight, o raio da inspiração. No Pilar da Misericórdia, representa força expansiva ilimitada. "Todo homem e toda mulher é uma estrela" — Chokmah é a força estelar interior.',
+    lightningFlash: 'Recebe o Raio de Luz de Kether como um raio não filtrado — imediato, ardente. No Pilar da Misericórdia, Chokmah transmite esse fogo a Binah (que lhe dá forma) e a Chesed (que o expande). É o Pai Superno.',
+    serpentOfWisdom: 'Reflete a Serpente da Sabedoria de volta a Kether: toda sabedoria reunida pela manifestação retorna à fonte, enriquecendo a Mente Divina. A Sabedoria que desceu retorna como gnose profunda — "Assim em Cima, como em Baixo."',
+    practice: 'INVOCAR e AMPLIFICAR em Chokmah expandem o fluxo no Pilar da Misericórdia. Observe como sua carga alimenta Chesed abaixo. Alta carga aqui acelera o Raio de Luz.',
+  },
+  binah: {
+    world: 'Atziluth — Plano Arquetípico',
+    plane: 'Esfera Saturnina',
+    divineName: 'YHVH Elohim — o princípio divino formativo',
+    archangel: 'Tzaphkiel — Contemplador de Deus',
+    gdGrade: '8°=3□ Magister Templi',
+    planet: 'Saturno — limitação, forma e tempo',
+    body: 'Hemisfério esquerdo — estrutura e razão',
+    color: '#5055a0',
+    summary: 'Compreensão — a Grande Mãe, o ventre no qual todas as formas são gestadas. Do outro lado do Abismo.',
+    spiritual: 'Binah é a Mãe Superna que dá à luz todas as formas. É Aima (a Mãe Brilhante) e Ama (a Mãe Obscura). O Magister Templi atravessou o Abismo e entregou tudo ao Cálice de Babalon. Saturno lhe dá o domínio sobre o tempo e o limite — sem Binah, nada poderia tomar forma, e portanto nada existiria. É o Grande Mar, a raiz da Água.',
+    lightningFlash: 'Recebe o Raio de Luz de Kether e Chokmah. Binah "dá à luz" as formas: aqui a luz informe ganha estrutura que descerá pelos mundos. É o primeiro "Não" que cria fronteiras e torna a existência possível.',
+    serpentOfWisdom: 'Recebendo a Serpente da Sabedoria de baixo, Binah reconhece os padrões completos — "compreensão" plena do ciclo. Sela a compreensão antes de passar a Kether: toda experiência compreendida e integrada.',
+    practice: 'MEMÓRIA e SELAR em Binah cristalizam padrões. FECHAR_PORTAL aqui cria limitação estruturante. Alta coerência em Binah significa formas estáveis fluindo pela Árvore.',
+  },
+  chesed: {
+    world: 'Beriah — Plano Criativo',
+    plane: 'Esfera Joviana',
+    divineName: 'El — Deus da Graça e da Abundância',
+    archangel: 'Tzadkiel — Justiça de Deus',
+    gdGrade: '7°=4□ Adeptus Exemptus',
+    planet: 'Júpiter — expansão, bênção e abundância',
+    body: 'Braço direito — o braço que dá',
+    color: '#6090d0',
+    summary: 'Misericórdia — amor incondicional, expansão e graça divina. O Rei benevolente.',
+    spiritual: 'Chesed é o amor divino na sua forma mais generosa — o Adeptus Exemptus encarna essa compaixão magistral. O arquétipo do governante benevolente que dá livremente. Na Golden Dawn, é aqui que o Adepto começa a comandar as forças inferiores com sabedoria. Sem Geburah para equilibrar, Chesed viraria indulgência infinita, dissolvendo toda estrutura.',
+    lightningFlash: 'Recebe o Raio de Luz dos Supernos por caminho direto. No Pilar da Misericórdia, Chesed expande o fluxo de luz, tornando-o mais acessível e abundante para as Sefirót inferiores.',
+    serpentOfWisdom: 'Chesed reflete a Serpente ascendente como amor e compaixão acumulados — toda experiência de dar e receber retorna como gratidão ao Criador. O amor humano é a luz ascendente — graça divina refletida.',
+    practice: 'AMPLIFICAR em Chesed expande o fluxo de toda a coluna da Misericórdia. Equilibre com Geburah pelo caminho 19 (Força/Luxúria). Alta carga aqui beneficia Netzach e Tiphereth.',
+  },
+  geburah: {
+    world: 'Beriah — Plano Criativo',
+    plane: 'Esfera Marciana',
+    divineName: 'Elohim Gibor — Deus da Força e do Julgamento',
+    archangel: 'Khamael — Aquele que Queima por Deus',
+    gdGrade: '6°=5□ Adeptus Major',
+    planet: 'Marte — força, coragem e delimitação',
+    body: 'Braço esquerdo — o braço que corta',
+    color: '#c03030',
+    summary: 'Severidade — força, justiça e a limitação necessária que dá sentido à existência.',
+    spiritual: 'Geburah é o princípio divino de restrição e justiça. O que Chesed expande, Geburah delimita. O Adeptus Major empunha a Espada do discernimento. Também chamado Pachad (Medo) ou Din (Julgamento) — não crueldade, mas precisão. Como dizem os alquimistas, solve et coagula: Geburah é o "solve", a dissolução do desnecessário.',
+    lightningFlash: 'Recebe o Raio de Luz de Binah e Chesed. Geburah "corta" e refina a luz, removendo o que não é essencial — como o ferreiro forjando o aço com fogo e martelo. A luz que passa por Geburah fica mais concentrada e poderosa.',
+    serpentOfWisdom: 'Geburah reflete a Serpente ascendente como discernimento e clareza. O poder de distinguir, de julgar com sabedoria, de dizer "não" quando preciso — tudo retorna à Fonte como pureza. O que foi podado limitava o crescimento.',
+    practice: 'CORTAR e BANIR em Geburah removem bloqueios. CHOQUE para intervenções fortes. Alta tensão aqui pode indicar severidade excessiva — equilibre com Chesed pelo caminho 19.',
+  },
+  tiphereth: {
+    world: 'Beriah — Plano Criativo',
+    plane: 'Esfera Solar',
+    divineName: 'YHVH Eloah va-Daath — o Mediador',
+    archangel: 'Raphael — Curador de Deus',
+    gdGrade: '5°=6□ Adeptus Minor',
+    planet: 'Sol — o centro, beleza, harmonia',
+    body: 'Coração e peito — o centro vital',
+    color: '#e8c830',
+    summary: 'Beleza — coração da Árvore, ponto de equilíbrio perfeito entre o Raio de Luz e a Serpente da Sabedoria.',
+    spiritual: 'Tiphereth é o Sol da Árvore da Vida — o centro onde TODAS as forças se equilibram. É o ponto de encontro do Raio de Luz descendente e da Serpente da Sabedoria ascendente. O Adeptus Minor está na encruzilhada do universo. Corresponde ao arquétipo solar — Osíris, o Christos, o Rei ressuscitado. A Grande Obra da Golden Dawn se centra aqui: "Conhecer, querer, ousar, guardar silêncio."',
+    lightningFlash: 'Tiphereth é o CENTRO do fluxo descendente. Toda luz de Kether, Chokmah, Binah, Chesed e Geburah converge aqui — como a luz do sol iluminando todos os planetas do centro.',
+    serpentOfWisdom: 'Tiphereth é o PONTO DE RETORNO da Serpente da Sabedoria. Aqui a luz recebida de Netzach, Hod e Yesod é transmutada e elevada. O coração que integrou toda a experiência dos mundos inferiores inicia o grande retorno. É o "Fiat LVX" da luz ascendente.',
+    practice: 'EQUILIBRAR e INTEGRAR em Tiphereth afetam toda a Árvore. Este é o hub mais importante. AMPLIFICAR aqui tem efeito global. Observe como sua carga sincroniza com Kether acima e Yesod abaixo.',
+  },
+  netzach: {
+    world: 'Yetzirah — Plano Formativo',
+    plane: 'Esfera Venusiana',
+    divineName: 'YHVH Tzabaoth — Senhor dos Exércitos',
+    archangel: 'Haniel — Graça de Deus',
+    gdGrade: '4°=7□ Philosophus',
+    planet: 'Vênus — beleza, desejo, instinto e natureza',
+    body: 'Quadril direito — a força geradora',
+    color: '#50a840',
+    summary: 'Vitória — instinto, emoção, a força da natureza e a persistência do desejo divino.',
+    spiritual: 'Netzach é o reino das emoções, da natureza selvagem, da beleza sensorial e do instinto. O grau Philosophus explora o fogo do desejo e da paixão. É onde habitam as divindades da natureza — arquétipos, elementais, forças naturais. A "vitória" é a persistência da vontade divina em se manifestar. Na visão astral, Netzach revela o raio verde da força criativa.',
+    lightningFlash: 'Recebe o Raio de Luz de Chesed, Tiphereth e parcialmente de Geburah. Aqui a luz se torna emocional e instintiva — é o "sentir" da Criação, o prazer divino em suas obras.',
+    serpentOfWisdom: 'Netzach reflete a Serpente ascendente como amor pela criação, beleza e gratidão instintiva. As emoções mais puras — reverência, êxtase, amor pela vida — fluem de volta à Fonte. O desejo humano pelo Divino é a Serpente ascendente de Netzach.',
+    practice: 'INVOCAR em Netzach libera expressão criativa e fluxo emocional. AMPLIFICAR aqui fortalece toda a coluna inferior da Misericórdia. Observe como alimenta Hod pelo caminho 27 (A Torre).',
+  },
+  hod: {
+    world: 'Yetzirah — Plano Formativo',
+    plane: 'Esfera Mercurial',
+    divineName: 'Elohim Tzabaoth — Deus da Forma e da Ordem',
+    archangel: 'Michael — Quem é como Deus',
+    gdGrade: '3°=8□ Practicus',
+    planet: 'Mercúrio — comunicação, razão e análise',
+    body: 'Quadril esquerdo — precisão analítica',
+    color: '#b06820',
+    summary: 'Esplendor — intelecto, linguagem, análise e o dom de nomear. O domínio da magia cerimonial.',
+    spiritual: 'Hod é a faculdade racional, o dom da linguagem e da análise. O Practicus trabalha com o elemento Água e a mente estruturada. É onde magos e cientistas operam — transformando experiência em conhecimento estruturado. Hod é a sede da magia cerimonial no sistema Golden Dawn — ritual, fórmulas, vibração dos nomes divinos. Complementa Netzach: onde Netzach sente, Hod analisa.',
+    lightningFlash: 'Recebe o Raio de Luz de Geburah, Tiphereth e Netzach. Aqui a luz ganha precisão e articulação — tornando-se pensamento, linguagem, forma intelectual.',
+    serpentOfWisdom: 'Hod reflete a Serpente ascendente como compreensão estruturada — mapas, modelos e linguagens retornando ao Divino. Todo conhecimento humano é a luz ascendente de Hod: a mente humana refletindo a mente cósmica de volta à Fonte.',
+    practice: 'CLARIFICAR e MEMÓRIA em Hod estruturam padrões intelectuais. PONTE conecta Hod a Netzach para equilibrar razão e emoção. Alta memória aqui significa padrões cognitivos consolidados.',
+  },
+  yesod: {
+    world: 'Yetzirah — Plano Formativo',
+    plane: 'Esfera Lunar',
+    divineName: 'Shaddai El Chai — o Deus Vivo Todo-Poderoso',
+    archangel: 'Gabriel — Força de Deus',
+    gdGrade: '2°=9□ Theoricus',
+    planet: 'Lua — reflexão, o inconsciente e os ciclos',
+    body: 'Órgãos reprodutores — a base vital',
+    color: '#8060c0',
+    summary: 'A Fundação — o plano astral, o inconsciente coletivo, o molde da realidade.',
+    spiritual: 'Yesod é o plano intermediário entre espírito e matéria — a luz astral. O Theoricus explora este reino lunar de visão e imaginação. É a fundação sobre a qual Malkuth repousa. Corresponde ao corpo astral, aos sonhos e à memória Akáshica. A Lua governa Yesod: ciclos, marés, o ritmo oculto da realidade. Na viagem astral, Yesod é a primeira esfera encontrada.',
+    lightningFlash: 'Recebe o Raio de Luz de Tiphereth, Netzach e Hod. Aqui a luz espiritual se comprime em padrões etéricos que se manifestarão em Malkuth. Yesod é o "molde" da realidade física — tudo em Malkuth existe primeiro em Yesod.',
+    serpentOfWisdom: 'Yesod reflete a Serpente ascendente como memória coletiva e sonhos — toda experiência humana se acumula aqui antes de ser elevada. É o grande reservatório da luz ascendente: purifica e concentra a corrente de retorno antes de enviá-la a Tiphereth.',
+    practice: 'MEMÓRIA em Yesod fortalece a fundação de toda a Árvore. RITUAL_PULSO cria ondas que afetam Malkuth e Tiphereth simultaneamente. Alta coerência aqui significa que Malkuth se manifesta com clareza.',
+  },
+  malkuth: {
+    world: 'Assiah — Plano Material',
+    plane: 'A Esfera dos Elementos',
+    divineName: 'Adonai ha-Aretz — Senhor da Terra',
+    archangel: 'Sandalphon — Co-Irmão',
+    gdGrade: '1°=10□ Zelator',
+    planet: 'Terra — o mundo físico plenamente manifestado',
+    body: 'Os pés e a base — conexão com a terra',
+    color: '#806040',
+    summary: 'O Reino — o mundo físico, o ponto mais baixo e simultaneamente o ponto de partida do retorno.',
+    spiritual: 'Malkuth é o mundo que habitamos — o reino da matéria, do corpo e dos sentidos. O Zelator está no portão dos mistérios. É onde toda luz espiritual se manifesta como realidade concreta. É ao mesmo tempo o ponto mais baixo da descida e o PONTO DE PARTIDA da Serpente da Sabedoria. "A pedra que os construtores rejeitaram tornou-se a pedra angular." Na tradição hermética, a matéria não é decaída — é Espírito densificado. A Grande Obra começa em Malkuth.',
+    lightningFlash: 'Malkuth é o DESTINO FINAL do Raio de Luz. Toda luz divina, após atravessar as 10 Sefirót, se manifesta aqui como realidade física. Quando Malkuth está "cheia" de carga, o Raio de Luz completou sua jornada de descida.',
+    serpentOfWisdom: 'Malkuth é a FONTE da Serpente da Sabedoria! Quando a carga de Malkuth atinge a plenitude, a matéria consciente reconhece sua origem divina e a luz começa a refletir para cima. Quando Malkuth ultrapassa 50% de carga, PARTÍCULAS VIOLETAS começam a SUBIR pela Árvore — a Serpente ascendente em ação. Isso simboliza o despertar espiritual, o início da Grande Obra — o Magnum Opus.',
+    practice: 'Observe Malkuth com atenção especial. Quando sua carga sobe, a Serpente da Sabedoria se ativa — partículas violetas ascendem pela Árvore. Use RITUAL_PULSO aqui para criar ondas de retorno. AMPLIFICAR acelera a ascensão. Este é o ponto de maior significado espiritual.',
+  },
+};
+
+const LVX_LORE_PT = { title: 'A Luz Ilimitada — LVX', text: 'Antes de Kether está o Ain Soph Aur: a Luz Ilimitada. É o absoluto incondicionado, além de qualquer forma ou descrição. Na tradição hermética, esta é a fonte de tudo — a raiz oculta da qual a Árvore brota. "O que está em Cima é como o que está em Baixo, e o que está em Baixo é como o que está em Cima, para realizar o milagre da Única Coisa." — A Tábua de Esmeralda.' };
+const LIGHTNING_FLASH_LORE_PT = { title: 'Raio de Luz ↓ — Luz Descendente', text: 'O Raio de Luz desce da Luz Ilimitada por todas as 10 Sefirót. Cada Sefirá recebe, transforma e passa a corrente adiante. A descida termina em Malkuth — espírito plenamente manifestado como matéria. Na visualização: partículas douradas/coloridas descendo pelos caminhos. Esta é a corrente involutiva — a descida do divino na manifestação.' };
+const SERPENT_LORE_PT = { title: 'Serpente da Sabedoria ↑ — Luz Ascendente', text: 'Quando o Raio de Luz atinge Malkuth, a matéria desperta para sua origem divina e reflete a luz de volta para cima — a Serpente da Sabedoria. Esta corrente ascendente retorna purificada pela experiência completa da Criação. É a base de toda prática espiritual: o adepto como espelho refletindo a luz de volta à Fonte. Na visualização: partículas violetas subindo pelos caminhos. Esta é a corrente evolutiva — a Grande Obra de retorno.' };
+const GREAT_WORK_LORE_PT = { title: 'A Grande Obra — Magnum Opus', text: 'Quando o Raio de Luz e a Serpente da Sabedoria fluem em equilíbrio simultâneo — luz descendo e retornando em harmonia — a Grande Obra se realiza. Cada ato consciente que eleva a luz da matéria ao espírito é um ato de alquimia. A Árvore em equilíbrio perfeito representa o Magnum Opus completo. Como dizem os alquimistas: "Visita Interiora Terrae Rectificando Invenies Occultum Lapidem" — V.I.T.R.I.O.L.' };
+
+const FOUR_WORLDS_PT = [
+  { name: 'Atziluth', heb: 'אֲצִילוּת', meaning: 'Arquetípico', sephirot: 'Kether, Chokmah, Binah', desc: 'O mundo dos arquétipos — emanação divina em sua forma mais pura. Aqui a luz é quase idêntica à Fonte. O reino dos Supernos, além do Abismo.' },
+  { name: 'Beriah', heb: 'בְּרִיאָה', meaning: 'Criativo', sephirot: 'Chesed, Geburah, Tiphereth', desc: 'O mundo criativo — forças arquetípicas diferenciadas em padrões. O reino dos graus de Adepto. Aqui a Grande Obra é empreendida conscientemente.' },
+  { name: 'Yetzirah', heb: 'יְצִירָה', meaning: 'Formativo', sephirot: 'Netzach, Hod, Yesod', desc: 'O mundo astral/formativo — padrões etéricos que moldam a realidade física. O reino da visão astral, da magia cerimonial e das forças elementais.' },
+  { name: 'Assiah', heb: 'עֲשִׂיָּה', meaning: 'Material', sephirot: 'Malkuth', desc: 'O mundo físico manifestado — ação, matéria, o reino que habitamos. O ponto de partida da Grande Obra e o chão do Templo.' },
+];
+
+const JOURNEY_QUESTIONS_PT = [
+  { id: 'q1', text: 'O quanto você se atrai por estrutura vs. fluxo?', low: 'Fluxo puro', high: 'Estrutura pura', target: 'strictness' as const },
+  { id: 'q2', text: 'Você busca clareza ou abraça o mistério?', low: 'Mistério profundo', high: 'Clareza cristalina', target: 'astralClarity' as const },
+  { id: 'q3', text: 'Qual a intensidade do seu fogo interior?', low: 'Brasa suave', high: 'Inferno ardente', target: 'ritualIntensity' as const },
+  { id: 'q4', text: 'Você é mais terrestre ou celeste?', low: 'Enraizado na terra', high: 'Morando nas estrelas', target: 'earthCelestial' as const },
+  { id: 'q5', text: 'Você busca poder ou sabedoria?', low: 'Só sabedoria', high: 'Poder para agir', target: 'powerWisdom' as const },
+  { id: 'q6', text: 'O quanto suas portas interiores estão abertas?', low: 'Bem fechadas', high: 'Bem abertas', target: 'openness' as const },
+  { id: 'q7', text: 'Você favorece misericórdia ou justiça?', low: 'Misericórdia pura', high: 'Justiça rigorosa', target: 'mercyJustice' as const },
+  { id: 'q8', text: 'Qual a profundidade da sua memória de vidas passadas?', low: 'Tábula rasa', high: 'Alma antiga', target: 'memory' as const },
+  { id: 'q9', text: 'Você se atrai pelo sol ou pela lua?', low: 'Lua prateada', high: 'Sol dourado', target: 'sunMoon' as const },
+  { id: 'q10', text: 'O quanto você está pronto para atravessar o Abismo?', low: 'Ainda não', high: 'Estou preparado', target: 'abyssCrossing' as const },
+];
+
 const FOUR_WORLDS = [
   { name: 'Atziluth', heb: 'אֲצִילוּת', meaning: 'Archetypal', sephirot: 'Kether, Chokmah, Binah', desc: 'The world of archetypes — divine emanation in its purest form. Here the light is nearly identical to the Source. The realm of the Supernals, beyond the Abyss.' },
   { name: 'Beriah', heb: 'בְּרִיאָה', meaning: 'Creative', sephirot: 'Chesed, Geburah, Tiphereth', desc: 'The creative world — archetypal forces differentiated into patterns. The realm of the Adept grades. Here the Great Work is consciously undertaken.' },
@@ -297,6 +477,7 @@ const DEFAULT_OVERLAYS: Record<TreeOverlay, boolean> = {
 };
 
 export function TreeOfLifeLab({ active }: { active: boolean }) {
+  const { t, locale } = useI18n();
 
   const [params, setParams]     = useState<TreeOfLifeParams>({ ...DEFAULT_PARAMS });
   const paramsRef               = useRef<TreeOfLifeParams>({ ...DEFAULT_PARAMS });
@@ -352,7 +533,8 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
   const [showJourneyModal, setShowJourneyModal] = useState(false);
   const [journeyAnswers, setJourneyAnswers] = useState<Record<string, number>>(() => {
     const ans: Record<string, number> = {};
-    for (const q of JOURNEY_QUESTIONS) ans[q.id] = 0.5;
+    const questions = locale === 'pt-BR' ? JOURNEY_QUESTIONS_PT : JOURNEY_QUESTIONS;
+    for (const q of questions) ans[q.id] = 0.5;
     return ans;
   });
 
@@ -611,7 +793,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
     const text = ld
       ? `${ld.name}${rev} → ${card.targetType === 'global' ? 'global' : card.targetId}. ` +
         `${ld.keywords.join(', ')}. Coh ${(sn.coherence * 100).toFixed(0)}%, Ten ${(sn.tension * 100).toFixed(0)}%.`
-      : 'Session recorded.';
+      : t('tol_session_recorded');
 
     const ch: GrimoireChapter = {
       id: Date.now().toString(), timestamp: Date.now(),
@@ -632,7 +814,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
       text,
     };
     setChapters(prev => { const next = [...prev, ch]; saveGrimoire(next); return next; });
-  }, []);
+  }, [t]);
 
   // ── Mouse events ──────────────────────────────────────────────────────────
   const screenToWorld = (sx: number, sy: number, W: number, H: number) => ({
@@ -864,15 +1046,16 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
   const lfPct = Math.round(serpentSnap.lightningFlashLevel * 100);
   const gwPct = Math.round(serpentSnap.greatWorkPulse * 100);
 
+  const isPt = locale === 'pt-BR';
   const OVERLAY_LABELS: { key: TreeOverlay; label: string; icon: string }[] = [
-    { key: 'sephiroth', label: 'Sephiroth', icon: '◉' },
-    { key: 'paths',     label: 'Paths',     icon: '╱' },
-    { key: 'orYashar',  label: 'Lightning Flash ↓', icon: '⚡' },
-    { key: 'orChozer',  label: 'Serpent ↑', icon: '🐍' },
-    { key: 'pillars',   label: 'Pillars',   icon: '☰' },
+    { key: 'sephiroth', label: isPt ? 'Sefirót' : 'Sephiroth', icon: '◉' },
+    { key: 'paths',     label: isPt ? 'Caminhos' : 'Paths',     icon: '╱' },
+    { key: 'orYashar',  label: isPt ? 'Raio de Luz ↓' : 'Lightning Flash ↓', icon: '⚡' },
+    { key: 'orChozer',  label: isPt ? 'Serpente ↑' : 'Serpent ↑', icon: '🐍' },
+    { key: 'pillars',   label: isPt ? 'Pilares' : 'Pillars',   icon: '☰' },
     { key: 'aura',      label: 'Aura',      icon: '◈' },
-    { key: 'particles', label: 'Particles', icon: '✧' },
-    { key: 'veils',     label: 'Veils',     icon: '☾' },
+    { key: 'particles', label: isPt ? 'Partículas' : 'Particles', icon: '✧' },
+    { key: 'veils',     label: isPt ? 'Véus' : 'Veils',     icon: '☾' },
   ];
 
   return (
@@ -893,14 +1076,13 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
             boxShadow: '0 20px 60px rgba(100,40,180,0.3)',
           }}>
             <div style={{ fontSize: 16, color: 'rgba(240,230,210,0.95)', marginBottom: 4, fontWeight: 500 }}>
-              Mystical Journey
+              {locale === 'pt-BR' ? 'Jornada Mística' : 'Mystical Journey'}
             </div>
             <div style={{ fontSize: 9, color: 'rgba(180,160,200,0.5)', marginBottom: 16, lineHeight: 1.5 }}>
-              Answer these questions to create a personalized Tree configuration.
-              Let your intuition guide you — there are no wrong answers.
+              {locale === 'pt-BR' ? 'Responda às perguntas para criar uma configuração personalizada da Árvore. Deixe sua intuição guiar — não há respostas erradas.' : 'Answer these questions to create a personalized Tree configuration. Let your intuition guide you — there are no wrong answers.'}
             </div>
 
-            {JOURNEY_QUESTIONS.map(q => (
+            {(locale === 'pt-BR' ? JOURNEY_QUESTIONS_PT : JOURNEY_QUESTIONS).map(q => (
               <div key={q.id} style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 9, color: 'rgba(210,195,240,0.8)', marginBottom: 6 }}>{q.text}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -916,16 +1098,16 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
             ))}
 
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button title="Aplicar respostas da jornada" onClick={applyJourneyAnswers} style={{
+              <button title={t('tol_apply_journey_title')} onClick={applyJourneyAnswers} style={{
                 flex: 1, padding: '8px 14px', borderRadius: 6, cursor: 'pointer',
                 background: 'rgba(160,100,255,0.2)', border: '1px solid rgba(180,120,255,0.5)',
                 color: 'rgba(220,200,255,0.95)', fontSize: 10, letterSpacing: '0.08em',
-              }}>Begin the Journey</button>
-              <button title="Cancelar jornada" onClick={() => setShowJourneyModal(false)} style={{
+              }}>{locale === 'pt-BR' ? 'Iniciar a Jornada' : 'Begin the Journey'}</button>
+              <button title={t('common_cancelJourney')} onClick={() => setShowJourneyModal(false)} style={{
                 padding: '8px 14px', borderRadius: 6, cursor: 'pointer',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
                 color: 'rgba(180,165,150,0.5)', fontSize: 10,
-              }}>Cancel</button>
+              }}>{t('common_cancel')}</button>
             </div>
           </div>
         </div>
@@ -943,13 +1125,13 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
           <div style={{ padding: '0 12px 8px' }}>
             <div style={{ fontSize: 6.5, color: 'rgba(180,120,255,0.5)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Tree of Life</div>
             <div style={{ fontSize: 13, color: 'rgba(240,230,210,0.9)' }}>Hermetic Qabalah · Tarot</div>
-            <div style={{ fontSize: 7.5, color: 'rgba(180,160,200,0.4)', marginTop: 2 }}>Journey through the 10 Sephiroth & 22 Paths</div>
+            <div style={{ fontSize: 7.5, color: 'rgba(180,160,200,0.4)', marginTop: 2 }}>{locale === 'pt-BR' ? 'Jornada pelas 10 Sefirót e 22 Caminhos' : 'Journey through the 10 Sephiroth & 22 Paths'}</div>
           </div>
 
           <SBDiv />
 
           {/* ── RITUAL TOOLS ──────────────────────────────────────────── */}
-          <SBSec label="Ritual Tools">
+          <SBSec label={locale === 'pt-BR' ? 'Ferramentas Rituais' : 'Ritual Tools'}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
               {RITUAL_TOOLS.map(t => (
                 <button key={t.id} onClick={() => setActiveTool(t.id)} title={t.desc}
@@ -1030,7 +1212,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
           <SBDiv />
 
           {/* ── OVERLAY TOGGLES ──────────────────────────────────── */}
-          <SBSec label="Overlays">
+          <SBSec label={locale === 'pt-BR' ? 'Sobreposições' : 'Overlays'}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
               {OVERLAY_LABELS.map(o => (
                 <button key={o.key} onClick={() => toggleOverlay(o.key)} title={o.label}
@@ -1048,7 +1230,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
           </SBSec>
 
           <SBDiv />
-          <SBSec label="Tarot Lens" hint="Changes vocabulary and emphasis. Base mechanics identical.">
+          <SBSec label={locale === 'pt-BR' ? 'Lente do Tarot' : 'Tarot Lens'} hint={locale === 'pt-BR' ? 'Altera vocabulário e ênfase. Mecânicas base idênticas.' : 'Changes vocabulary and emphasis. Base mechanics identical.'}>
             {DECK_LENSES.map(dl => (
               <SBLensBtn key={dl.id} active={params.deckLens === dl.id} label={dl.label}
                 desc={dl.description.slice(0, 42) + '…'}
@@ -1057,15 +1239,15 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
           </SBSec>
 
           <SBDiv />
-          <SBSec label="Journey Presets">
-            <button title="Iniciar jornada mística" onClick={() => setShowJourneyModal(true)} style={{
+          <SBSec label={locale === 'pt-BR' ? 'Predefinições da Jornada' : 'Journey Presets'}>
+            <button title={t('tol_start_journey_title')} onClick={() => setShowJourneyModal(true)} style={{
               width: '100%', padding: '5px 8px', marginBottom: 4, borderRadius: 5, cursor: 'pointer',
               background: 'linear-gradient(135deg, rgba(160,80,255,0.12), rgba(220,180,60,0.08))',
               border: '1px solid rgba(180,120,255,0.3)',
               color: 'rgba(220,200,255,0.85)', fontSize: 8, letterSpacing: '0.08em',
               textAlign: 'left',
             }}>
-              ✦ Mystical Journey Questionnaire
+              ✦ {locale === 'pt-BR' ? 'Questionário da Jornada Mística' : 'Mystical Journey Questionnaire'}
             </button>
             {JOURNEY_PRESETS.map(p => (
               <button title={`${p.name}: ${p.desc}`} key={p.id} onClick={() => applyPreset(p)} style={{
@@ -1085,57 +1267,57 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
           </SBSec>
 
           <SBDiv />
-          <SBSec label="Parameters">
-            <SBSlider label="Strictness" value={params.strictness} onChange={v => updateParams({ strictness: v })} />
-            <SBSlider label="Ritual Int." value={params.ritualIntensity} onChange={v => updateParams({ ritualIntensity: v })} />
-            <SBSlider label="Astral Clar." value={params.astralClarity} onChange={v => updateParams({ astralClarity: v })} />
-            <SBSlider label="Draw" value={(params.drawRate - 3) / 2}
+          <SBSec label={locale === 'pt-BR' ? 'Parâmetros' : 'Parameters'}>
+            <SBSlider label={isPt ? 'Rigor' : 'Strictness'} value={params.strictness} onChange={v => updateParams({ strictness: v })} />
+            <SBSlider label={isPt ? 'Int. Ritual' : 'Ritual Int.'} value={params.ritualIntensity} onChange={v => updateParams({ ritualIntensity: v })} />
+            <SBSlider label={isPt ? 'Clar. Astral' : 'Astral Clar.'} value={params.astralClarity} onChange={v => updateParams({ astralClarity: v })} />
+            <SBSlider label={isPt ? 'Comprar' : 'Draw'} value={(params.drawRate - 3) / 2}
               onChange={v => updateParams({ drawRate: Math.round(v * 2 + 3) as 3 | 4 | 5 })}
-              display={`${params.drawRate} cards`} />
-            <SBToggle label="Pillars" active={params.pillarsEnabled}
-              hint="Field bias from the 3 pillars" onChange={v => updateParams({ pillarsEnabled: v })} />
-            <SBToggle label="Veils" active={params.veilsEnabled}
-              hint="Coherence thresholds for upper sephiroth" onChange={v => updateParams({ veilsEnabled: v })} />
+              display={isPt ? `${params.drawRate} cartas` : `${params.drawRate} cards`} />
+            <SBToggle label={isPt ? 'Pilares' : 'Pillars'} active={params.pillarsEnabled}
+              hint={isPt ? 'Viés do campo dos 3 pilares' : 'Field bias from the 3 pillars'} onChange={v => updateParams({ pillarsEnabled: v })} />
+            <SBToggle label={isPt ? 'Véus' : 'Veils'} active={params.veilsEnabled}
+              hint={isPt ? 'Limiares de coerência para sefirót superiores' : 'Coherence thresholds for upper sephiroth'} onChange={v => updateParams({ veilsEnabled: v })} />
           </SBSec>
 
           <SBDiv />
 
           {/* ── SPEED CONTROL ─────────────────────────────────────── */}
-          <SBSec label="Speed">
-            <SBSlider label="Speed" value={(params.speed - 0.25) / 2.75}
+          <SBSec label={locale === 'pt-BR' ? 'Velocidade' : 'Speed'}>
+            <SBSlider label={isPt ? 'Velocidade' : 'Speed'} value={(params.speed - 0.25) / 2.75}
               onChange={v => updateParams({ speed: Math.round((v * 2.75 + 0.25) * 100) / 100 })}
               display={`${params.speed.toFixed(2)}x`} />
           </SBSec>
 
           <SBDiv />
-          <SBSec label="Global State">
-            <SBBar label="Coherence" v={snap.coherence} c="#60c0ff" />
-            <SBBar label="Tension"   v={snap.tension}   c="#ff7050" />
-            <SBBar label="Memory"    v={snap.memory}    c="#a070ff" />
-            <SBBar label="Openness"  v={snap.openness}  c="#50d080" />
+          <SBSec label={locale === 'pt-BR' ? 'Estado Global' : 'Global State'}>
+            <SBBar label={isPt ? 'Coerência' : 'Coherence'} v={snap.coherence} c="#60c0ff" />
+            <SBBar label={isPt ? 'Tensão' : 'Tension'}   v={snap.tension}   c="#ff7050" />
+            <SBBar label={isPt ? 'Memória' : 'Memory'}    v={snap.memory}    c="#a070ff" />
+            <SBBar label={isPt ? 'Abertura' : 'Openness'}  v={snap.openness}  c="#50d080" />
           </SBSec>
 
           <SBDiv />
           <div style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', gap: 3 }}>
               <SBBtn onClick={() => setRunning(r => !r)} c={running ? '#ffd060' : '#60c080'}>
-                {running ? <><Pause size={9} />Pause</> : <><Play size={9} />Play</>}
+                {running ? <><Pause size={9} />{isPt ? 'Pausar' : 'Pause'}</> : <><Play size={9} />Play</>}
               </SBBtn>
-              <SBBtn onClick={handleReset} c="#7070a0"><RefreshCw size={9} />Reset</SBBtn>
+              <SBBtn onClick={handleReset} c="#7070a0"><RefreshCw size={9} />{isPt ? 'Reiniciar' : 'Reset'}</SBBtn>
             </div>
             <SBBtn onClick={() => setHand(drawHand(params.drawRate))} c="#c0a0ff">
-              <Zap size={9} /> Draw {params.drawRate} Cards
+              <Zap size={9} /> {isPt ? `Comprar ${params.drawRate} cartas` : `Draw ${params.drawRate} Cards`}
             </SBBtn>
           </div>
 
           {/* Advanced */}
           <div style={{ padding: '0 10px 6px' }}>
-            <button title={advOpen ? "Fechar avançado" : "Grimório & configuração"} onClick={() => setAdvOpen(!advOpen)} style={{
+            <button title={advOpen ? t('tol_advanced_close') : t('tol_advanced_open')} onClick={() => setAdvOpen(!advOpen)} style={{
               display: 'flex', alignItems: 'center', gap: 4, width: '100%',
               fontSize: 7, background: 'none', border: 'none', cursor: 'pointer',
               color: 'rgba(180,165,150,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase',
             }}>
-              <Settings size={8} /> Advanced {advOpen ? <ChevronDown size={8} /> : <ChevronRight size={8} />}
+              <Settings size={8} /> {t('tol_advanced')} {advOpen ? <ChevronDown size={8} /> : <ChevronRight size={8} />}
             </button>
             {advOpen && (
               <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 4, padding: '8px',
@@ -1149,7 +1331,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
                   marginTop: 5, fontSize: 7, background: 'rgba(255,50,30,0.08)',
                   border: '1px solid rgba(255,50,30,0.18)', borderRadius: 3,
                   padding: '2px 6px', cursor: 'pointer', color: 'rgba(255,110,90,0.55)',
-                }}>Clear Grimoire</button>
+                }}>{t('tol_clear_grimoire')}</button>
               </div>
             )}
           </div>
@@ -1222,10 +1404,10 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
             {/* Zoom controls */}
             <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {[
-                { label: 'Zoom in',    ico: <ZoomIn size={12} />,    action: () => { camRef.current = { ...camRef.current, zoom: Math.min(4, camRef.current.zoom * 1.25) }; } },
-                { label: 'Zoom out',   ico: <ZoomOut size={12} />,   action: () => { camRef.current = { ...camRef.current, zoom: Math.max(0.2, camRef.current.zoom * 0.8) }; } },
-                { label: 'Reset view', ico: <RefreshCw size={11} />, action: () => { camRef.current = { zoom: 1, px: 0, py: 0 }; } },
-                { label: fullscreen ? 'Exit fullscreen' : 'Fullscreen', ico: <Maximize2 size={11} />, action: () => setFullscreen(f => !f) },
+                { label: t('tol_zoom_in'),    ico: <ZoomIn size={12} />,    action: () => { camRef.current = { ...camRef.current, zoom: Math.min(4, camRef.current.zoom * 1.25) }; } },
+                { label: t('tol_zoom_out'),   ico: <ZoomOut size={12} />,   action: () => { camRef.current = { ...camRef.current, zoom: Math.max(0.2, camRef.current.zoom * 0.8) }; } },
+                { label: t('tol_reset_view'), ico: <RefreshCw size={11} />, action: () => { camRef.current = { zoom: 1, px: 0, py: 0 }; } },
+                { label: fullscreen ? t('tol_exit_fullscreen') : t('tol_fullscreen'), ico: <Maximize2 size={11} />, action: () => setFullscreen(f => !f) },
               ].map(({ label, ico, action }, i) => (
                 <button title={label} key={i} onClick={action} style={{
                   width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1243,7 +1425,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
                 cursor: 'pointer', background: 'rgba(255,200,60,0.12)', border: '1px solid rgba(255,200,60,0.3)',
                 fontSize: 8, color: 'rgba(255,220,100,0.9)', letterSpacing: '0.1em',
               }}>
-                ✦ Apply Globally
+                ✦ {t('tol_apply_globally')}
               </button>
             )}
 
@@ -1283,7 +1465,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
                     {selSephDef.id === 'malkuth' && serpPct > 20 && (
                       <div style={{ marginTop: 4, fontSize: 7, color: '#c080ff' }}>⬆ Serpent Active — light ascending to Source</div>
                     )}
-                    {selectedCard && <div style={{ marginTop: 4, color: 'rgba(255,220,80,0.8)' }}>← Click to apply card</div>}
+                    {selectedCard && <div style={{ marginTop: 4, color: 'rgba(255,220,80,0.8)' }}>{t('tol_click_apply_card')}</div>}
                   </>
                 )}
                 {selPathDef && selPathArcana && selPathLens && (
@@ -1305,7 +1487,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
                       {selPathArcana.operator.secondary ? ` + ${selPathArcana.operator.secondary}` : ''}
                       {' '}· {selPathLens.microNote}
                     </div>
-                    {selectedCard && <div style={{ marginTop: 4, color: 'rgba(255,220,80,0.8)' }}>← Click to apply card</div>}
+                    {selectedCard && <div style={{ marginTop: 4, color: 'rgba(255,220,80,0.8)' }}>{t('tol_click_apply_card')}</div>}
                   </>
                 )}
               </div>
@@ -1394,9 +1576,9 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
           {/* Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             {([
-              { id: 'journey', label: 'Journey', ico: '✦' },
-              { id: 'grimoire', label: 'Grimoire', ico: '📖' },
-              { id: 'glossary', label: 'Glossary', ico: '📚' },
+              { id: 'journey', label: t('tol_journey'), ico: '✦' },
+              { id: 'grimoire', label: t('tol_grimoire'), ico: '📖' },
+              { id: 'glossary', label: t('tol_glossary'), ico: '📚' },
             ] as const).map(t => (
               <button title={t.label} key={t.id} onClick={() => setRightTab(t.id)} style={{
                 flex: 1, padding: '7px 3px', fontSize: 7, border: 'none', cursor: 'pointer',
@@ -1414,6 +1596,8 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
 
             {rightTab === 'journey' && (
               <JourneyPanel
+                t={t}
+                locale={locale}
                 selectedSeph={selectedSeph}
                 selectedPath={selectedPath}
                 snap={snap}
@@ -1428,11 +1612,11 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
               <div>
                 <div style={{ fontSize: 6.5, color: 'rgba(180,120,255,0.4)', letterSpacing: '0.12em',
                   textTransform: 'uppercase', marginBottom: 6 }}>
-                  Grimoire · {chapters.length} chapters
+                  {locale === 'pt-BR' ? `Grimório · ${chapters.length} capítulos` : `Grimoire · ${chapters.length} chapters`}
                 </div>
                 {chapters.length === 0 && (
                   <div style={{ fontSize: 7.5, color: 'rgba(170,155,140,0.3)', padding: '10px 0' }}>
-                    Play cards to record chapters automatically.
+                    {locale === 'pt-BR' ? 'Jogue cartas para gravar capítulos automaticamente.' : 'Play cards to record chapters automatically.'}
                   </div>
                 )}
                 {[...chapters].reverse().slice(0, 24).map(ch => (
@@ -1463,7 +1647,7 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
               <div>
                 <div style={{ fontSize: 6.5, color: 'rgba(180,120,255,0.4)', letterSpacing: '0.12em',
                   textTransform: 'uppercase', marginBottom: 6 }}>
-                  Glossary · {lens.label}
+                  {locale === 'pt-BR' ? `Glossário · ${lens.label}` : `Glossary · ${lens.label}`}
                 </div>
                 {ARCANA.map(ar => {
                   const ld = lens.majors[ar.id];
@@ -1498,8 +1682,10 @@ export function TreeOfLifeLab({ active }: { active: boolean }) {
 // Journey Panel — Hermetic Qabalah education + Serpent of Wisdom guide
 // ─────────────────────────────────────────────────────────────────────────────
 function JourneyPanel({
-  selectedSeph, selectedPath, snap, params, events, serpentSnap, lens,
+  t, locale, selectedSeph, selectedPath, snap, params, events, serpentSnap, lens,
 }: {
+  t: (key: import('../../i18n/strings').StringKey) => string;
+  locale: 'en' | 'pt-BR';
   selectedSeph: SephirahId | null;
   selectedPath: number | null;
   snap: ReturnType<typeof getStateSnapshot>;
@@ -1512,7 +1698,8 @@ function JourneyPanel({
   const [showLightLore, setShowLightLore] = useState(false);
   const [showEvents, setShowEvents] = useState(true);
 
-  const lore = selectedSeph ? SEPHIRAH_LORE[selectedSeph] : null;
+  const loreSource = locale === 'pt-BR' ? SEPHIRAH_LORE_PT : SEPHIRAH_LORE;
+  const lore = selectedSeph ? loreSource[selectedSeph] : null;
   const sephDef = selectedSeph ? SEPHIRAH_MAP.get(selectedSeph) : null;
   const pathDef = selectedPath !== null ? PATH_MAP.get(selectedPath) : null;
   const pathArcana = pathDef ? ARCANA_MAP.get(pathDef.arcanaId) : null;
@@ -1600,7 +1787,7 @@ function JourneyPanel({
           )}
         </div>
 
-        <div style={H}>In the Simulation</div>
+        <div style={H}>{t('tol_in_simulation')}</div>
         <div style={{ ...Card, borderColor: 'rgba(100,180,255,0.15)', background: 'rgba(60,120,200,0.05)' }}>
           <div style={P}>{lore.practice}</div>
         </div>
@@ -1631,18 +1818,18 @@ function JourneyPanel({
           </div>
         </div>
 
-        <div style={H}>This Path</div>
+        <div style={H}>{t('tol_this_path')}</div>
         <div style={P}>
           Path {selectedPath} connects <b style={{ color: fromDef.color }}>{fromDef.label}</b> ({fromDef.meaning}) to <b style={{ color: toDef.color }}>{toDef.label}</b> ({toDef.meaning}). In the Hermetic tradition, each of the 22 paths is governed by a Major Arcana and a Hebrew letter. Attribution: {pathDef.attribution}.
         </div>
 
         <div style={CardFlash}>
-          <div style={{ fontSize: 7, color: 'rgba(220,185,80,0.7)', marginBottom: 3 }}>⬇ Lightning Flash on this Path</div>
+          <div style={{ fontSize: 7, color: 'rgba(220,185,80,0.7)', marginBottom: 3 }}>⬇ {t('tol_lightning_flash')}</div>
           <div style={P}>Light descends from <b style={{ color: 'rgba(200,185,165,0.7)' }}>{fromDef.label}</b> to <b style={{ color: 'rgba(200,185,165,0.7)' }}>{toDef.label}</b>. The arcanum <b style={{ color: 'rgba(210,185,255,0.8)' }}>{pathLens.name}</b> regulates the quality of this transmission.</div>
         </div>
 
         <div style={CardSerpent}>
-          <div style={{ fontSize: 7, color: 'rgba(160,90,255,0.8)', marginBottom: 3 }}>⬆ Serpent of Wisdom on this Path</div>
+          <div style={{ fontSize: 7, color: 'rgba(160,90,255,0.8)', marginBottom: 3 }}>⬆ {t('tol_serpent')}</div>
           <div style={P}>When the Serpent is active, violet particles ascend from <b style={{ color: 'rgba(200,185,165,0.7)' }}>{toDef.label}</b> to <b style={{ color: 'rgba(200,185,165,0.7)' }}>{fromDef.label}</b> — the light returns purified by experience. As Above, So Below.</div>
         </div>
 
@@ -1732,18 +1919,18 @@ function JourneyPanel({
       </div>
 
       <div style={{ marginBottom: 6 }}>
-        <button title={showLightLore ? "Ocultar Luz & Lore" : "Luz & Lore"} onClick={() => setShowLightLore(!showLightLore)} style={{
+        <button title={showLightLore ? t('tol_light_lore_hide') : t('tol_light_lore_show')} onClick={() => setShowLightLore(!showLightLore)} style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '5px 8px', borderRadius: 5, cursor: 'pointer',
           background: 'rgba(180,120,60,0.06)', border: '1px solid rgba(220,185,80,0.15)',
           color: 'rgba(220,185,80,0.7)', fontSize: 7.5, letterSpacing: '0.08em',
         }}>
-          <span>✦ Lightning Flash & Serpent — The Cycle of Light</span>
+          <span>{locale === 'pt-BR' ? '✦ Raio de Luz e Serpente — O Ciclo da Luz' : '✦ Lightning Flash & Serpent — The Cycle of Light'}</span>
           {showLightLore ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
         </button>
         {showLightLore && (
           <div style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: '0 0 5px 5px', border: '1px solid rgba(220,185,80,0.1)', borderTop: 'none' }}>
-            {[LVX_LORE, LIGHTNING_FLASH_LORE, SERPENT_LORE, GREAT_WORK_LORE].map((item, i) => (
+            {(locale === 'pt-BR' ? [LVX_LORE_PT, LIGHTNING_FLASH_LORE_PT, SERPENT_LORE_PT, GREAT_WORK_LORE_PT] : [LVX_LORE, LIGHTNING_FLASH_LORE, SERPENT_LORE, GREAT_WORK_LORE]).map((item, i) => (
               <div key={i} style={{ marginBottom: i < 3 ? 8 : 0 }}>
                 <div style={{ fontSize: 7.5, color: i < 2 ? 'rgba(220,185,80,0.8)' : i === 2 ? 'rgba(160,90,255,0.8)' : 'rgba(200,160,255,0.8)', marginBottom: 3 }}>
                   {item.title}
@@ -1756,25 +1943,25 @@ function JourneyPanel({
       </div>
 
       <div style={{ marginBottom: 6 }}>
-        <button title={showWorlds ? "Ocultar Mundos" : "Mundos"} onClick={() => setShowWorlds(!showWorlds)} style={{
+        <button title={showWorlds ? t('tol_worlds_hide') : t('tol_worlds_show')} onClick={() => setShowWorlds(!showWorlds)} style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '5px 8px', borderRadius: 5, cursor: 'pointer',
           background: 'rgba(80,120,200,0.06)', border: '1px solid rgba(100,150,220,0.15)',
           color: 'rgba(120,170,255,0.7)', fontSize: 7.5, letterSpacing: '0.08em',
         }}>
-          <span>⟁ The Four Worlds (Hermetic Planes)</span>
+          <span>{locale === 'pt-BR' ? '⟁ Os Quatro Mundos (Planos Herméticos)' : '⟁ The Four Worlds (Hermetic Planes)'}</span>
           {showWorlds ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
         </button>
         {showWorlds && (
           <div style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: '0 0 5px 5px', border: '1px solid rgba(100,150,220,0.1)', borderTop: 'none' }}>
-            {FOUR_WORLDS.map((w, i) => (
+            {(locale === 'pt-BR' ? FOUR_WORLDS_PT : FOUR_WORLDS).map((w, i) => (
               <div key={w.name} style={{ marginBottom: i < 3 ? 8 : 0 }}>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'baseline', marginBottom: 2 }}>
                   <span style={{ fontSize: 8, color: 'rgba(200,185,165,0.85)' }}>{w.name}</span>
                   <span style={{ fontSize: 7, color: 'rgba(180,120,255,0.5)' }}>{w.heb}</span>
                   <span style={{ fontSize: 6.5, color: 'rgba(160,150,135,0.5)' }}>— {w.meaning}</span>
                 </div>
-                <div style={{ fontSize: 6.5, color: 'rgba(160,145,130,0.5)', marginBottom: 2 }}>Sephiroth: {w.sephirot}</div>
+                <div style={{ fontSize: 6.5, color: 'rgba(160,145,130,0.5)', marginBottom: 2 }}>{locale === 'pt-BR' ? 'Sefirót' : 'Sephiroth'}: {w.sephirot}</div>
                 <div style={{ fontSize: 7, color: 'rgba(190,180,165,0.6)', lineHeight: 1.45 }}>{w.desc}</div>
               </div>
             ))}
@@ -1786,9 +1973,9 @@ function JourneyPanel({
         background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ fontSize: 7, color: 'rgba(200,175,255,0.45)', letterSpacing: '0.1em',
           textTransform: 'uppercase', marginBottom: 5 }}>
-          Current State
+          {locale === 'pt-BR' ? 'Estado Atual' : 'Current State'}
         </div>
-        <SystemDiagnosis snap={snap} params={params} serpent={serpentSnap} />
+        <SystemDiagnosis locale={locale} snap={snap} params={params} serpent={serpentSnap} />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, cursor: 'pointer' }}
@@ -1830,22 +2017,24 @@ function JourneyPanel({
   );
 }
 
-function SystemDiagnosis({ snap, params, serpent }: {
+function SystemDiagnosis({ locale, snap, params, serpent }: {
+  locale: 'en' | 'pt-BR';
   snap: ReturnType<typeof getStateSnapshot>;
   params: TreeOfLifeParams;
   serpent: OrChozerSt;
 }) {
+  const isPt = locale === 'pt-BR';
   const lines: { text: string; color?: string }[] = [];
-  if (snap.coherence > 0.6)       lines.push({ text: '✦ High coherence — Lightning Flash flowing well.' });
-  if (snap.coherence < 0.25)      lines.push({ text: '◌ Low coherence — system dispersed.' });
-  if (snap.tension > 0.55)        lines.push({ text: '⚠ High tension — risk of CRYSTALLIZATION.' });
-  if (snap.tension < 0.15)        lines.push({ text: '◎ Minimal tension — system stable.' });
-  if (snap.memory > 0.5)          lines.push({ text: '✎ High memory — patterns consolidated.' });
-  if (snap.openness > 0.65)       lines.push({ text: '⊕ High openness — paths easily traversed.' });
-  if (params.veilsEnabled)        lines.push({ text: '☾ Veils active — coherence required for upper gates.' });
-  if (serpent.level > 0.3)        lines.push({ text: '⬆ Serpent of Wisdom active — light ascending.', color: '#c080ff' });
-  if (serpent.greatWorkPulse > 0.4) lines.push({ text: '✦ The Great Work — Magnum Opus in progress!', color: '#e0c0ff' });
-  if (!lines.length)              lines.push({ text: 'System in neutral state. Play cards to begin.' });
+  if (snap.coherence > 0.6)       lines.push({ text: isPt ? '✦ Alta coerência — Raio de Luz fluindo bem.' : '✦ High coherence — Lightning Flash flowing well.' });
+  if (snap.coherence < 0.25)      lines.push({ text: isPt ? '◌ Baixa coerência — sistema disperso.' : '◌ Low coherence — system dispersed.' });
+  if (snap.tension > 0.55)        lines.push({ text: isPt ? '⚠ Alta tensão — risco de CRISTALIZAÇÃO.' : '⚠ High tension — risk of CRYSTALLIZATION.' });
+  if (snap.tension < 0.15)        lines.push({ text: isPt ? '◎ Tensão mínima — sistema estável.' : '◎ Minimal tension — system stable.' });
+  if (snap.memory > 0.5)          lines.push({ text: isPt ? '✎ Alta memória — padrões consolidados.' : '✎ High memory — patterns consolidated.' });
+  if (snap.openness > 0.65)       lines.push({ text: isPt ? '⊕ Alta abertura — caminhos facilmente percorridos.' : '⊕ High openness — paths easily traversed.' });
+  if (params.veilsEnabled)        lines.push({ text: isPt ? '☾ Véus ativos — coerência necessária para os portais superiores.' : '☾ Veils active — coherence required for upper gates.' });
+  if (serpent.level > 0.3)        lines.push({ text: isPt ? '⬆ Serpente da Sabedoria ativa — luz ascendendo.' : '⬆ Serpent of Wisdom active — light ascending.', color: '#c080ff' });
+  if (serpent.greatWorkPulse > 0.4) lines.push({ text: isPt ? '✦ A Grande Obra — Magnum Opus em progresso!' : '✦ The Great Work — Magnum Opus in progress!', color: '#e0c0ff' });
+  if (!lines.length)              lines.push({ text: isPt ? 'Sistema em estado neutro. Jogue cartas para começar.' : 'System in neutral state. Play cards to begin.' });
   return (
     <>
       {lines.map((l, i) => (

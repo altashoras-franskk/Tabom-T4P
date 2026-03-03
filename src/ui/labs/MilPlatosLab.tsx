@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useI18n } from '../../i18n/context';
 import { DraggablePanel } from '../../app/components/DraggablePanel';
 import { TelemetryHUD } from '../../app/components/TelemetryHUD';
 import { RecordingButton } from '../../app/components/recording/RecordingButton';
@@ -137,6 +138,7 @@ function worldTo3D(world: any, overlays: Set<MPOverlay>): { particles: Particle3
 }
 
 export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
+  const { t } = useI18n();
   const [running, setRunning] = useState(true);
   const [params, setParams] = useState<MPParams>(createDefaultParams);
   const [tab, setTab] = useState<MPTab>('cso');
@@ -545,7 +547,7 @@ export const MilPlatosLab: React.FC<{ active: boolean }> = ({ active }) => {
               </>) : (<>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginBottom: 16, lineHeight: 1.5 }}>Seu Corpo sem Orgaos esta pronto. Clique para gerar a simulacao personalizada.</div>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowJornada(false)} title="Cancelar jornada" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 9, fontFamily: MONO }}>Cancelar</button>
+                  <button onClick={() => setShowJornada(false)} title={t('common_cancelJourney')} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 9, fontFamily: MONO }}>{t('common_cancel')}</button>
                   <button onClick={finishJornada} title="Gerar seu Corpo sem Órgãos" style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid ' + ACCENT, borderRadius: 4, padding: '6px 16px', cursor: 'pointer', color: ACCENT, fontSize: 9, fontFamily: MONO, fontWeight: 600 }}>Gerar meu CsO</button>
                 </div>
               </>)}

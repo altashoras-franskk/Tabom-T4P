@@ -116,7 +116,7 @@ export const DraggablePanel: React.FC<DraggablePanelProps> = ({
   };
 
   return (
-    <div ref={rootRef} style={style} className={className}>
+    <div ref={rootRef} style={style} className={className} data-ui-overlay="true" onClick={(e) => e.stopPropagation()}>
       {/* ── Drag handle / title bar ── */}
       <div
         style={{

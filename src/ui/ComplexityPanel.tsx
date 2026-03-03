@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useI18n } from '../i18n/context';
 import {
   ComplexityLensState,
   ComplexityMetrics,
@@ -94,12 +95,14 @@ function ForceBar({ label, value, color, hint }: {
 }
 
 function CtrlSlider({
-  icon, label, hint, value, min, max, step, display, effectiveDisplay, onChange,
+  icon, label, hint, value, min, max, step, display, effectiveDisplay, effectiveValueTitle, onChange,
 }: {
   icon?: string; label: string; hint: string; value: number;
   min: number; max: number; step: number;
   display?: string; /** Quando retroação ativa: mostra valor efetivo (base + Δ) */
   effectiveDisplay?: string;
+  /** Tooltip for the "→ effective" span (parent passes t('cl_effectiveValue')) */
+  effectiveValueTitle?: string;
   onChange: (v: number) => void;
 }) {
   return (
@@ -112,7 +115,7 @@ function CtrlSlider({
         <span style={{ fontFamily: MONO, fontSize: 9, color: `${TEAL}99` }}>
           {display ?? value.toFixed(2)}
           {effectiveDisplay != null && (
-            <span style={{ marginLeft: 4, fontSize: 8, color: 'rgba(255,255,255,0.4)' }} title="Valor efetivo (base + retroação)">
+            <span style={{ marginLeft: 4, fontSize: 8, color: 'rgba(255,255,255,0.4)' }} title={effectiveValueTitle ?? ''}>
               → {effectiveDisplay}
             </span>
           )}
@@ -219,6 +222,7 @@ export function ComplexityPanel({
   targetParticleCount, onTargetParticleCountChange,
   embedded = false,
 }: ComplexityPanelProps) {
+  const { t } = useI18n();
   const [open,         setOpen]     = useState(() => {
     try {
       const v = localStorage.getItem('complexityPanelOpen');
@@ -239,14 +243,24 @@ export function ComplexityPanel({
   const [secField,     setSecFld]   = useState(false);
   const [secMorin,     setSecMorin] = useState(true);
 
+  // Guard: avoid crash if lensState is stale/undefined (e.g. during rapid updates)
+  if (!lensState?.feedback?.config) {
+    return (
+      <div data-ui-overlay="true" style={{ padding: 8, fontFamily: MONO, fontSize: 9, color: DIM }}>
+        Sistema Complexo — carregando…
+      </div>
+    );
+  }
+
   const { feedback, metrics, forces, systemPhase, modulation,
           systemHealth, emergenceIndex, morin } = lensState;
   const cfg = feedback.config;
 
-  const phaseColor = SYSTEM_PHASE_COLORS[systemPhase];
-  const phaseSigil = SYSTEM_PHASE_SIGILS[systemPhase];
-  const phaseHint  = SYSTEM_PHASE_HINT[systemPhase];
-  const top3       = topModules(moduleTelemetry, 3);
+  const safePhase = systemPhase && SYSTEM_PHASE_COLORS[systemPhase as keyof typeof SYSTEM_PHASE_COLORS] ? systemPhase : 'Expansão';
+  const phaseColor = SYSTEM_PHASE_COLORS[safePhase as keyof typeof SYSTEM_PHASE_COLORS];
+  const phaseSigil = SYSTEM_PHASE_SIGILS[safePhase as keyof typeof SYSTEM_PHASE_SIGILS];
+  const phaseHint  = SYSTEM_PHASE_HINT[safePhase as keyof typeof SYSTEM_PHASE_HINT];
+  const top3       = topModules(moduleTelemetry ?? {}, 3);
 
   const FPS_COLOR = fps >= 50 ? '#60ff90' : fps >= 30 ? '#ffc840' : '#ff6050';
   const bal = vitalRates.birthsPerSec - vitalRates.deathsPerSec;
@@ -309,7 +323,7 @@ export function ComplexityPanel({
             background: `${phaseColor}0c`, color: phaseColor,
             border: `1px dashed ${phaseColor}30`, letterSpacing: '0.04em',
           }}>
-            {phaseSigil} {systemPhase}
+            {phaseSigil} {safePhase}
           </div>
         )}
         {open
@@ -339,7 +353,7 @@ export function ComplexityPanel({
               {cfg.enabled && (
                 <button
                   onClick={onResetMemory}
-                  title="Limpa memória e reinicia fase"
+                  title={t('cl_resetPhase')}
                   style={{
                     fontFamily: MONO, fontSize: 9, padding: '3px 6px', cursor: 'pointer',
                     background: 'transparent', border: '1px dashed rgba(255,255,255,0.06)',
@@ -352,7 +366,7 @@ export function ComplexityPanel({
 
               {/* Health + emergence pills */}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                <div title="Saúde sistêmica" style={{
+                <div title={t('cl_systemHealth')} style={{
                   fontFamily: MONO, fontSize: 8.5, padding: '2px 4px',
                   background: `rgba(${systemHealth > 0.6 ? '80,255,130' : systemHealth > 0.35 ? '255,200,80' : '255,80,80'},0.06)`,
                   border: `1px dashed rgba(${systemHealth > 0.6 ? '80,255,130' : systemHealth > 0.35 ? '255,200,80' : '255,80,80'},0.25)`,
@@ -360,7 +374,7 @@ export function ComplexityPanel({
                 }}>
                   ♥ {Math.round(systemHealth * 100)}%
                 </div>
-                <div title="Índice de emergência" style={{
+                <div title={t('cl_emergenceIndex')} style={{
                   fontFamily: MONO, fontSize: 8.5, padding: '2px 4px',
                   background: `${TEAL}06`, border: `1px dashed ${TEAL}20`, color: `${TEAL}bb`,
                 }}>
@@ -373,12 +387,12 @@ export function ComplexityPanel({
             {cfg.enabled && (
               <div style={{ marginTop: 7 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontFamily: MONO, fontSize: 8, color: DIM, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fase</span>
+                  <span style={{ fontFamily: MONO, fontSize: 8, color: DIM, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('cl_phase')}</span>
                   <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.04)' }}>
                     <div style={{ height: '100%', width: `${(feedback.phase % 1) * 100}%`, background: `linear-gradient(90deg,${phaseColor}55,${phaseColor}aa)`, transition: 'width 0.3s' }} />
                   </div>
                   <span style={{ fontFamily: MONO, fontSize: 8.5, color: phaseColor, padding: '1px 4px', background: `${phaseColor}0c`, border: `1px dashed ${phaseColor}22` }}>
-                    {phaseSigil} {systemPhase}
+                    {phaseSigil} {safePhase}
                   </span>
                 </div>
               </div>
@@ -389,39 +403,39 @@ export function ComplexityPanel({
               SECÇÃO: TELEMETRIA AO VIVO (reflete parâmetros efetivos em tempo real)
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Telemetria" open={secTel} onToggle={() => setSecTel(v => !v)} />
+            <SectionHeader label={t('cl_telemetry')} open={secTel} onToggle={() => setSecTel(v => !v)} />
             {secTel && (
               <div>
                 {cfg.enabled && (
                   <div style={{ fontFamily: MONO, fontSize: 7.5, color: 'rgba(255,255,255,0.35)', marginBottom: 6, letterSpacing: '0.03em' }}>
-                    Parâmetros efetivos = base + retroação (Δ). Nasc./mortes exigem Energia ligada.
+                    {t('cl_effectiveParams')}
                   </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', marginBottom: 4 }}>
-                  <TelRow label="FPS" value={Math.round(fps)} color={FPS_COLOR} />
-                  <TelRow label="Agentes" value={agentCount} />
-                  <TelRow label="Nascimentos" value={vitalRates.birthsPerSec.toFixed(1)} unit="/s" color="#60ff90" />
-                  <TelRow label="Mortes" value={vitalRates.deathsPerSec.toFixed(1)} unit="/s" color="#ff7060" />
-                  <TelRow label="Mutações" value={vitalRates.mutationsPerSec.toFixed(1)} unit="/s" color="#c080ff" />
+                  <TelRow label={t('cl_fps')} value={Math.round(fps)} color={FPS_COLOR} />
+                  <TelRow label={t('cl_agents')} value={agentCount} />
+                  <TelRow label={t('cl_births')} value={vitalRates.birthsPerSec.toFixed(1)} unit="/s" color="#60ff90" />
+                  <TelRow label={t('cl_deaths')} value={vitalRates.deathsPerSec.toFixed(1)} unit="/s" color="#ff7060" />
+                  <TelRow label={t('cl_mutations')} value={vitalRates.mutationsPerSec.toFixed(1)} unit="/s" color="#c080ff" />
                   <TelRow
-                    label="Balanço"
+                    label={t('cl_balance')}
                     value={bal >= 0 ? `+${bal.toFixed(1)}` : bal.toFixed(1)}
                     unit="/s"
                     color={bal >= 0 ? '#60ff90' : '#ff7060'}
                   />
                 </div>
                 <div style={{ fontFamily: DOTO, fontSize: 7.5, color: 'rgba(255,255,255,0.12)', marginBottom: 3, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  Mortes/s por causa (Meadows)
+                  {t('cl_deathsByCause')}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', marginBottom: 6 }}>
-                  <TelRow label="Fome" value={vitalRates.deathsByStarvation.toFixed(1)} unit="/s" color="#ff6050" />
-                  <TelRow label="Idade" value={vitalRates.deathsByAge.toFixed(1)} unit="/s" color="#ffa050" />
-                  <TelRow label="Colisão" value={vitalRates.deathsByCollision.toFixed(1)} unit="/s" color="#ffc840" />
-                  <TelRow label="Predação" value={vitalRates.deathsByPredation.toFixed(1)} unit="/s" color="#c080ff" />
+                  <TelRow label={t('cl_starvation')} value={vitalRates.deathsByStarvation.toFixed(1)} unit="/s" color="#ff6050" />
+                  <TelRow label={t('cl_age')} value={vitalRates.deathsByAge.toFixed(1)} unit="/s" color="#ffa050" />
+                  <TelRow label={t('cl_collision')} value={vitalRates.deathsByCollision.toFixed(1)} unit="/s" color="#ffc840" />
+                  <TelRow label={t('cl_predation')} value={vitalRates.deathsByPredation.toFixed(1)} unit="/s" color="#c080ff" />
                 </div>
                 <div>
                   <div style={{ fontFamily: DOTO, fontSize: 8, color: 'rgba(255,255,255,0.14)', marginBottom: 3, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
-                    Módulos (ms/frame)
+                    {t('cl_modules')}
                   </div>
                   {top3.map(({ id, ms }) => (
                     <div key={id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2.5 }}>
@@ -440,25 +454,25 @@ export function ComplexityPanel({
               SECÇÃO: ESTADO EMERGENTE (read-only)
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '6px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Meadows · Estado Emergente" open={secMetrics} onToggle={() => setSecMet(v => !v)} />
+            <SectionHeader label={t('cl_meadowsState')} open={secMetrics} onToggle={() => setSecMet(v => !v)} />
             {secMetrics && (
               <div>
-                <MetricBar label="Variedade" value={metrics.variedade} color="#c080ff" hint="Diversidade de tipos no espaço. Alta variedade = alto potencial de resiliência (Lei de Ashby)." />
-                <MetricBar label="Coesão" value={metrics.coesao} color="#60d0ff" hint="Aglomeração espacial. Nicho emergindo — padrão de auto-organização local." />
-                <MetricBar label="Atrito" value={metrics.atrito} color="#ff6050" hint="Pressão competitiva. Força de seleção ativa: loop de balanço." />
-                <MetricBar label="Resiliência" value={metrics.resiliencia} color="#50ff90" hint="Fração de espécies ativas. Diversidade = capacidade de absorver perturbação." />
-                <MetricBar label="Persistência" value={metrics.persistencia} color="#ffd060" hint="Homeostase. Alta persistência = sistema estagnado (derive para baixa performance)." />
-                <MetricBar label="Metabolismo" value={metrics.metabolismo} color="#80c0ff" hint="Fluxo de energia cinética. Stocks e flows — vitalidade do sistema." />
+                <MetricBar label={t('cl_variety')} value={metrics.variedade} color="#c080ff" hint="Diversidade de tipos no espaço. Alta variedade = alto potencial de resiliência (Lei de Ashby)." />
+                <MetricBar label={t('cl_cohesion')} value={metrics.coesao} color="#60d0ff" hint="Aglomeração espacial. Nicho emergindo — padrão de auto-organização local." />
+                <MetricBar label={t('cl_friction')} value={metrics.atrito} color="#ff6050" hint="Pressão competitiva. Força de seleção ativa: loop de balanço." />
+                <MetricBar label={t('cl_resilience')} value={metrics.resiliencia} color="#50ff90" hint="Fração de espécies ativas. Diversidade = capacidade de absorver perturbação." />
+                <MetricBar label={t('cl_persistence')} value={metrics.persistencia} color="#ffd060" hint="Homeostase. Alta persistência = sistema estagnado (derive para baixa performance)." />
+                <MetricBar label={t('cl_metabolism')} value={metrics.metabolismo} color="#80c0ff" hint="Fluxo de energia cinética. Stocks e flows — vitalidade do sistema." />
 
                 {/* Forces compact */}
                 <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '5px 0' }} />
                 <div style={{ marginBottom: 0 }}>
-                  <div style={{ fontFamily: DOTO, fontSize: 7.5, color: DIM, marginBottom: 4, letterSpacing: '0.09em', textTransform: 'uppercase' }}>Meadows · Forças (R/B loops)</div>
-                  <ForceBar label="Perturbação" value={forces.perturbacao} color="#e0c860" hint="Desordem criativa. Injeta imprevisibilidade — motor de emergência." />
-                  <ForceBar label="Auto-Org" value={forces.autoOrganizacao} color="#6090e0" hint="Consolida estruturas espontâneas. Padrão sem controle externo." />
-                  <ForceBar label="Amplificação" value={forces.amplificacao} color="#50e080" hint="Loop de reforço R. Crescimento se auto-alimenta." />
-                  <ForceBar label="Regulação" value={forces.regulacao} color="#e05050" hint="Loop de balanço B. Freia runaway." />
-                  <ForceBar label="Coerência" value={forces.coerencia} color="#d4a060" hint="Saúde global. O todo é mais do que a soma das partes." />
+                  <div style={{ fontFamily: DOTO, fontSize: 7.5, color: DIM, marginBottom: 4, letterSpacing: '0.09em', textTransform: 'uppercase' }}>{t('cl_meadowsForces')}</div>
+                  <ForceBar label={t('cl_perturbation')} value={forces.perturbacao} color="#e0c860" hint="Desordem criativa. Injeta imprevisibilidade — motor de emergência." />
+                  <ForceBar label={t('cl_autoOrg')} value={forces.autoOrganizacao} color="#6090e0" hint="Consolida estruturas espontâneas. Padrão sem controle externo." />
+                  <ForceBar label={t('cl_amplification')} value={forces.amplificacao} color="#50e080" hint="Loop de reforço R. Crescimento se auto-alimenta." />
+                  <ForceBar label={t('cl_regulation')} value={forces.regulacao} color="#e05050" hint="Loop de balanço B. Freia runaway." />
+                  <ForceBar label={t('cl_coherence')} value={forces.coerencia} color="#d4a060" hint="Saúde global. O todo é mais do que a soma das partes." />
                 </div>
 
                 {/* Modulation deltas */}
@@ -490,16 +504,16 @@ export function ComplexityPanel({
               Dialogica, Recursivo, Hologramático, Sapiens/Demens, Tetralogia
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '6px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Morin · Índices de Complexidade" open={secMorin} onToggle={() => setSecMorin(v => !v)} accent="#00d4aa88" />
+            <SectionHeader label={t('cl_morinIndices')} open={secMorin} onToggle={() => setSecMorin(v => !v)} accent="#00d4aa88" />
             {secMorin && (
               <div>
-                <ForceBar label="Dialógica" value={morin.dialogica} color="#c080ff"
+                <ForceBar label={t('cl_dialogic')} value={morin.dialogica} color="#c080ff"
                   hint="Co-presença de forças antagônicas (R+B loops). Alto = opostos coexistem produtivamente." />
-                <ForceBar label="Recursivo" value={morin.recursivo} color="#60d0ff"
+                <ForceBar label={t('cl_recursive')} value={morin.recursivo} color="#60d0ff"
                   hint="Loop recursivo: efeito se torna causa. Produto é também produtor. O sistema modifica a si mesmo." />
-                <ForceBar label="Hologramático" value={morin.hologramatico} color="#50e080"
+                <ForceBar label={t('cl_hologrammatic')} value={morin.hologramatico} color="#50e080"
                   hint="Cada parte contém a lógica do todo. Correlação entre dinâmica local e padrão global." />
-                <ForceBar label="Tetralogia" value={morin.tetralogia} color="#e0c860"
+                <ForceBar label={t('cl_tetralogy')} value={morin.tetralogia} color="#e0c860"
                   hint="Ordem ↔ Desordem ↔ Interações ↔ Organização. Alto = todos os 4 polos ativos e ciclando." />
 
                 <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '6px 0' }} />
@@ -507,7 +521,7 @@ export function ComplexityPanel({
                 {/* Sapiens-Demens gauge */}
                 <div style={{ marginBottom: 4 }} title="Razão construtivo/destrutivo. 0.5 = equilíbrio sapiens-demens.">
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: DIM2, letterSpacing: '0.03em' }}>Sapiens ↔ Demens</span>
+                    <span style={{ fontFamily: MONO, fontSize: 9, color: DIM2, letterSpacing: '0.03em' }}>{t('cl_sapiensDemens')}</span>
                     <span style={{ fontFamily: MONO, fontSize: 9, color: Math.abs(morin.sapiensDemens - 0.5) < 0.15 ? '#00d4aa' : '#ffc840' }}>
                       {(morin.sapiensDemens * 100).toFixed(0)}%
                     </span>
@@ -541,78 +555,83 @@ export function ComplexityPanel({
               Com retroação ativa: valor efetivo = base + Δ exibido ao lado do slider.
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Interação · Dialógica" open={secInteract} onToggle={() => setSecInt(v => !v)} accent={`${TEAL}88`} />
+            <SectionHeader label={t('cl_interactionDialogic')} open={secInteract} onToggle={() => setSecInt(v => !v)} accent={`${TEAL}88`} />
             {secInteract && (
               <div>
                 <CtrlSlider
-                  icon="🧬" label="Nº de Espécies"
+                  icon="🧬" label={t('cl_speciesCount')}
                   hint="Número de tipos/espécies na matriz de interação (typesCount). Afeta diversidade e matriz atração/repulsão."
                   value={microConfig.typesCount} min={2} max={16} step={1}
                   display={`${microConfig.typesCount}`}
                   onChange={v => onMicroChange({ typesCount: Math.round(v) })}
                 />
                 <ToggleRow
-                  label="Fronteira toroidal"
+                  label={t('cl_toroidalBoundary')}
                   hint="wrap: true = agentes reaparecem do outro lado; false = bordas sólidas."
                   checked={microConfig.wrap}
                   onChange={(v) => onMicroChange({ wrap: v })}
                 />
                 <CtrlSlider
-                  icon="🔗" label="Acoplamento"
+                  icon="🔗" label={t('cl_coupling')}
                   hint="Raio de interação entre agentes. Alto acoplamento = mais interconexões. (rmax)"
                   value={microConfig.rmax} min={0.04} max={0.50} step={0.01}
                   effectiveDisplay={eff ? eff.rmax.toFixed(2) : undefined}
+                  effectiveValueTitle={t('cl_effectiveValue')}
                   onChange={v => onMicroChange({ rmax: v })}
                 />
                 <CtrlSlider
-                  icon="⚡" label="Força de Atração"
+                  icon="⚡" label={t('cl_attractionForce')}
                   hint="Magnitude das forças de atração/repulsão. Amplitude dos loops de interação. (force)"
                   value={microConfig.force} min={0.2} max={4.0} step={0.05}
                   effectiveDisplay={eff ? eff.force.toFixed(2) : undefined}
+                  effectiveValueTitle={t('cl_effectiveValue')}
                   onChange={v => onMicroChange({ force: v })}
                 />
                 <CtrlSlider
-                  icon="🫧" label="Viscosidade"
+                  icon="🫧" label={t('cl_viscosity')}
                   hint="Arrasto exponencial (drag). Alto = movimento mais contido; baixo = mais cinético."
                   value={microConfig.drag} min={0.1} max={5.0} step={0.1}
                   effectiveDisplay={eff ? eff.drag.toFixed(2) : undefined}
+                  effectiveValueTitle={t('cl_effectiveValue')}
                   onChange={v => onMicroChange({ drag: v })}
                 />
                 <CtrlSlider
-                  icon="🏎" label="Limite de Velocidade"
+                  icon="🏎" label={t('cl_speedLimit')}
                   hint="Clamp de velocidade (speedClamp). Controla quanto energia cinética pode acumular."
                   value={microConfig.speedClamp} min={0.02} max={0.5} step={0.01}
                   onChange={v => onMicroChange({ speedClamp: v })}
                 />
                 <CtrlSlider
-                  icon="⭐" label="Limiar Auto-Org"
+                  icon="⭐" label={t('cl_autoOrgThreshold')}
                   hint="Raio central de repulsão (beta). Controla quando agentes se organizam em estruturas vs. se dispersam."
                   value={microConfig.beta} min={0.05} max={0.95} step={0.01}
                   effectiveDisplay={eff ? eff.beta.toFixed(2) : undefined}
+                  effectiveValueTitle={t('cl_effectiveValue')}
                   onChange={v => onMicroChange({ beta: v })}
                 />
                 <CtrlSlider
-                  icon="🧲" label="Repulsão Central"
+                  icon="🧲" label={t('cl_centralRepulsion')}
                   hint="Intensidade da repulsão no núcleo (coreRepel). Alto = evita colapso; baixo = favorece aglomeração."
                   value={microConfig.coreRepel} min={0.2} max={2.0} step={0.05}
                   onChange={v => onMicroChange({ coreRepel: v })}
                 />
                 <CtrlSlider
-                  icon="🔥" label="Entropia"
+                  icon="🔥" label={t('cl_entropy')}
                   hint="Ruído injetado por frame. Alta entropia = perturbação criativa. Baixa = sistema determinístico."
                   value={microConfig.entropy} min={0} max={1.0} step={0.01}
                   display={microConfig.entropy.toFixed(2)}
                   effectiveDisplay={eff ? eff.entropy.toFixed(3) : undefined}
+                  effectiveValueTitle={t('cl_effectiveValue')}
                   onChange={v => onMicroChange({ entropy: v })}
                 />
                 <CtrlSlider
-                  icon="☯" label="Dialógica"
+                  icon="☯" label={t('cl_dialogicLabel')}
                   hint="Intensidade da dependência circular entre tipos. Cria tensão ordem/desordem — opostos que coexistem."
                   value={microConfig.circularDependency} min={0} max={1} step={0.01}
                   onChange={v => onMicroChange({ circularDependency: v })}
                 />
                 <ToggleRow
-                  label="Forças Sigil (Bond/Rift)"
+                  label={t('cl_sigilForces')}
                   hint="Usa sigilBond/sigilRift como forças causais na microdinâmica (toggle)."
                   checked={microConfig.enableSigilForces !== false}
                   onChange={(v) => onMicroChange({ enableSigilForces: v })}
@@ -626,22 +645,22 @@ export function ComplexityPanel({
               Parâmetros: absorção, custo, reprodução, capacidade, mutação
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Metabolismo · Auto-Eco-Org." open={secMeta} onToggle={() => setSecMeta(v => !v)} accent={`${TEAL}88`} />
+            <SectionHeader label={t('cl_metabolismSection')} open={secMeta} onToggle={() => setSecMeta(v => !v)} accent={`${TEAL}88`} />
             {secMeta && (
               <div>
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontFamily: DOTO, fontSize: 8, color: DIM, marginBottom: 5, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
-                    Vida (toggles)
+                    {t('cl_lifeToggles')}
                   </div>
                   <ToggleRow
-                    label="Comida"
+                    label={t('cl_food')}
                     hint="Ativa nós de recurso (food). Sem isso, a dinâmica fica mais 'física' e menos metabólica."
                     checked={life.foodEnabled}
                     onChange={(v) => onLifeChange({ foodEnabled: v })}
                   />
                 {life.foodEnabled && (
                   <CtrlSlider
-                    icon="🍎" label="Razão Comida"
+                    icon="🍎" label={t('cl_foodRatio')}
                     hint="Proporção de partículas que são recurso (food). life.foodRatio → microConfig.foodRatio."
                     value={life.foodRatio} min={0.05} max={0.5} step={0.01}
                     display={life.foodRatio.toFixed(2)}
@@ -649,20 +668,20 @@ export function ComplexityPanel({
                   />
                 )}
                   <ToggleRow
-                    label="Energia"
+                    label={t('cl_energy')}
                     hint="Ativa o sistema de energia/reprodução. Sem energia, não há seleção por custo/ganho."
                     checked={life.energyEnabled}
                     onChange={(v) => onLifeChange({ energyEnabled: v })}
                   />
                   <ToggleRow
-                    label="Reconfig"
+                    label={t('cl_reconfig')}
                     hint="Ativa mutação macro (reconfig) em janelas — útil para phase shifts e novidades."
                     checked={life.reconfigEnabled}
                     onChange={(v) => onLifeChange({ reconfigEnabled: v })}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                     <span style={{ fontFamily: MONO, fontSize: 9, color: DIM2, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                      Modo
+                      {t('cl_mode')}
                     </span>
                     <select
                       value={life.mode}
@@ -676,63 +695,73 @@ export function ComplexityPanel({
                         padding: '2px 6px',
                       }}
                     >
-                      <option value="OFF">OFF</option>
-                      <option value="METABOLIC">METABÓLICO</option>
-                      <option value="EVOLUTIVE">EVOLUTIVO</option>
-                      <option value="FULL">COMPLETO</option>
+                      <option value="OFF">{t('cl_OFF')}</option>
+                      <option value="METABOLIC">{t('cl_METABOLIC')}</option>
+                      <option value="EVOLUTIVE">{t('cl_EVOLUTIVE')}</option>
+                      <option value="FULL">{t('cl_FULL')}</option>
                     </select>
                   </div>
                 </div>
 
                 <CtrlSlider
-                  icon="💧" label="Taxa de Absorção"
+                  icon="💧" label={t('cl_absorptionRate')}
                   hint="Velocidade de ganho de energia ao interagir com outros. Stocks e flows: taxa de entrada no estoque de energia."
                   value={life.energyFeedRate} min={0.005} max={0.15} step={0.005}
                   display={life.energyFeedRate.toFixed(3)}
                   onChange={v => onLifeChange({ energyFeedRate: v })}
                 />
                 <CtrlSlider
-                  icon="⚗️" label="Custo Metabólico"
+                  icon="⚗️" label={t('cl_metabolicCost')}
                   hint="Decaimento de energia por frame. Pressão de seleção: agentes de baixo custo sobrevivem mais. (energyDecay)"
                   value={life.energyDecay} min={0.0005} max={0.01} step={0.0005}
                   display={life.energyDecay.toFixed(4)}
                   onChange={v => onLifeChange({ energyDecay: v })}
                 />
                 <CtrlSlider
-                  icon="🌱" label="Limiar de Reprodução"
+                  icon="🌱" label={t('cl_reproductionThreshold')}
                   hint="Energia necessária para se reproduzir. Alto limiar = seleção mais rígida. (reproductionThreshold)"
                   value={life.energyReproThreshold} min={0.5} max={5.0} step={0.1}
                   onChange={v => onLifeChange({ energyReproThreshold: v })}
                 />
                 <CtrlSlider
-                  icon="👥" label="Capacidade de Suporte"
+                  icon="👥" label={t('cl_supportCapacity')}
                   hint="Número máximo de agentes. Define o teto do estoque populacional. (targetParticleCount)"
                   value={targetParticleCount} min={100} max={3000} step={50}
                   display={`${targetParticleCount}`}
                   onChange={v => onTargetParticleCountChange(Math.round(v))}
                 />
                 <ToggleRow
-                  label="Manter População"
+                  label={t('cl_maintainPopulation')}
                   hint="Se desligado, a população pode oscilar (nascimentos/mortes alteram o total). Se ligado, o sistema força o total até a capacidade alvo."
                   checked={maintainPopulation}
                   onChange={onMaintainPopulationChange}
                 />
                 <CtrlSlider
-                  icon="🧬" label="Mutação"
+                  icon="🧬" label={t('cl_mutation')}
                   hint="Dial de mutação [0..1]. Alto = tipos evoluem rapidamente, baixa estabilidade. (mutationDial)"
                   value={life.mutationDial} min={0} max={1} step={0.01}
                   onChange={v => onLifeChange({ mutationDial: v })}
                 />
                 <div style={{ marginTop: 6, padding: '6px 8px', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: MONO, fontSize: 8.5, color: DIM }}>
-                    <span>mutationRate</span><span style={{ color: DIM2 }}>{life.mutationRate.toFixed(5)}{eff != null && <span style={{ marginLeft: 4, fontSize: 7.5, color: 'rgba(255,255,255,0.35)' }} title="Valor efetivo (micro + retroação)">→ {eff.mutationRate.toFixed(5)}</span>}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: MONO, fontSize: 8.5, color: DIM }}>
-                    <span>typeStability</span><span style={{ color: DIM2 }}>{life.typeStability.toFixed(3)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: MONO, fontSize: 8.5, color: DIM }}>
-                    <span>mutationAmount</span><span style={{ color: DIM2 }}>{life.mutationAmount.toFixed(3)}</span>
-                  </div>
+                  {(() => {
+                    const evolutionOff = life.mode === 'OFF';
+                    const mr = evolutionOff ? 0 : life.mutationRate;
+                    const ts = evolutionOff ? 1 : life.typeStability;
+                    const effMr = eff != null && !evolutionOff ? eff.mutationRate : mr;
+                    return (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: MONO, fontSize: 8.5, color: DIM }}>
+                          <span>mutationRate</span><span style={{ color: evolutionOff ? 'rgba(255,255,255,0.25)' : DIM2 }}>{mr.toFixed(5)}{eff != null && !evolutionOff && <span style={{ marginLeft: 4, fontSize: 7.5, color: 'rgba(255,255,255,0.35)' }} title={t('cl_effectiveValue')}>→ {effMr.toFixed(5)}</span>}{evolutionOff && <span style={{ marginLeft: 4, fontSize: 7.5, color: 'rgba(255,255,255,0.25)' }}>(OFF)</span>}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: MONO, fontSize: 8.5, color: DIM }}>
+                          <span>typeStability</span><span style={{ color: evolutionOff ? 'rgba(255,255,255,0.25)' : DIM2 }}>{ts.toFixed(3)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: MONO, fontSize: 8.5, color: DIM }}>
+                          <span>mutationAmount</span><span style={{ color: DIM2 }}>{life.mutationAmount.toFixed(3)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -743,30 +772,30 @@ export function ComplexityPanel({
               Parâmetros: força, atraso, memória, regulação
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px', borderBottom: '1px dashed rgba(255,255,255,0.04)' }}>
-            <SectionHeader label="Retroalimentação · Recursivité" open={secFeedback} onToggle={() => setSecFb(v => !v)} accent={`${TEAL}88`} />
+            <SectionHeader label={t('cl_feedbackSection')} open={secFeedback} onToggle={() => setSecFb(v => !v)} accent={`${TEAL}88`} />
             {secFeedback && (
               <div>
                 <CtrlSlider
-                  icon="🔄" label="Força dos Loops"
+                  icon="🔄" label={t('cl_loopStrength')}
                   hint="Intensidade dos loops de feedback. 0 = sistema aberto. 1 = retroação máxima nos parâmetros. (strength)"
                   value={cfg.strength} min={0} max={1} step={0.01}
                   onChange={v => onConfigChange({ strength: v })}
                 />
                 <CtrlSlider
-                  icon="⏱" label="Atraso Sistêmico"
+                  icon="⏱" label={t('cl_systemDelay')}
                   hint="Delay entre causa e efeito do loop de feedback. Atrasos longos → instabilidade e oscilações. (intervalFrames)"
                   value={cfg.intervalFrames} min={1} max={60} step={1}
                   display={`${cfg.intervalFrames} fr`}
                   onChange={v => onConfigChange({ intervalFrames: Math.round(v) })}
                 />
                 <CtrlSlider
-                  icon="🧠" label="Memória do Sistema"
+                  icon="🧠" label={t('cl_systemMemory')}
                   hint="Inércia do loop de feedback. Alta memória = sistema 'lembra' perturbações. Correlato de história acumulada. (smoothing)"
                   value={cfg.smoothing} min={0} max={0.99} step={0.01}
                   onChange={v => onConfigChange({ smoothing: v })}
                 />
                 <CtrlSlider
-                  icon="🛡" label="Regulação Máxima"
+                  icon="🛡" label={t('cl_maxRegulation')}
                   hint="Teto da autorregulação. Limita quanto os loops de balanço podem comprimir os parâmetros. (chaosClamp)"
                   value={cfg.chaosClamp} min={0} max={1} step={0.01}
                   onChange={v => onConfigChange({ chaosClamp: v })}
@@ -777,46 +806,46 @@ export function ComplexityPanel({
                   Macro (Reconfig / Matriz)
                 </div>
                 <CtrlSlider
-                  icon="⏱" label="Intervalo"
+                  icon="⏱" label={t('cl_interval')}
                   hint="Intervalo entre ticks de reconfiguração (operadores macro: mutação de matriz, especiação, instituição)."
                   value={reconfigConfig.interval} min={0.5} max={12} step={0.5}
                   display={`${reconfigConfig.interval.toFixed(1)}s`}
                   onChange={v => onReconfigChange({ interval: v })}
                 />
                 <CtrlSlider
-                  icon="🧬" label="Especiação"
+                  icon="🧬" label={t('cl_speciation')}
                   hint="Probabilidade do operador de especiação quando há clusters estáveis."
                   value={reconfigConfig.speciationRate} min={0} max={1} step={0.05}
                   onChange={v => onReconfigChange({ speciationRate: v })}
                 />
                 <CtrlSlider
-                  icon="🏛" label="Instituição"
+                  icon="🏛" label={t('cl_institution')}
                   hint="Probabilidade do operador de instituição (artefatos semânticos) quando há oscilação/mythic."
                   value={reconfigConfig.institutionRate} min={0} max={1} step={0.05}
                   onChange={v => onReconfigChange({ institutionRate: v })}
                 />
                 <CtrlSlider
-                  icon="⚙" label="Força mutação matriz"
+                  icon="⚙" label={t('cl_matrixMutationForce')}
                   hint="Intensidade/chance do operador de mutação da matriz de atração (mutationStrength)."
                   value={reconfigConfig.mutationStrength} min={0} max={0.5} step={0.01}
                   display={reconfigConfig.mutationStrength.toFixed(2)}
                   onChange={v => onReconfigChange({ mutationStrength: v })}
                 />
                 <CtrlSlider
-                  icon="⏳" label="Cooldown operadores"
+                  icon="⏳" label={t('cl_operatorCooldown')}
                   hint="Tempo mínimo entre disparos dos operadores macro (operatorCooldown, segundos)."
                   value={reconfigConfig.operatorCooldown} min={0.5} max={8} step={0.5}
                   display={`${reconfigConfig.operatorCooldown.toFixed(1)}s`}
                   onChange={v => onReconfigChange({ operatorCooldown: v })}
                 />
                 <CtrlSlider
-                  icon="⊕" label="Escala atração (matriz)"
+                  icon="⊕" label={t('cl_attractionScale')}
                   hint="Fator de escala para atração na fase shift (matrixAttractScale). 1 = neutro."
                   value={reconfigConfig.matrixAttractScale ?? 1} min={0.3} max={1.5} step={0.05}
                   onChange={v => onReconfigChange({ matrixAttractScale: v })}
                 />
                 <CtrlSlider
-                  icon="⊖" label="Escala repulsão (matriz)"
+                  icon="⊖" label={t('cl_repulsionScale')}
                   hint="Fator de escala para repulsão na fase shift (matrixRepelScale). 1 = neutro."
                   value={reconfigConfig.matrixRepelScale ?? 1} min={0.3} max={1.5} step={0.05}
                   onChange={v => onReconfigChange({ matrixRepelScale: v })}
@@ -830,29 +859,29 @@ export function ComplexityPanel({
               Parâmetros: recursividade (influenceStrength), hologramático (depositStrength)
           ────────────────────────────────────────────────────────────── */}
           <div style={{ padding: '8px 10px' }}>
-            <SectionHeader label="Campo · Ambiente (Eco)" open={secField} onToggle={() => setSecFld(v => !v)} accent={`${TEAL}88`} />
+            <SectionHeader label={t('cl_fieldSection')} open={secField} onToggle={() => setSecFld(v => !v)} accent={`${TEAL}88`} />
             {secField && (
               <div>
                 <CtrlSlider
-                  icon="♻️" label="Recursividade"
+                  icon="♻️" label={t('cl_recursivity')}
                   hint="Força com que o campo alimenta de volta os agentes. Efeito se torna causa: agentes modificam o campo que os modifica. (influenceStrength)"
                   value={fieldConfig.influenceStrength} min={0} max={2} step={0.05}
                   onChange={v => onFieldChange({ influenceStrength: v })}
                 />
                 <CtrlSlider
-                  icon="🔮" label="Hologramático"
+                  icon="🔮" label={t('cl_hologrammaticField')}
                   hint="Intensidade do depósito local no campo global. Cada parte escreve o todo. O trace local emerge como padrão global. (depositStrength)"
                   value={fieldConfig.depositStrength} min={0} max={3} step={0.05}
                   onChange={v => onFieldChange({ depositStrength: v })}
                 />
                 <CtrlSlider
-                  icon="🌊" label="Difusão do Campo"
+                  icon="🌊" label={t('cl_fieldDiffusion')}
                   hint="Velocidade de difusão do campo espacial. Alta difusão = efeitos locais se propagam rapidamente. (diffusion)"
                   value={fieldConfig.diffusion} min={0.01} max={0.5} step={0.01}
                   onChange={v => onFieldChange({ diffusion: v })}
                 />
                 <CtrlSlider
-                  icon="📉" label="Decaimento do Campo"
+                  icon="📉" label={t('cl_fieldDecay')}
                   hint="Velocidade de decaimento das memórias de campo. Baixo decay = campo tem memória longa. (decay)"
                   value={fieldConfig.decay} min={0.001} max={0.1} step={0.001}
                   display={fieldConfig.decay.toFixed(3)}

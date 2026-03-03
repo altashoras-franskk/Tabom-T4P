@@ -147,10 +147,10 @@ export const createMicroConfig = (): MicroConfig => ({
   energyDecay: 0.002,
   energyFeedRate: 0.04,
   energyReproThreshold: 2.0,
-  // I) Metamorphosis system
-  metamorphosisEnabled: true, // ENABLED by default for emergent behavior
-  mutationRate: 0.0008, // 0.08% per frame = ~5% per second
-  typeStability: 0.985, // 98.5% stable
+  // I) Metamorphosis system — App applies life.mode each frame to enable/disable
+  metamorphosisEnabled: true,
+  mutationRate: 0.0008,
+  typeStability: 0.985,
   enableSigilForces: true,
 });
 

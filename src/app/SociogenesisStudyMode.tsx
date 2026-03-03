@@ -2,6 +2,7 @@
 // Symbols as Laws · 20 presets · dropdown HUD · agent inspector · auto-emergence
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useI18n } from '../i18n/context';
 
 const MONO = "'IBM Plex Mono', monospace";
 const DOTO = "'Doto', monospace";
@@ -241,6 +242,9 @@ function Section({ title, badge, open, onToggle, children }: {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
+  const { t } = useI18n();
+  const translateRef = useRef(t);
+  translateRef.current = t;
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Sim refs
@@ -733,11 +737,11 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               .map(([label, count]) => ({ label, count })),
           );
           setDriverIntensity([
-            { label: 'Ameaça', value: sumThreat / nAgents },
-            { label: 'Recurso', value: sumResource / nAgents },
-            { label: 'Social', value: sumSocial / nAgents },
-            { label: 'Transgressão', value: sumTrans / nAgents },
-            { label: 'Memória', value: sumMemory / nAgents },
+            { label: translateRef.current('socio_driverThreat'), value: sumThreat / nAgents },
+            { label: translateRef.current('socio_driverResource'), value: sumResource / nAgents },
+            { label: translateRef.current('socio_driverSocial'), value: sumSocial / nAgents },
+            { label: translateRef.current('socio_driverTransgression'), value: sumTrans / nAgents },
+            { label: translateRef.current('socio_memory'), value: sumMemory / nAgents },
           ]);
         }
 
@@ -952,7 +956,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
   const syms = symbolsRef.current;
   const symTotal = syms.totems.length + syms.tabus.length + syms.rituals.length;
   const currentScenario: StudyScenario = scenario === 'random_preset'
-    ? { id: 'random_preset', name: 'Preset aleatório', icon: '🎲', description: 'Parâmetros e campos gerados aleatoriamente.', category: 'genesis', apply: () => {} }
+    ? { id: 'random_preset', name: t('socio_randomPreset'), icon: '🎲', description: t('socio_randomPresetDesc'), category: 'genesis', apply: () => {} }
     : (STUDY_SCENARIOS.find(s => s.id === scenario) ?? STUDY_SCENARIOS[0]);
 
   // ── Recording ────────────────────────────────────────────────────────────
@@ -1640,7 +1644,7 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
               <PsychBar label="Recurso"      v={inspectorSnap.auditResource} c="#fbbf24" />
               <PsychBar label="Social"       v={inspectorSnap.auditSocial} c="#34d399" />
               <PsychBar label="Transgressão" v={inspectorSnap.auditTransgression} c="#f472b6" />
-              <PsychBar label="Memória"      v={inspectorSnap.auditMemoryPull} c="#93c5fd" />
+              <PsychBar label={t('socio_memory')}      v={inspectorSnap.auditMemoryPull} c="#93c5fd" />
               <div className="text-[9px] mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 Motivo dominante: {inspectorSnap.auditReason || 'n/d'}
               </div>

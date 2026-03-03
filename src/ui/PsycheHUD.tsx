@@ -1,5 +1,6 @@
 // ── Psyche Lab — HUD (Design System: DOTO/MONO, dashed borders, #8b5cf6 accent)
 import React, { useState } from 'react';
+import { useI18n } from '../i18n/context';
 import { PSYCHE_PRESETS } from '../sim/psyche/psychePresets';
 import { PsycheLens, PsychePhase, FreudMetrics, LacanMetrics } from '../sim/psyche/psycheTypes';
 import { ARCHETYPES } from '../sim/psyche/archetypes';
@@ -89,7 +90,7 @@ const DOTO = "'Doto', monospace";
 const MONO = "'IBM Plex Mono', monospace";
 const ACCENT = '#8b5cf6';
 
-const PHASE_INFO: Record<PsychePhase, { label: string; desc: string; color: string }> = {
+const PHASE_INFO_PT: Record<PsychePhase, { label: string; desc: string; color: string }> = {
   CALM:        { label: 'CALMO',       desc: 'Equilíbrio dinâmico',           color: '#93c5fd' },
   ALERT:       { label: 'ALERTA',      desc: 'Tensão crescente',               color: '#fde047' },
   PANIC:       { label: 'COLAPSO',     desc: 'Ruptura caótica',                color: '#f87171' },
@@ -98,7 +99,16 @@ const PHASE_INFO: Record<PsychePhase, { label: string; desc: string; color: stri
   INTEGRATING: { label: 'INTEGRANDO',  desc: 'Síntese emergente',              color: '#c4b5fd' },
 };
 
-const PHASE_FREUD: Record<PsychePhase, string> = {
+const PHASE_INFO_EN: Record<PsychePhase, { label: string; desc: string; color: string }> = {
+  CALM:        { label: 'CALM',        desc: 'Dynamic equilibrium',            color: '#93c5fd' },
+  ALERT:       { label: 'ALERT',       desc: 'Rising tension',                 color: '#fde047' },
+  PANIC:       { label: 'COLLAPSE',    desc: 'Chaotic rupture',                color: '#f87171' },
+  FLOW:        { label: 'FLOW',        desc: 'High coherence — Self active',   color: '#86efac' },
+  FRAGMENTED:  { label: 'FRAGMENTED', desc: 'Active dissociation',            color: '#fdba74' },
+  INTEGRATING: { label: 'INTEGRATING', desc: 'Emergent synthesis',             color: '#c4b5fd' },
+};
+
+const PHASE_FREUD_PT: Record<PsychePhase, string> = {
   CALM:        'Princípio de Prazer estável — Eros domina',
   ALERT:       'Conflito pulsional — Id vs Superego',
   PANIC:       'Retorno do Reprimido — defesas rompidas',
@@ -107,7 +117,16 @@ const PHASE_FREUD: Record<PsychePhase, string> = {
   INTEGRATING: 'Elaboração psíquica — Trabalho de luto',
 };
 
-const PHASE_LACAN: Record<PsychePhase, string> = {
+const PHASE_FREUD_EN: Record<PsychePhase, string> = {
+  CALM:        'Stable Pleasure Principle — Eros dominates',
+  ALERT:       'Drive conflict — Id vs Superego',
+  PANIC:       'Return of the Repressed — defenses broken',
+  FLOW:        'Active sublimation — Eros released',
+  FRAGMENTED:  'Fragmentation anxiety — fragile Ego',
+  INTEGRATING: 'Psychic elaboration — work of mourning',
+};
+
+const PHASE_LACAN_PT: Record<PsychePhase, string> = {
   CALM:        'Ordem simbólica estável — Lei do Pai operativa',
   ALERT:       'Tensão RSI — borda entre registros',
   PANIC:       'Irrupção do Real — inassimilável',
@@ -116,7 +135,16 @@ const PHASE_LACAN: Record<PsychePhase, string> = {
   INTEGRATING: 'Travessia da fantasia — reorganização do $',
 };
 
-const LENSES: { id: PsycheLens; label: string; color: string; group?: string }[] = [
+const PHASE_LACAN_EN: Record<PsychePhase, string> = {
+  CALM:        'Stable symbolic order — Law of the Father operative',
+  ALERT:       'RSI tension — edge between registers',
+  PANIC:       'Irruption of the Real — unassimilable',
+  FLOW:        'Modulated jouissance — circulation between registers',
+  FRAGMENTED:  'Divided subject ($) in crisis',
+  INTEGRATING: 'Traversing the fantasy — reorganization of $',
+};
+
+const LENSES_PT: { id: PsycheLens; label: string; color: string; group?: string }[] = [
   { id: 'TOPOLOGY',   label: 'Topologia',      color: '#c4b5fd' },
   { id: 'ENERGY',     label: 'Energia',         color: '#fca5a5' },
   { id: 'VALENCE',    label: 'Valência',        color: '#86efac' },
@@ -125,6 +153,17 @@ const LENSES: { id: PsycheLens; label: string; color: string; group?: string }[]
   { id: 'EVENTS',     label: 'Eventos',         color: '#67e8f9' },
   { id: 'LACAN',      label: '◻ Lacan  RSI',   color: '#e0a0ff', group: 'teoria' },
   { id: 'FREUD',      label: '△ Freud  Id/Ego', color: '#f4a460', group: 'teoria' },
+];
+
+const LENSES_EN: { id: PsycheLens; label: string; color: string; group?: string }[] = [
+  { id: 'TOPOLOGY',   label: 'Topology',       color: '#c4b5fd' },
+  { id: 'ENERGY',     label: 'Energy',         color: '#fca5a5' },
+  { id: 'VALENCE',    label: 'Valence',        color: '#86efac' },
+  { id: 'COHERENCE',  label: 'Coherence',      color: '#93c5fd' },
+  { id: 'ARCHETYPES', label: 'Archetypes',     color: '#fde047' },
+  { id: 'EVENTS',     label: 'Events',         color: '#67e8f9' },
+  { id: 'LACAN',      label: '◻ Lacan  RSI',  color: '#e0a0ff', group: 'theory' },
+  { id: 'FREUD',      label: '△ Freud  Id/Ego', color: '#f4a460', group: 'theory' },
 ];
 
 const CAMADAS_JUNG = [
@@ -194,6 +233,13 @@ const valueStyle: React.CSSProperties = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
+  const { locale } = useI18n();
+  const isEn = locale !== 'pt-BR';
+  const PHASE_INFO = isEn ? PHASE_INFO_EN : PHASE_INFO_PT;
+  const PHASE_FREUD = isEn ? PHASE_FREUD_EN : PHASE_FREUD_PT;
+  const PHASE_LACAN = isEn ? PHASE_LACAN_EN : PHASE_LACAN_PT;
+  const LENSES = isEn ? LENSES_EN : LENSES_PT;
+
   const [showArchPanel, setShowArchPanel] = useState(false);
   const [showPresets,   setShowPresets]   = useState(false);
   const [showLens,      setShowLens]      = useState(false);
@@ -213,9 +259,9 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
                   : isLacan ? PHASE_LACAN[props.phase]
                   : phaseInfo.desc;
 
-  const phaseTitle = isFreud ? 'estado libidinal'
-                   : isLacan ? 'posição subjetiva'
-                   : 'estado psíquico';
+  const phaseTitle = isFreud ? (isEn ? 'libidinal state' : 'estado libidinal')
+                   : isLacan ? (isEn ? 'subjective position' : 'posição subjetiva')
+                   : (isEn ? 'psychic state' : 'estado psíquico');
 
   const theoryAccent = isFreud ? '#f4a460' : isLacan ? '#e0a0ff' : phaseInfo.color;
 
@@ -304,8 +350,8 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
             </div>
           </div>
 
-          {/* Parâmetros */}
-          <Section title="Parâmetros" open={showParams} onToggle={() => setShowParams(v => !v)}>
+          {/* Parâmetros / Parameters */}
+          <Section title={isEn ? 'Parameters' : 'Parâmetros'} open={showParams} onToggle={() => setShowParams(v => !v)}>
             <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <ParamSlider label="Dança"      hint="intensidade do flow field"  value={props.flowGain}     min={0.05} max={0.80} step={0.05} display={v => `${Math.round(v*100)}%`} color="#c4b5fd" onChange={props.onFlowGainChange} />
               <ParamSlider label="Molas"      hint="rigidez dos vínculos"       value={props.springK}      min={0.10} max={2.00} step={0.05} display={v => v.toFixed(2)}            color="#86efac" onChange={props.onSpringKChange} />
@@ -341,15 +387,15 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
               <span style={valueStyle}>{Math.round(props.soulVis * 100)}%</span>
             </div>
             <div style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.15)', marginBottom: 5, lineHeight: 1.5 }}>
-              identidade individual de cada quantum
+              {isEn ? 'individual identity of each quantum' : 'identidade individual de cada quantum'}
             </div>
             <input type="range" min={0} max={1} step={0.02} value={props.soulVis}
               onChange={e => props.onSoulVisChange(parseFloat(e.target.value))}
               style={{ width: '100%', height: 2, accentColor: ACCENT, cursor: 'pointer' }} />
           </div>
 
-          {/* Lente */}
-          <Section title="Lente" open={showLens} onToggle={() => setShowLens(v => !v)}
+          {/* Lente / Lens */}
+          <Section title={isEn ? 'Lens' : 'Lente'} open={showLens} onToggle={() => setShowLens(v => !v)}
             accent={LENSES.find(l => l.id === props.lens)?.color ?? ACCENT}
             extra={<span style={{ fontFamily: MONO, fontSize: 8, color: LENSES.find(l => l.id === props.lens)?.color ?? '#aaa' }}>{LENSES.find(l => l.id === props.lens)?.label}</span>}>
             <div style={{ padding: '4px 8px' }}>
@@ -371,8 +417,8 @@ export const PsycheHUD: React.FC<PsycheHUDProps> = (props) => {
             </div>
           </Section>
 
-          {/* Mapas (Jung / Freud / Lacan) — dropdown, all 3 can be on */}
-          <Section title="Mapas" open={showMapas} onToggle={() => setShowMapas(v => !v)}
+          {/* Mapas / Maps (Jung / Freud / Lacan) */}
+          <Section title={isEn ? 'Maps' : 'Mapas'} open={showMapas} onToggle={() => setShowMapas(v => !v)}
             accent="#c4b5fd"
             extra={<span style={{ fontFamily: MONO, fontSize: 8, color: '#c4b5fd80' }}>
               {props.overlayMaps ? [props.overlayMaps.jung && 'Jung', props.overlayMaps.freud && 'Freud', props.overlayMaps.lacan && 'Lacan'].filter(Boolean).join(' · ') || '—' : '—'}

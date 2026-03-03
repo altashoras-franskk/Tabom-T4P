@@ -1,6 +1,8 @@
 // ── AuthModal — Login / Register for Tools for Perception ────────────────────
 import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import type { StringKey } from '../../i18n/strings';
+import { useI18n } from '../../i18n/context';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { X, LogIn, UserPlus, Eye, EyeOff } from 'lucide-react';
 
@@ -33,19 +35,20 @@ type Mode = 'login' | 'register';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-function validatePassword(pw: string): { ok: boolean; message?: string } {
+function validatePassword(pw: string, t: (k: StringKey) => string): { ok: boolean; message?: string } {
   if (pw.length < MIN_PASSWORD_LENGTH) {
-    return { ok: false, message: `Senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.` };
+    return { ok: false, message: t('auth_passwordMinLength') };
   }
   const hasLetter = /[a-zA-Z]/.test(pw);
   const hasNumber = /[0-9]/.test(pw);
   if (!hasLetter || !hasNumber) {
-    return { ok: false, message: 'Use letras e números na senha.' };
+    return { ok: false, message: t('auth_passwordLettersNumbers') };
   }
   return { ok: true };
 }
 
 export function AuthModal({ onClose, onAuthChange }: Props) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,7 +62,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
   const handleForgotPassword = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setError('Digite seu email e clique em Esqueci a senha.');
+      setError(t('auth_enterEmailForgot'));
       return;
     }
     setError('');
@@ -70,9 +73,9 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       });
       if (resetError) throw resetError;
       setForgotSent(true);
-      setSuccess('Se esse email estiver cadastrado, você receberá um link para redefinir a senha.');
+      setSuccess(t('auth_resetEmailSent'));
     } catch (err: any) {
-      setError(err.message || 'Erro ao enviar email.');
+      setError(err.message || t('auth_errorSendingEmail'));
     }
   };
 
@@ -94,7 +97,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      setError('Preencha email e senha.');
+      setError(t('auth_fillEmailPassword'));
       return;
     }
     setLoading(true);
@@ -107,7 +110,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       if (signInError) throw signInError;
       const user = data.session?.user;
       const token = data.session?.access_token;
-      if (!user || !token) throw new Error('Login falhou — sem sessão.');
+      if (!user || !token) throw new Error(t('auth_loginFailedNoSession'));
       if (typeof onAuthChange === 'function') {
         onAuthChange({
           id: user.id,
@@ -119,7 +122,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       setSuccess('Login realizado! Coleções sincronizadas.');
       setTimeout(() => onClose(), 1000);
     } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login.');
+      setError(err.message || t('auth_errorLogin'));
     } finally {
       setLoading(false);
     }
@@ -128,16 +131,12 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      setError('Preencha email e senha.');
+      setError(t('auth_fillEmailPassword'));
       return;
     }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
-      return;
-    }
-    const pv = validatePassword(password);
+    const pv = validatePassword(password, t);
     if (!pv.ok) {
-      setError(pv.message || 'Senha inválida.');
+      setError(pv.message || t('auth_passwordInvalid'));
       return;
     }
     setLoading(true);
@@ -154,7 +153,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       });
       const signupData = await res.json();
       if (!res.ok || !signupData.success) {
-        throw new Error(signupData.error || 'Erro ao criar conta.');
+        throw new Error(signupData.error || t('auth_errorCreatingAccount'));
       }
       // Auto sign in after registration
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -164,7 +163,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       if (signInError) throw signInError;
       const user = data.session?.user;
       const token = data.session?.access_token;
-      if (!user || !token) throw new Error('Conta criada mas login falhou. Tente fazer login.');
+      if (!user || !token) throw new Error(t('auth_accountCreatedLoginFailed'));
       if (typeof onAuthChange === 'function') {
         onAuthChange({
           id: user.id,
@@ -176,7 +175,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
       setSuccess('Conta criada! Bem-vindo ao Rhizome.');
       setTimeout(() => onClose(), 1000);
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta.');
+      setError(err.message || t('auth_errorCreatingAccount'));
     } finally {
       setLoading(false);
     }
@@ -222,12 +221,10 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
             Tools for Perception
           </div>
           <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)', fontWeight: 500, marginBottom: 4, fontFamily: DOTO, letterSpacing: '0.02em' }}>
-            {mode === 'login' ? 'Entrar' : 'Criar conta'}
+            {mode === 'login' ? t('auth_login') : t('auth_createAccount')}
           </div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em', fontFamily: MONO }}>
-            {mode === 'login'
-              ? 'Coleções sincronizadas entre dispositivos'
-              : 'Pesquisa rizomática persistente em todos os dispositivos'}
+            {mode === 'login' ? t('auth_loginDesc') : t('auth_registerDesc')}
           </div>
         </div>
 
@@ -251,7 +248,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
                 transition: 'all 0.15s',
               }}
             >
-              {m === 'login' ? 'Entrar' : 'Cadastrar'}
+              {m === 'login' ? t('auth_login') : t('auth_register')}
             </button>
           ))}
         </div>
@@ -261,11 +258,11 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
           {mode === 'register' && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase', fontFamily: MONO }}>
-                Nome (opcional)
+                {t('auth_nameOptional')}
               </div>
               <input
                 type="text"
-                placeholder="Seu nome"
+                placeholder={t('auth_namePlaceholder')}
                 value={name}
                 onChange={e => setName(e.target.value)}
                 style={inputSty}
@@ -278,11 +275,11 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
           {/* Email */}
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase', fontFamily: MONO }}>
-              Email
+              {t('auth_email')}
             </div>
             <input
               type="email"
-              placeholder="seu@email.com"
+              placeholder={t('auth_emailPlaceholder')}
               value={email}
               onChange={e => setEmail(e.target.value)}
               style={inputSty}
@@ -295,7 +292,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
           {/* Password */}
           <div style={{ marginBottom: mode === 'login' ? 8 : 20 }}>
             <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase', fontFamily: MONO }}>
-              Senha {mode === 'register' && <span style={{ color: 'rgba(255,255,255,0.25)' }}>(mín. 8 caracteres, letras e números)</span>}
+              {t('auth_password')} {mode === 'register' && <span style={{ color: 'rgba(255,255,255,0.25)' }}>{t('auth_passwordHint')}</span>}
             </div>
             <div style={{ position: 'relative' }}>
               <input
@@ -307,7 +304,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
                 onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)')}
                 onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
-              <button title={showPw ? "Esconder senha" : "Mostrar senha"}
+              <button title={showPw ? t('auth_hidePassword') : t('auth_showPassword')}
                 type="button"
                 onClick={() => setShowPw(v => !v)}
                 style={{
@@ -329,7 +326,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
                   fontFamily: MONO, letterSpacing: '0.04em',
                 }}
               >
-                Esqueci a senha
+                {t('auth_forgotPassword')}
               </button>
             )}
           </div>
@@ -355,7 +352,7 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
           )}
 
           {/* Submit */}
-          <button title={loading ? "Carregando..." : mode === "login" ? "Entrar" : "Criar conta"}
+          <button title={loading ? t('auth_loading') : mode === 'login' ? t('auth_login') : t('auth_createAccount')}
             type="submit"
             disabled={loading}
             style={{
@@ -372,12 +369,12 @@ export function AuthModal({ onClose, onAuthChange }: Props) {
             {loading ? (
               <>
                 <span style={{ fontSize: 11, animation: 'spin 1s linear infinite', display: 'inline-block' }}>◌</span>
-                {mode === 'login' ? 'Entrando...' : 'Criando conta...'}
+                {mode === 'login' ? t('auth_signingIn') : t('auth_creatingAccount')}
               </>
             ) : mode === 'login' ? (
-              <><LogIn size={11} strokeWidth={2} /> Entrar</>
+              <><LogIn size={11} strokeWidth={2} /> {t('auth_login')}</>
             ) : (
-              <><UserPlus size={11} strokeWidth={2} /> Criar conta</>
+              <><UserPlus size={11} strokeWidth={2} /> {t('auth_createAccount')}</>
             )}
           </button>
         </form>

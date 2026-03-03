@@ -4,6 +4,7 @@ import { MicroConfig } from './microState';
 
 export interface MicroPreset {
   name: string;
+  description: string;
   typesCount: number;
   particleCount: number;
   config: Partial<MicroConfig>;
@@ -14,9 +15,11 @@ export interface MicroPreset {
 export const microPresets: MicroPreset[] = [
   {
     name: 'Orbit',
+    description: 'Cyclic pursuit with crisp, stable orbital clusters (no metabolism).',
     typesCount: 3,
     particleCount: 1200,
     config: {
+      useDrag: false, // presets tune `friction`; make it effective
       rmax: 0.12,
       force: 1.2,
       friction: 0.92,
@@ -38,9 +41,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Flocks',
+    description: 'Loose swarms that align, split, and re-aggregate. Gentle turbulence.',
     typesCount: 4,
     particleCount: 1500,
     config: {
+      useDrag: false,
       rmax: 0.15,
       force: 0.8,
       friction: 0.88,
@@ -63,9 +68,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Borders',
+    description: 'Territorial segregation. Strong in-type cohesion, sharp inter-type repulsion.',
     typesCount: 5,
     particleCount: 2000,
     config: {
+      useDrag: false,
       rmax: 0.1,
       force: 1.0,
       friction: 0.9,
@@ -88,9 +95,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Mitosis',
+    description: 'Binary fission aesthetic. Two species lock into alternating islands.',
     typesCount: 2,
     particleCount: 800,
     config: {
+      useDrag: false,
       rmax: 0.2,
       force: 1.5,
       friction: 0.85,
@@ -109,9 +118,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Ritual',
+    description: 'Many types in repeating motifs. Slow choreography near the edge.',
     typesCount: 6,
     particleCount: 2500,
     config: {
+      useDrag: false,
       rmax: 0.14,
       force: 0.9,
       friction: 0.93,
@@ -139,9 +150,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Crisis',
+    description: 'High tension / high entropy regime. Stable only if you intervene carefully.',
     typesCount: 3,
     particleCount: 1000,
     config: {
+      useDrag: false,
       rmax: 0.08,
       force: 2.0,
       friction: 0.8,
@@ -164,9 +177,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Symbiosis',
+    description: 'Mutualistic pairs weave into braided clusters and cooperative webs.',
     typesCount: 4,
     particleCount: 1800,
     config: {
+      useDrag: false,
       rmax: 0.16,
       force: 1.1,
       friction: 0.91,
@@ -189,9 +204,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Anomaly',
+    description: 'Structured chaos: deterministic couplings produce rare motifs and sudden flips.',
     typesCount: 7,
     particleCount: 2800,
     config: {
+      useDrag: false,
       rmax: 0.13,
       force: 1.3,
       friction: 0.87,
@@ -212,9 +229,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Nested',
+    description: 'Hierarchies inside hierarchies. Sub-communities orbit within larger communities.',
     typesCount: 6,
     particleCount: 2200,
     config: {
+      useDrag: false,
       rmax: 0.14,
       force: 1.0,
       friction: 0.92,
@@ -253,6 +272,7 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Particle Life',
+    description: 'Canonical particle-life kernel tuned for rich, readable alien ecology.',
     typesCount: 6,
     particleCount: 2000,
     config: {
@@ -297,9 +317,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Membranes',
+    description: 'Hollow shells and soft boundaries. Cell-like membranes collide and merge.',
     typesCount: 5,
     particleCount: 2000,
     config: {
+      useDrag: false,
       rmax: 0.14,
       force: 1.1,
       friction: 0.91,
@@ -323,9 +345,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Predators',
+    description: 'Chase chains and evasive loops. Populations pulse like micro-ecologies.',
     typesCount: 4,
     particleCount: 1600,
     config: {
+      useDrag: false,
       rmax: 0.16,
       force: 1.3,
       friction: 0.89,
@@ -355,9 +379,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Parasites',
+    description: 'Asymmetric attachment dynamics: hosts repel, parasites pursue.',
     typesCount: 6,
     particleCount: 2200,
     config: {
+      useDrag: false,
       rmax: 0.13,
       force: 1.0,
       friction: 0.90,
@@ -387,9 +413,11 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: 'Orbits',
+    description: 'Multi-ring orbital lanes. A calmer cosmic chase with readable loops.',
     typesCount: 5,
     particleCount: 1800,
     config: {
+      useDrag: false,
       rmax: 0.15,
       force: 1.2,
       friction: 0.92,
@@ -427,6 +455,7 @@ export const microPresets: MicroPreset[] = [
   // PATCH 04.3: ARCHETYPE SHOWCASE PRESETS (focused on mutation/sigils/speciation)
   {
     name: '🧬 Genesis Pool',
+    description: 'A calm genesis bath: sigils appear, but the soup stays coherent until you perturb it.',
     typesCount: 3,
     particleCount: 600,
     showSigils: true,
@@ -435,7 +464,7 @@ export const microPresets: MicroPreset[] = [
       force: 1.0,
       friction: 0.88,
       speedClamp: 0.12,
-      entropy: 0.004, // HIGH mutation rate
+      entropy: 0.0012,
       beta: 0.15,
       drag: 1.2,
       useDrag: true,
@@ -453,15 +482,17 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '✶ Bond Ritual',
+    description: 'Bond-first world. Attraction writes structure into the field; rifts arrive only after pressure.',
     typesCount: 4,
     particleCount: 1000,
     showSigils: true,
     config: {
+      useDrag: false,
       rmax: 0.16,
       force: 1.4,
       friction: 0.90,
       speedClamp: 0.10,
-      entropy: 0.002,
+      entropy: 0.0008,
       beta: 0.25,
     },
     matrixInit: (m) => {
@@ -481,15 +512,17 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '⨯ Rift Storm',
+    description: 'Repulsion storms and fracture lines. Stable enough to read—until you push it.',
     typesCount: 5,
     particleCount: 1400,
     showSigils: true,
     config: {
+      useDrag: false,
       rmax: 0.14,
       force: 1.6,
       friction: 0.85,
       speedClamp: 0.14,
-      entropy: 0.005, // High chaos
+      entropy: 0.0016,
       beta: 0.10,
     },
     matrixInit: (m) => {
@@ -509,6 +542,7 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '⚘ Bloom Garden',
+    description: 'Bloom pockets. Nutrient + bonds create bursts, then settle back into order.',
     typesCount: 4,
     particleCount: 1200,
     showSigils: true,
@@ -517,7 +551,7 @@ export const microPresets: MicroPreset[] = [
       force: 0.9,
       friction: 0.92,
       speedClamp: 0.12,
-      entropy: 0.003,
+      entropy: 0.0010,
       beta: 0.20,
       drag: 1.4,
       useDrag: true,
@@ -539,15 +573,17 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '⌬ Oath Paths',
+    description: 'Persistent filaments. Memory-like paths stabilize, then snap under stress.',
     typesCount: 3,
     particleCount: 800,
     showSigils: true,
     config: {
+      useDrag: false,
       rmax: 0.18,
       force: 0.8,
       friction: 0.95, // Very low friction = persistent paths
       speedClamp: 0.08, // Low speed for ritual-like movement
-      entropy: 0.001,
+      entropy: 0.0005,
       beta: 0.30,
     },
     matrixInit: (m) => {
@@ -570,6 +606,7 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '🌀 Speciation Vortex',
+    description: 'Diversity pressure near the edge. Small shifts can trigger sudden splits.',
     typesCount: 6,
     particleCount: 1800,
     showSigils: true,
@@ -578,7 +615,7 @@ export const microPresets: MicroPreset[] = [
       force: 1.2,
       friction: 0.88,
       speedClamp: 0.13,
-      entropy: 0.006, // VERY high mutation
+      entropy: 0.0018,
       beta: 0.18,
       drag: 1.3,
       useDrag: true,
@@ -597,15 +634,17 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '💎 Crystal Archive',
+    description: 'Low entropy crystallization. Stable lattices that remember perturbations.',
     typesCount: 4,
     particleCount: 1000,
     showSigils: true,
     config: {
+      useDrag: false,
       rmax: 0.12,
       force: 1.0,
       friction: 0.94, // Very stable
       speedClamp: 0.08,
-      entropy: 0.001, // Low mutation - stable species
+      entropy: 0.0002,
       beta: 0.25,
     },
     matrixInit: (m) => {
@@ -627,6 +666,7 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '🔥 Mutation Forge',
+    description: 'A hot forge for interventions. Coherent baseline; chaos on demand.',
     typesCount: 7,
     particleCount: 2000,
     showSigils: true,
@@ -635,7 +675,7 @@ export const microPresets: MicroPreset[] = [
       force: 1.4,
       friction: 0.86,
       speedClamp: 0.14,
-      entropy: 0.008, // EXTREME mutation
+      entropy: 0.0025,
       beta: 0.12,
       drag: 1.1,
       useDrag: true,
@@ -654,6 +694,7 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '🧿 Sigil Mandala',
+    description: 'Symmetry + sigils. Mandala-like motifs emerge from repeated local bonds.',
     typesCount: 5,
     particleCount: 1500,
     showSigils: true,
@@ -662,7 +703,7 @@ export const microPresets: MicroPreset[] = [
       force: 1.1,
       friction: 0.91,
       speedClamp: 0.11,
-      entropy: 0.003,
+      entropy: 0.0010,
       beta: 0.22,
       drag: 1.25,
       useDrag: true,
@@ -681,6 +722,7 @@ export const microPresets: MicroPreset[] = [
   },
   {
     name: '🌊 Primordial Soup',
+    description: 'A diverse soup at the brink. Highly responsive to sliders and field lenses.',
     typesCount: 8,
     particleCount: 2400,
     showSigils: true,
@@ -689,7 +731,7 @@ export const microPresets: MicroPreset[] = [
       force: 1.0,
       friction: 0.89,
       speedClamp: 0.13,
-      entropy: 0.004,
+      entropy: 0.0013,
       beta: 0.16,
       drag: 1.2,
       useDrag: true,

@@ -29,8 +29,8 @@ export type LifeConfig = {
 };
 
 export const DEFAULT_LIFE: LifeConfig = {
-  // Default: stable. Evolution starts when user explicitly dials it up.
-  mode: 'METABOLIC',
+  // Default: pure particle-life (OFF). User enables metabolism/energy when desired for clearer organism-like forms first.
+  mode: 'OFF',
   foodEnabled: false,
   foodRatio: 0.15,
   foodType: 255,
@@ -42,7 +42,7 @@ export const DEFAULT_LIFE: LifeConfig = {
   mutationAmount: 0.08,
   mutationRate: 0.0008,
   typeStability: 0.985,
-  reconfigEnabled: false,
+  reconfigEnabled: true, // Load with reconfiguration on (user can turn off)
   reconfigRate: 0.08,
   reconfigAmount: 0.06,
 };
