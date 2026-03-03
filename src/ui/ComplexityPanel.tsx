@@ -204,6 +204,10 @@ export interface ComplexityPanelProps {
   targetParticleCount: number;
   onTargetParticleCountChange: (v: number) => void;
 
+  /** Modo padrão = presets estáveis (como Psyche/Sociogenesis). Modo avançado = Hebbian + reconfig + feedback. */
+  advancedSimulationMode?: boolean;
+  onAdvancedSimulationModeChange?: (v: boolean) => void;
+
   /** When true, panel is inside a DraggablePanel — no absolute positioning */
   embedded?: boolean;
 }
@@ -220,6 +224,8 @@ export function ComplexityPanel({
   reconfigConfig, onReconfigChange,
   maintainPopulation, onMaintainPopulationChange,
   targetParticleCount, onTargetParticleCountChange,
+  advancedSimulationMode = false,
+  onAdvancedSimulationModeChange,
   embedded = false,
 }: ComplexityPanelProps) {
   const { t } = useI18n();
@@ -312,9 +318,27 @@ export function ComplexityPanel({
             Sistema Complexo
           </div>
           <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.16)', letterSpacing: '0.04em' }}>
-            Retroação · Emergência · Autopoiese
+            {advancedSimulationMode ? 'Retroação · Emergência · Autopoiese' : 'Modo padrão · presets estáveis'}
           </div>
         </div>
+
+        {/* Modo padrão / avançado */}
+        {onAdvancedSimulationModeChange && (
+          <button
+            type="button"
+            onClick={() => onAdvancedSimulationModeChange(!advancedSimulationMode)}
+            title={advancedSimulationMode ? 'Modo avançado: Hebbian, reconfig, feedback. Clique para modo padrão (estável).' : 'Modo padrão: presets fixos, sem mutação. Clique para modo avançado.'}
+            style={{
+              fontFamily: MONO, fontSize: 8, padding: '3px 6px', cursor: 'pointer',
+              background: advancedSimulationMode ? `${TEAL}12` : 'rgba(255,255,255,0.06)',
+              border: `1px dashed ${advancedSimulationMode ? `${TEAL}44` : 'rgba(255,255,255,0.1)'}`,
+              color: advancedSimulationMode ? TEAL : 'rgba(255,255,255,0.5)',
+              letterSpacing: '0.04em', textTransform: 'uppercase',
+            }}
+          >
+            {advancedSimulationMode ? 'Avançado' : 'Padrão'}
+          </button>
+        )}
 
         {/* Phase pill */}
         {cfg.enabled && (
