@@ -20,8 +20,6 @@ const RELATION_LABELS: Record<string, { icon: string; color: string }> = {
   critiques:   { icon: '✗',  color: '#f87171' },
   related:     { icon: '·',  color: '#64748b' },
 };
-import { motion } from 'motion/react';
-
 interface Props {
   node: RhizomeNode;
   allNodes: RhizomeNode[];
@@ -35,15 +33,14 @@ interface Props {
 export function NodeInspector({
   node, allNodes, score, onClose, onSaveCard, onSendToArena, onExpand,
 }: Props) {
-  const connectedNodes = Array.from(node.connections.keys())
+  const conn = node.connections instanceof Map ? node.connections : new Map<number, number>();
+  const edgeTypes = node.edgeTypes instanceof Map ? node.edgeTypes : new Map<number, string>();
+  const connectedNodes = Array.from(conn.keys())
     .map(id => allNodes.find(n => n.id === id))
     .filter(Boolean) as RhizomeNode[];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
+    <div
       style={{
         position: 'fixed',
         top: 80,
@@ -334,9 +331,10 @@ export function NodeInspector({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {connectedNodes.slice(0, 12).map(cn => {
-                const edgeRel = node.edgeTypes?.get(cn.id) ?? cn.edgeTypes?.get(node.id);
-                const relInfo = edgeRel ? RELATION_LABELS[edgeRel] : undefined;
-                const edgeWeight = node.connections.get(cn.id) ?? 0;
+                const cnEdgeTypes = cn.edgeTypes instanceof Map ? cn.edgeTypes : new Map<number, string>();
+                const edgeRel = edgeTypes.get(cn.id) ?? cnEdgeTypes.get(node.id);
+                const relInfo = edgeRel && RELATION_LABELS[edgeRel] ? RELATION_LABELS[edgeRel] : undefined;
+                const edgeWeight = conn.get(cn.id) ?? 0;
 
                 return (
                   <div
@@ -505,6 +503,6 @@ export function NodeInspector({
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

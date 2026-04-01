@@ -624,9 +624,10 @@ function NodeCard({
   onExpand: (node: RhizomeNode) => void;
   onSave: (node: RhizomeNode) => void;
 }) {
+  const conn = node.connections instanceof Map ? node.connections : new Map<number, number>();
   const connectedNodes = node.connectionsLabels
     ? node.connectionsLabels
-    : Array.from(node.connections.keys())
+    : Array.from(conn.keys())
         .map(id => allNodes.find(n => n.id === id)?.label)
         .filter(Boolean) as string[];
 
@@ -839,6 +840,63 @@ function NodeCard({
       </div>
     </div>
   );
+}
+
+// ── Error boundary for node inspector (evita tela branca ao clicar em nó) ─────
+class NodeInspectorErrorBoundary extends React.Component<
+  { children: React.ReactNode; onClose: () => void },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err: Error) {
+    console.error('[RhizomeLab] Node inspector error:', err);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          style={{
+            position: 'fixed',
+            top: 80,
+            right: 20,
+            width: 280,
+            padding: 16,
+            background: 'rgba(10,8,18,0.95)',
+            border: '1px dashed rgba(239,68,68,0.4)',
+            borderRadius: 4,
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 11,
+            color: 'rgba(255,255,255,0.8)',
+            zIndex: 100,
+          }}
+        >
+          <div style={{ marginBottom: 8, color: 'rgba(239,68,68,0.9)' }}>Erro ao abrir inspector</div>
+          <button
+            type="button"
+            onClick={() => {
+              this.setState({ hasError: false });
+              this.props.onClose();
+            }}
+            style={{
+              padding: '6px 12px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px dashed rgba(255,255,255,0.2)',
+              borderRadius: 4,
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: 10,
+            }}
+          >
+            Fechar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -2041,13 +2099,15 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
 
           {/* Node inspector card */}
           {selectedNode && (
-            <NodeCard
-              node={selectedNode}
-              allNodes={stateRef.current?.nodes ?? []}
-              onClose={() => setSelectedNode(null)}
-              onExpand={handleLLMExpand}
-              onSave={handleSaveCard}
-            />
+            <NodeInspectorErrorBoundary onClose={() => setSelectedNode(null)}>
+              <NodeCard
+                node={selectedNode}
+                allNodes={stateRef.current?.nodes ?? []}
+                onClose={() => setSelectedNode(null)}
+                onExpand={handleLLMExpand}
+                onSave={handleSaveCard}
+              />
+            </NodeInspectorErrorBoundary>
           )}
 
           {/* Interaction hints */}
@@ -2374,15 +2434,17 @@ export const RhizomeLab: React.FC<Props> = ({ active }) => {
 
       {/* ── Patch 01.01: Node Inspector (direita, quando node selecionado) ── */}
       {selectedNode && (
-        <NodeInspectorNew
-          node={selectedNode}
-          allNodes={stateRef.current?.nodes || []}
-          score={nodeScores.get(selectedNode.id)}
-          onClose={() => setSelectedNode(null)}
-          onSaveCard={(node) => handleSaveCard(node)}
-          onSendToArena={(node) => handleSendToArena(node)}
-          onExpand={(node) => handleExpandNode(node)}
-        />
+        <NodeInspectorErrorBoundary onClose={() => setSelectedNode(null)}>
+          <NodeInspectorNew
+            node={selectedNode}
+            allNodes={stateRef.current?.nodes || []}
+            score={nodeScores.get(selectedNode.id)}
+            onClose={() => setSelectedNode(null)}
+            onSaveCard={(node) => handleSaveCard(node)}
+            onSendToArena={(node) => handleSendToArena(node)}
+            onExpand={(node) => handleExpandNode(node)}
+          />
+        </NodeInspectorErrorBoundary>
       )}
 
       {/* ── Patch 01.01: Are.na Connect Modal ─────────────────────────────── */}

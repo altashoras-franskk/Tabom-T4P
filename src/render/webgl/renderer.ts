@@ -14,6 +14,10 @@ export interface RenderConfig {
   fade: number; // 0.90-0.99
   glow: number; // 0-2
   paletteIndex: number;
+  /** Quando true, cor por linhagem (lineageId % 16): mutações mantêm a mesma cor da família. */
+  colorByLineage?: boolean;
+  /** Quando true, partículas rápidas ficam mais transparentes — clusters (lentas) se destacam. */
+  clusterEmphasis?: boolean;
 }
 
 // Cached uniform locations — looked up ONCE at init, never again per frame
@@ -40,6 +44,7 @@ export interface WebGLRenderer {
   typeBuffer: WebGLBuffer;
   sizeBuffer: WebGLBuffer;
   mutationGlowBuffer: WebGLBuffer;
+  alphaBuffer: WebGLBuffer;
   vao: WebGLVertexArrayObject;
   fadeVao: WebGLVertexArrayObject | null;
   quadBuffer: WebGLBuffer | null;
@@ -49,6 +54,7 @@ export interface WebGLRenderer {
   typesArray: Float32Array | null;
   sizesArray: Float32Array | null;
   mutationGlowsArray: Float32Array | null;
+  alphaArray: Float32Array | null;
   maxParticles: number;
   // Cached uniform locations
   uniforms: UniformCache;
@@ -109,8 +115,9 @@ export const initWebGLRenderer = (canvas: HTMLCanvasElement): WebGLRenderer | nu
   const typeBuffer         = gl.createBuffer();
   const sizeBuffer         = gl.createBuffer();
   const mutationGlowBuffer = gl.createBuffer();
+  const alphaBuffer        = gl.createBuffer();
   const vao                = gl.createVertexArray();
-  if (!positionBuffer || !typeBuffer || !sizeBuffer || !mutationGlowBuffer || !vao) return null;
+  if (!positionBuffer || !typeBuffer || !sizeBuffer || !mutationGlowBuffer || !alphaBuffer || !vao) return null;
 
   gl.bindVertexArray(vao);
 
@@ -133,6 +140,11 @@ export const initWebGLRenderer = (canvas: HTMLCanvasElement): WebGLRenderer | nu
   const mutGlowLoc = gl.getAttribLocation(program, 'a_mutationGlow');
   gl.enableVertexAttribArray(mutGlowLoc);
   gl.vertexAttribPointer(mutGlowLoc, 1, gl.FLOAT, false, 0, 0);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, alphaBuffer);
+  const alphaLoc = gl.getAttribLocation(program, 'a_alpha');
+  gl.enableVertexAttribArray(alphaLoc);
+  gl.vertexAttribPointer(alphaLoc, 1, gl.FLOAT, false, 0, 0);
 
   gl.bindVertexArray(null);
 
@@ -205,10 +217,10 @@ export const initWebGLRenderer = (canvas: HTMLCanvasElement): WebGLRenderer | nu
 
   return {
     gl, canvas, program, fadeProgram,
-    positionBuffer, typeBuffer, sizeBuffer, mutationGlowBuffer,
+    positionBuffer, typeBuffer, sizeBuffer, mutationGlowBuffer, alphaBuffer,
     vao, fadeVao, quadBuffer,
     config: { pointSize: 4.0, fade: 0.96, glow: 0.5, paletteIndex: 0 },
-    positionsArray: null, typesArray: null, sizesArray: null, mutationGlowsArray: null,
+    positionsArray: null, typesArray: null, sizesArray: null, mutationGlowsArray: null, alphaArray: null,
     maxParticles: 0,
     uniforms,
     paletteCache,
@@ -280,6 +292,7 @@ export const renderWebGL = (
     renderer.typesArray        = new Float32Array(state.maxCount);
     renderer.sizesArray        = new Float32Array(state.maxCount);
     renderer.mutationGlowsArray = new Float32Array(state.maxCount);
+    renderer.alphaArray        = new Float32Array(state.maxCount);
     renderer.maxParticles      = state.maxCount;
     renderer.lastCount         = -1; // force bufferData on first upload
   }
@@ -292,15 +305,25 @@ export const renderWebGL = (
   const types         = renderer.typesArray!;
   const sizes         = renderer.sizesArray!;
   const mutationGlows = renderer.mutationGlowsArray!;
+  const alphas        = renderer.alphaArray!;
   const count         = state.count;
+  const clusterEmphasis = renderer.config.clusterEmphasis;
+  const SPEED_SCALE = 0.08; // speed above this gets dimmed when clusterEmphasis
 
+  const colorByLineage = renderer.config.colorByLineage && state.lineageId;
   for (let i = 0; i < count; i++) {
     positions[i * 2]     = state.x[i];
     positions[i * 2 + 1] = state.y[i];
-    types[i]             = state.type[i];
+    types[i]             = colorByLineage ? (state.lineageId![i] % 16) : state.type[i];
     sizes[i]             = state.size[i];
     const p              = state.mutationPotential[i];
     mutationGlows[i]     = Math.sin(p * Math.PI) * p;
+    if (clusterEmphasis) {
+      const speed = Math.sqrt(state.vx[i] * state.vx[i] + state.vy[i] * state.vy[i]);
+      alphas[i]   = 1.0 - 0.55 * Math.min(1, speed / SPEED_SCALE); // slow = solid, fast = dim
+    } else {
+      alphas[i]   = 1.0;
+    }
   }
 
   // ── Upload to GPU — bufferSubData when same count (avoids realloc on driver) ──
@@ -308,17 +331,20 @@ export const renderWebGL = (
   const typSub  = types.subarray(0, count);
   const sizSub  = sizes.subarray(0, count);
   const mgSub   = mutationGlows.subarray(0, count);
+  const alphaSub = alphas.subarray(0, count);
 
   if (renderer.lastCount === count) {
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);     gl.bufferSubData(gl.ARRAY_BUFFER, 0, posSub);
     gl.bindBuffer(gl.ARRAY_BUFFER, typeBuffer);         gl.bufferSubData(gl.ARRAY_BUFFER, 0, typSub);
     gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);         gl.bufferSubData(gl.ARRAY_BUFFER, 0, sizSub);
     gl.bindBuffer(gl.ARRAY_BUFFER, mutationGlowBuffer); gl.bufferSubData(gl.ARRAY_BUFFER, 0, mgSub);
+    gl.bindBuffer(gl.ARRAY_BUFFER, renderer.alphaBuffer); gl.bufferSubData(gl.ARRAY_BUFFER, 0, alphaSub);
   } else {
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);     gl.bufferData(gl.ARRAY_BUFFER, posSub, gl.DYNAMIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, typeBuffer);         gl.bufferData(gl.ARRAY_BUFFER, typSub, gl.DYNAMIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);         gl.bufferData(gl.ARRAY_BUFFER, sizSub, gl.DYNAMIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, mutationGlowBuffer); gl.bufferData(gl.ARRAY_BUFFER, mgSub, gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, renderer.alphaBuffer); gl.bufferData(gl.ARRAY_BUFFER, alphaSub, gl.DYNAMIC_DRAW);
     renderer.lastCount = count;
   }
 
@@ -350,7 +376,7 @@ export const renderWebGL = (
     let nLines = 0;
     for (let i = 0; i < count && nLines < maxLines; i++) {
       const xi = state.x[i], yi = state.y[i];
-      const ti = state.type[i];
+      const ti = colorByLineage ? (state.lineageId![i] % 16) : state.type[i];
       const [r, g, b] = getPaletteRgb(paletteIndex, ti, typesCount);
       for (let j = i + 1; j < count && nLines < maxLines; j++) {
         const dx = state.x[j] - xi, dy = state.y[j] - yi;

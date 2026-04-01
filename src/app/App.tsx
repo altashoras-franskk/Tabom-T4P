@@ -4,10 +4,11 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { toast, Toaster } from 'sonner';
 import { TopHUD } from '../ui/TopHUD';
 import { RightDock } from '../ui/RightDock';
-import { SeededRNG } from '../engine/rng';
+import { SeededRNG, DEFAULT_SEED } from '../engine/rng';
 import { createTimeState, updateTime, TimeState, BASE_STEP } from '../engine/time';
 import { createPerformanceConfig, applyQualityPreset, SimQuality, RenderQuality, PerformanceConfig } from '../engine/performance';
 import { checkPerformanceAndAutoReduce } from '../engine/performance-patch';
+import { createBudgetState, updateBudget, getCappedMaxSteps, getLODFeedSubsample } from '../engine/budgetMode';
 import { screenToWorld } from '../engine/camera';
 import { setRandomPaletteSeed } from '../render/palette';
 import { createMicroState, createMicroConfig, spawnParticles, spawnParticlesWithPattern, addParticle, removeParticlesInRadius, MicroState, MicroConfig } from '../sim/micro/microState';
@@ -15,7 +16,7 @@ import { createMatrix, randomizeMatrix, softenMatrix, symmetrizeMatrix, invertMa
 import { updateParticleLife, applyImpulse, applyWind, applyWhiteHole, applyBlackHole, applyVortex, applyFreeze, applyChaos, applyQuake, applyNova, applyMagnetize, getMicroPerfStats } from '../sim/micro/particleLife';
 import { updateParticleLifeWithField } from '../sim/micro/recursiveFieldWrapper';
 import { microPresets } from '../sim/micro/presets';
-import { updateEnergy, createEnergyConfig, stepCellCycle } from '../sim/micro/energy';
+import { updateEnergy, createEnergyConfig, stepCellCycle, initializeEnergy } from '../sim/micro/energy';
 import { createFieldState, createFieldConfig, sampleField, FieldState, FieldConfig, depositField, depositFieldRadius } from '../sim/field/fieldState';
 import { updateField } from '../sim/field/fieldUpdate';
 import { depositMicroMetrics } from '../sim/field/fieldSampling';
@@ -143,8 +144,8 @@ import {
 } from '../sim/complexity/complexityLens';
 import { ComplexityPanel } from '../ui/ComplexityPanel';
 
-// Sistema de energia desativado no Complexity Life Lab (mitose e reconfig continuam ativos)
-const ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB = true;
+// Sistema de energia no Complexity Lab: false = respeita o toggle "Energia" no painel Life (nasc./mortes funcionam)
+const ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB = false;
 
 // ECONOMY-LITE
 import {
@@ -450,7 +451,7 @@ const App: React.FC = () => {
   
   // Core state
   const timeRef = useRef<TimeState>(createTimeState());
-  const rngRef = useRef<SeededRNG>(new SeededRNG(Date.now()));
+  const rngRef = useRef<SeededRNG>(new SeededRNG(DEFAULT_SEED));
   const microStateRef = useRef<MicroState>(createMicroState(1000)); // Reduced for better initial FPS
   const microConfigRef = useRef<MicroConfig>(createMicroConfig());
   const matrixRef = useRef<InteractionMatrix>(createMatrix(4));
@@ -541,7 +542,8 @@ const App: React.FC = () => {
   const [complexitySnap, setComplexitySnap] = useState<ComplexityLensState>(
     () => createComplexityLensState(),
   );
-  
+  const [budgetSnap, setBudgetSnap] = useState<{ lodLevel: number; recommendedMaxSteps: number }>({ lodLevel: 0, recommendedMaxSteps: 15 });
+
   // PATCH 04.3: Archetypes + Mutation
   const archetypesRef = useRef<ArchetypeRegistry>(createRegistry());
   const [mutationCfg] = useState({
@@ -673,7 +675,12 @@ const App: React.FC = () => {
   const [pointSize, setPointSize] = useState(3.5); // OTIMIZAÇÃO: Reduzido de 4.0 para performance
   const [fadeFactor, setFadeFactor] = useState(0.96); // OTIMIZAÇÃO: Trails mais leves (4% fade, era 8%)
   const [glowIntensity, setGlowIntensity] = useState(0.0); // performance: start with glow off
-  const [paletteIndex, setPaletteIndex] = useState(0);
+  const [paletteIndex, setPaletteIndex] = useState(() => {
+    const i = PALETTES.findIndex((p) => p.name === 'Species');
+    return i >= 0 ? i : 0;
+  });
+  const [colorByLineage, setColorByLineage] = useState(true); // cor por linhagem: mutações mantêm família visual
+  const [clusterEmphasis, setClusterEmphasis] = useState(false); // destacar clusters (diminuir partículas rápidas)
   const [renderMode, setRenderMode] = useState<'dots' | 'streaks'>('dots');
   const [streakLength, setStreakLength] = useState(8.0);
   const [dotSize, setDotSize] = useState(2.0);
@@ -721,10 +728,12 @@ const App: React.FC = () => {
   // Performance config (START WITH FAST)
   const perfConfigRef = useRef<PerformanceConfig>(createPerformanceConfig());
   const [simQuality, setSimQuality] = useState<SimQuality>('FAST');
+  // Budget mode: adapta maxSteps e LOD ao orçamento de frame (escalabilidade)
+  const budgetStateRef = useRef(createBudgetState(60));
 
   // Brush parameters
   const [brushRadius, setBrushRadius] = useState(80);
-  const [brushStrength, setBrushStrength] = useState(25); // Now 0-100 range
+  const [brushStrength, setBrushStrength] = useState(55); // stronger default tool response
   const [seedRate, setSeedRate] = useState(50);
   const [eraseRate, setEraseRate] = useState(0.3);
   
@@ -971,9 +980,12 @@ const App: React.FC = () => {
     };
     const onDown = (e: MouseEvent) => {
       if (activeLab !== 'complexityLife') return;
-      if (e.button !== 1 && e.button !== 2) return; // middle or right drag only
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.('[data-ui-overlay]')) return;
+      const wantsSpacePan = e.button === 0 && vpKeysRef.current.has(' ');
+      if (e.button !== 1 && e.button !== 2 && !wantsSpacePan) return; // middle/right or space+left
       vpDragRef.current = { active: true, lastX: e.clientX, lastY: e.clientY };
-      if (e.button === 1) e.preventDefault();
+      if (e.button === 1 || wantsSpacePan) e.preventDefault();
     };
     const onMove = (e: MouseEvent) => {
       if (!vpDragRef.current.active) return;
@@ -997,12 +1009,19 @@ const App: React.FC = () => {
       if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(k)) {
         vpKeysRef.current.add(k); e.preventDefault();
       }
+      if (k === ' ') {
+        vpKeysRef.current.add(' ');
+        e.preventDefault();
+      }
       if (k === 'Home') {
         vpRef.current = { zoom: 1, panX: 0, panY: 0 }; applyVp();
         setVpZoom(1); setVpPanned(false);
       }
     };
-    const onKeyUp = (e: KeyboardEvent) => { vpKeysRef.current.delete(e.key); };
+    const onKeyUp = (e: KeyboardEvent) => {
+      vpKeysRef.current.delete(e.key);
+      if (e.key === ' ') vpKeysRef.current.delete(' ');
+    };
     const onContext = (e: MouseEvent) => { if (activeLab === 'complexityLife') e.preventDefault(); };
     // Arrow-key pan per animation frame
     const keyInterval = setInterval(() => {
@@ -1309,8 +1328,8 @@ const App: React.FC = () => {
 
       // ── Fully stop this loop when another self-contained lab is active or when
       //    home is shown. The useEffect deps (activeLab, showHome) restart it
-      //    automatically when we come back to complexityLife / sociogenesis.
-      if (showHome || (activeLab !== 'complexityLife' && activeLab !== 'sociogenesis')) {
+      //    automatically when we come back to complexityLife.
+      if (showHome || activeLab !== 'complexityLife') {
         return; // no next frame — loop suspends until useEffect re-runs
       }
 
@@ -1326,7 +1345,8 @@ const App: React.FC = () => {
       render();
       if (view3dRef.current.mode === '3D' && activeLab !== 'psycheLab') render3D();
       const frameRenderMs = performance.now() - renderStart;
-      
+      recordModuleMs(complexityLensRef.current.moduleTelemetry, 'render', frameRenderMs);
+
       try {
       // FPS monitor and auto-downgrade (check every 240 frames = ~4-8 seconds)
       frameCount++;
@@ -1354,8 +1374,11 @@ const App: React.FC = () => {
         frameCount = 0;
       }
       
-      // Update maxStepsPerFrame from performance config
-      timeRef.current.maxStepsPerFrame = perfConfigRef.current.maxStepsPerFrame;
+      // Update maxStepsPerFrame: config desejado, limitado por budget mode (escalabilidade)
+      timeRef.current.maxStepsPerFrame = getCappedMaxSteps(
+        budgetStateRef.current,
+        perfConfigRef.current.maxStepsPerFrame
+      );
       
       const reconfigIntervalSec = Math.max(0.5, Number.isFinite(reconfigConfigRef.current.interval) ? reconfigConfigRef.current.interval : 3.0);
       const { stepCount, fieldTick, reconfigTick } = updateTime(
@@ -1384,14 +1407,14 @@ const App: React.FC = () => {
       // Snapshot lens state once per frame (used by multiple modules)
       const lensState = complexityLensRef.current;
 
-      // Com energia ligada e população alta, reduzir steps por frame para evitar congelamento
-      const energyOn = !ENERGY_SYSTEM_DISABLED_COMPLEXITY_LAB && lifeCfg.energyEnabled;
+      // Usar todos os steps disponíveis (budget mode já limita maxStepsPerFrame). Antes: energyOn && n>550 forçava 1 step → animação muito lenta.
       const n = microStateRef.current.count;
-      const effectiveStepCount =
-        energyOn && n > 550 ? Math.min(stepCount, 1) : stepCount;
-      const simulatedDt = effectiveStepCount * BASE_STEP;
+      const simulatedDt = stepCount * BASE_STEP;
 
       const simStart = performance.now();
+
+      // Loop de física: stepCount steps por frame (cap aplicado por budget mode)
+      const effectiveStepCount = stepCount;
 
       // Comida ligada mas sem partículas food? Converte uma fração em food para efeito imediato do toggle
       if (lifeCfg.foodEnabled && n > 0) {
@@ -1521,6 +1544,7 @@ const App: React.FC = () => {
             e,
             rngRef.current,
             microStateRef.current.maxCount,
+            { lodFeedSubsample: getLODFeedSubsample(budgetStateRef.current) },
           );
           recordModuleMs(lensState.moduleTelemetry, 'energy', performance.now() - _t_en0);
 
@@ -1803,6 +1827,8 @@ const App: React.FC = () => {
           emergenceIndex: cl.emergenceIndex,
           morin:          { ...cl.morin },
         });
+        const budget = budgetStateRef.current;
+        setBudgetSnap({ lodLevel: budget.lodLevel, recommendedMaxSteps: budget.recommendedMaxSteps });
         // Also keep legacy feedbackSnap alive in case OrChozer panel is still used
         setFeedbackSnap({
           config:        { ...cl.feedback.config },
@@ -1890,6 +1916,14 @@ const App: React.FC = () => {
 
       const simEnd = performance.now();
       const simMs = simEnd - simStart;
+      // Budget mode: total frame = render + sim (para adaptar maxSteps/LOD no próximo frame)
+      const totalFrameMs = simEnd - renderStart;
+      updateBudget(
+        budgetStateRef.current,
+        totalFrameMs,
+        perfConfigRef.current.maxStepsPerFrame,
+        microStateRef.current.count
+      );
 
       // Field tick
       if (fieldTick) {
@@ -1922,8 +1956,9 @@ const App: React.FC = () => {
         }));
       }
 
-      // Reconfig tick
+      // Reconfig tick (timed for telemetry)
       if (reconfigTick) {
+        const _t_reconfig0 = performance.now();
         detectorsRef.current = runDetectors(microStateRef.current, fieldStateRef.current);
         // PATCH R1: share current field reference with operators (no signature changes)
         reconfigStateRef.current.field = fieldStateRef.current;
@@ -1964,6 +1999,7 @@ const App: React.FC = () => {
             });
             lastEmergenceApplyRef.current = nowT;
         }
+        recordModuleMs(complexityLensRef.current.moduleTelemetry, 'reconfig', performance.now() - _t_reconfig0);
 
         if (beat) {
           addBeat(chronicleRef.current, beat);
@@ -2027,6 +2063,7 @@ const App: React.FC = () => {
         
         // Try mitosis when world DNA has mitosis rate (no gate by life.mode — restore previous behavior)
         if (currentDNA && currentDNA.mitosisRate > 0.01 && microStateRef.current.count < 1200) {
+          const _t_mitosis0 = performance.now();
           const mitosisConfig = createMitosisConfig(currentDNA.mitosisRate);
           const result = performMitosis(
             microStateRef.current,
@@ -2078,6 +2115,7 @@ const App: React.FC = () => {
               }
             }
           }
+          recordModuleMs(complexityLensRef.current.moduleTelemetry, 'mitosis', performance.now() - _t_mitosis0);
         }
       }
 
@@ -2614,6 +2652,8 @@ const App: React.FC = () => {
         fade: fadeFactor,
         glow: glowIntensity,
         paletteIndex,
+        colorByLineage,
+        clusterEmphasis,
       });
       
       // Disable main trails when overlay bonds/trails are active
@@ -2954,6 +2994,12 @@ const App: React.FC = () => {
         const st = microStateRef.current;
         for (let i = 0; i < st.count; i++) st.energy[i] = 1.0;
       }
+      // If ENERGY is turned ON, ensure all agents have startEnergy (evita energia zerada por caminhos que não setam energy)
+      if (!prev.energyEnabled && patch.energyEnabled === true) {
+        const e = energyConfigRef.current;
+        e.enabled = true;
+        initializeEnergy(microStateRef.current, e);
+      }
       return next;
     });
   };
@@ -3268,7 +3314,8 @@ const App: React.FC = () => {
         count,
         microConfigRef.current.typesCount,
         2, // worldWidth
-        2  // worldHeight
+        2, // worldHeight
+        rngRef.current
       );
       
       // Apply positions and types
@@ -4003,6 +4050,10 @@ const App: React.FC = () => {
     if (target?.closest?.('[data-ui-overlay]')) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
+    // Mouse buttons other than left are reserved for viewport pan (handled on container).
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // Space + left mouse enables pan without painting powers.
+    if (activeLab === 'complexityLife' && e.pointerType === 'mouse' && e.button === 0 && vpKeysRef.current.has(' ')) return;
 
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
@@ -4072,6 +4123,7 @@ const App: React.FC = () => {
 
     const [wx, wy] = screenToWorldCorrect(e.clientX, e.clientY);
     const radiusWorld = (brushRadius / Math.min(rect.width, rect.height)) * 2;
+    const powerScale = brushStrength / 60;
     pointerRef.current.downWX = wx;
     pointerRef.current.downWY = wy;
     pointerRef.current.downRadiusWorld = radiusWorld;
@@ -4111,29 +4163,29 @@ const App: React.FC = () => {
         toast.error('No particles in capture area');
       }
     } else if (pointerRef.current.mode === 'PULSE') {
-      applyImpulse(microStateRef.current, wx, wy, radiusWorld, 50.0 * (brushStrength / 100));
+      applyImpulse(microStateRef.current, wx, wy, radiusWorld, 50.0 * powerScale);
     } else if (pointerRef.current.mode === 'WHITE-HOLE') {
-      applyWhiteHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * (brushStrength / 100));
-      depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 500.0 * (brushStrength / 100), 0, 0, 0, 0);
+      applyWhiteHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * powerScale);
+      depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 500.0 * powerScale, 0, 0, 0, 0);
     } else if (pointerRef.current.mode === 'BLACK-HOLE') {
-      applyBlackHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * (brushStrength / 100));
-      depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 0, 500.0 * (brushStrength / 100), 0, 0, 0);
+      applyBlackHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * powerScale);
+      depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 0, 500.0 * powerScale, 0, 0, 0);
     } else if (pointerRef.current.mode === 'WIND') {
-      applyImpulse(microStateRef.current, wx, wy, radiusWorld, 25.0 * (brushStrength / 100));
+      applyImpulse(microStateRef.current, wx, wy, radiusWorld, 25.0 * powerScale);
     // ── 6 NEW POWERS ──────────────────────────────────────────────────────────
     } else if (pointerRef.current.mode === 'VORTEX') {
-      applyVortex(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100));
+      applyVortex(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale);
     } else if (pointerRef.current.mode === 'FREEZE') {
-      applyFreeze(microStateRef.current, wx, wy, radiusWorld, Math.min(0.98, 0.6 * (brushStrength / 100)));
+      applyFreeze(microStateRef.current, wx, wy, radiusWorld, Math.min(0.98, 0.6 * powerScale));
     } else if (pointerRef.current.mode === 'CHAOS') {
-      applyChaos(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100));
+      applyChaos(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale, rngRef.current);
     } else if (pointerRef.current.mode === 'QUAKE') {
-      applyQuake(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100), timeRef.current.elapsed);
+      applyQuake(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale, timeRef.current.elapsed);
     } else if (pointerRef.current.mode === 'NOVA') {
-      applyNova(microStateRef.current, wx, wy, radiusWorld, 500.0 * (brushStrength / 100), novaPhaseRef.current);
+      applyNova(microStateRef.current, wx, wy, radiusWorld, 500.0 * powerScale, novaPhaseRef.current);
       novaPhaseRef.current = novaPhaseRef.current === 0 ? 1 : 0; // toggle phase
     } else if (pointerRef.current.mode === 'MAGNETIZE') {
-      applyMagnetize(microStateRef.current, wx, wy, radiusWorld, 0.4 * (brushStrength / 100), selectedType);
+      applyMagnetize(microStateRef.current, wx, wy, radiusWorld, 0.4 * powerScale, selectedType, rngRef.current);
     } else if (pointerRef.current.mode === 'ERASE') {
       removeParticlesInRadius(microStateRef.current, wx, wy, radiusWorld, 1.0);
     }
@@ -4213,33 +4265,34 @@ const App: React.FC = () => {
     const [wx, wy] = screenToWorldCorrect(e.clientX, e.clientY);
     const [pwx, pwy] = screenToWorldCorrect(pointerRef.current.prevX, pointerRef.current.prevY);
     const radiusWorld = (brushRadius / Math.min(rect.width, rect.height)) * 2;
+    const powerScale = brushStrength / 60;
 
     if (pointerRef.current.mode === 'WIND') {
       const dx = wx - pwx;
       const dy = wy - pwy;
-      applyWind(microStateRef.current, wx, wy, radiusWorld, dx * 500.0 * (brushStrength / 100), dy * 500.0 * (brushStrength / 100));
+      applyWind(microStateRef.current, wx, wy, radiusWorld, dx * 500.0 * powerScale, dy * 500.0 * powerScale);
     } else if (pointerRef.current.mode === 'PULSE') {
-      applyImpulse(microStateRef.current, wx, wy, radiusWorld, 50.0 * (brushStrength / 100));
+      applyImpulse(microStateRef.current, wx, wy, radiusWorld, 50.0 * powerScale);
     } else if (pointerRef.current.mode === 'WHITE-HOLE') {
-      applyWhiteHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * (brushStrength / 100));
-      depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 400.0 * (brushStrength / 100), 0, 0, 0, 0);
+      applyWhiteHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * powerScale);
+      depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 400.0 * powerScale, 0, 0, 0, 0);
     } else if (pointerRef.current.mode === 'BLACK-HOLE') {
-      applyBlackHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * (brushStrength / 100));
-      depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 0, 400.0 * (brushStrength / 100), 0, 0, 0);
+      applyBlackHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * powerScale);
+      depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 0, 400.0 * powerScale, 0, 0, 0);
     // ── 6 NEW POWERS (drag) ───────────────────────────────────────────────────
     } else if (pointerRef.current.mode === 'VORTEX') {
-      applyVortex(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100));
+      applyVortex(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale);
     } else if (pointerRef.current.mode === 'FREEZE') {
-      applyFreeze(microStateRef.current, wx, wy, radiusWorld, Math.min(0.98, 0.6 * (brushStrength / 100)));
+      applyFreeze(microStateRef.current, wx, wy, radiusWorld, Math.min(0.98, 0.6 * powerScale));
     } else if (pointerRef.current.mode === 'CHAOS') {
-      applyChaos(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100));
+      applyChaos(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale, rngRef.current);
     } else if (pointerRef.current.mode === 'QUAKE') {
-      applyQuake(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100), timeRef.current.elapsed);
+      applyQuake(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale, timeRef.current.elapsed);
     } else if (pointerRef.current.mode === 'NOVA') {
       // On drag Nova pulses in current phase without toggling
-      applyNova(microStateRef.current, wx, wy, radiusWorld, 500.0 * (brushStrength / 100), novaPhaseRef.current);
+      applyNova(microStateRef.current, wx, wy, radiusWorld, 500.0 * powerScale, novaPhaseRef.current);
     } else if (pointerRef.current.mode === 'MAGNETIZE') {
-      applyMagnetize(microStateRef.current, wx, wy, radiusWorld, 0.25 * (brushStrength / 100), selectedType);
+      applyMagnetize(microStateRef.current, wx, wy, radiusWorld, 0.25 * powerScale, selectedType, rngRef.current);
     } else if (pointerRef.current.mode === 'SEED') {
       const count = Math.max(1, Math.floor(seedRate / 30)); // ~30fps assumption
       for (let i = 0; i < count; i++) {
@@ -4282,28 +4335,29 @@ const App: React.FC = () => {
       const wx = pointerRef.current.downWX;
       const wy = pointerRef.current.downWY;
       const radiusWorld = pointerRef.current.downRadiusWorld || 0;
+      const powerScale = brushStrength / 60;
       if (activeLab !== 'sociogenesis') {
         if (pointerRef.current.mode === 'PULSE') {
-          applyImpulse(microStateRef.current, wx, wy, radiusWorld, 50.0 * (brushStrength / 100));
+          applyImpulse(microStateRef.current, wx, wy, radiusWorld, 50.0 * powerScale);
         } else if (pointerRef.current.mode === 'WHITE-HOLE') {
-          applyWhiteHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * (brushStrength / 100));
-          depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 400.0 * (brushStrength / 100), 0, 0, 0, 0);
+          applyWhiteHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * powerScale);
+          depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 400.0 * powerScale, 0, 0, 0, 0);
         } else if (pointerRef.current.mode === 'BLACK-HOLE') {
-          applyBlackHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * (brushStrength / 100));
-          depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 0, 400.0 * (brushStrength / 100), 0, 0, 0);
+          applyBlackHole(microStateRef.current, wx, wy, radiusWorld, 250.0 * powerScale);
+          depositFieldRadius(fieldStateRef.current, wx, wy, radiusWorld * 0.5, 0, 400.0 * powerScale, 0, 0, 0);
         } else if (pointerRef.current.mode === 'VORTEX') {
-          applyVortex(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100));
+          applyVortex(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale);
         } else if (pointerRef.current.mode === 'FREEZE') {
-          applyFreeze(microStateRef.current, wx, wy, radiusWorld, Math.min(0.98, 0.6 * (brushStrength / 100)));
+          applyFreeze(microStateRef.current, wx, wy, radiusWorld, Math.min(0.98, 0.6 * powerScale));
         } else if (pointerRef.current.mode === 'CHAOS') {
-          applyChaos(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100));
+          applyChaos(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale, rngRef.current);
         } else if (pointerRef.current.mode === 'QUAKE') {
-          applyQuake(microStateRef.current, wx, wy, radiusWorld, 80.0 * (brushStrength / 100), timeRef.current.elapsed);
+          applyQuake(microStateRef.current, wx, wy, radiusWorld, 80.0 * powerScale, timeRef.current.elapsed);
         } else if (pointerRef.current.mode === 'NOVA') {
-          applyNova(microStateRef.current, wx, wy, radiusWorld, 500.0 * (brushStrength / 100), novaPhaseRef.current);
+          applyNova(microStateRef.current, wx, wy, radiusWorld, 500.0 * powerScale, novaPhaseRef.current);
           novaPhaseRef.current = novaPhaseRef.current === 0 ? 1 : 0;
         } else if (pointerRef.current.mode === 'MAGNETIZE') {
-          applyMagnetize(microStateRef.current, wx, wy, radiusWorld, 0.25 * (brushStrength / 100), selectedType);
+          applyMagnetize(microStateRef.current, wx, wy, radiusWorld, 0.25 * powerScale, selectedType, rngRef.current);
         } else if (pointerRef.current.mode === 'ERASE') {
           removeParticlesInRadius(microStateRef.current, wx, wy, radiusWorld, eraseRate * 0.3);
         }
@@ -4368,7 +4422,7 @@ const App: React.FC = () => {
   const handleRecStop = useCallback(() => recorderRef.current?.stop(), []);
 
   return (
-    <div className="w-full h-screen overflow-hidden flex" style={{ background }}>
+    <div className="w-full h-screen overflow-hidden flex notranslate" translate="no" style={{ background }}>
       {/* Canvas container - takes remaining space, hidden on homepage */}
       <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden"
         style={{
@@ -4479,6 +4533,7 @@ const App: React.FC = () => {
             agentCount={microStateRef.current.count}
             vitalRates={complexitySnap.vitalRates}
             moduleTelemetry={complexitySnap.moduleTelemetry}
+            budgetState={budgetSnap}
             microConfig={{ ...microConfigRef.current }}
             fieldConfig={{ ...fieldConfigRef.current }}
             life={life}
@@ -4957,6 +5012,10 @@ const App: React.FC = () => {
               fadeFactor={fadeFactor}
               glowIntensity={glowIntensity}
               paletteIndex={paletteIndex}
+              colorByLineage={colorByLineage}
+              onColorByLineageChange={setColorByLineage}
+              clusterEmphasis={clusterEmphasis}
+              onClusterEmphasisChange={setClusterEmphasis}
               onPointSizeChange={setPointSize}
               onFadeFactorChange={setFadeFactor}
               onGlowIntensityChange={setGlowIntensity}

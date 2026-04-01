@@ -149,15 +149,20 @@ export const SPAWN_RECIPES: SpawnRecipe[] = [
   },
 ];
 
+/** RNG interface for deterministic spawn (same seed = same layout). */
+export type SpawnRng = { next: () => number; int: (min: number, max: number) => number };
+
 /**
- * Spawn particles based on recipe pattern
+ * Spawn particles based on recipe pattern.
+ * DETERMINISTIC: pass seeded rng so same seed + same params = same layout.
  */
 export const spawnFromRecipe = (
   recipe: SpawnRecipe,
   particleCount: number,
   typesCount: number,
   worldWidth: number,
-  worldHeight: number
+  worldHeight: number,
+  rng: SpawnRng
 ): { positions: Float32Array; types: Uint8Array } => {
   const positions = new Float32Array(particleCount * 2);
   const types = new Uint8Array(particleCount);
@@ -169,9 +174,9 @@ export const spawnFromRecipe = (
   switch (recipe.pattern) {
     case 'random':
       for (let i = 0; i < particleCount; i++) {
-        positions[i * 2] = Math.random() * worldWidth;
-        positions[i * 2 + 1] = Math.random() * worldHeight;
-        types[i] = Math.floor(Math.random() * typesCount);
+        positions[i * 2] = rng.next() * worldWidth;
+        positions[i * 2 + 1] = rng.next() * worldHeight;
+        types[i] = rng.int(0, typesCount - 1);
       }
       break;
       
@@ -179,11 +184,11 @@ export const spawnFromRecipe = (
       {
         const radius = (recipe.params?.radius || 0.15) * scale;
         for (let i = 0; i < particleCount; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const r = Math.sqrt(Math.random()) * radius;
+          const angle = rng.next() * Math.PI * 2;
+          const r = Math.sqrt(rng.next()) * radius;
           positions[i * 2] = cx + Math.cos(angle) * r;
           positions[i * 2 + 1] = cy + Math.sin(angle) * r;
-          types[i] = Math.floor(Math.random() * typesCount);
+          types[i] = rng.int(0, typesCount - 1);
         }
       }
       break;
@@ -193,11 +198,11 @@ export const spawnFromRecipe = (
         const radius = (recipe.params?.radius || 0.4) * scale;
         const thickness = (recipe.params?.thickness || 0.1) * scale;
         for (let i = 0; i < particleCount; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const r = radius + (Math.random() - 0.5) * thickness;
+          const angle = rng.next() * Math.PI * 2;
+          const r = radius + (rng.next() - 0.5) * thickness;
           positions[i * 2] = cx + Math.cos(angle) * r;
           positions[i * 2 + 1] = cy + Math.sin(angle) * r;
-          types[i] = Math.floor(Math.random() * typesCount);
+          types[i] = rng.int(0, typesCount - 1);
         }
       }
       break;
@@ -208,12 +213,12 @@ export const spawnFromRecipe = (
         const twist = recipe.params?.twist || 2.5;
         for (let i = 0; i < particleCount; i++) {
           const t = i / particleCount;
-          const armIndex = Math.floor(Math.random() * arms);
+          const armIndex = rng.int(0, arms - 1);
           const baseAngle = (armIndex / arms) * Math.PI * 2;
           const spiralAngle = baseAngle + t * Math.PI * twist;
           const r = t * scale * 0.4;
-          positions[i * 2] = cx + Math.cos(spiralAngle) * r + (Math.random() - 0.5) * 20;
-          positions[i * 2 + 1] = cy + Math.sin(spiralAngle) * r + (Math.random() - 0.5) * 20;
+          positions[i * 2] = cx + Math.cos(spiralAngle) * r + (rng.next() - 0.5) * 20;
+          positions[i * 2 + 1] = cy + Math.sin(spiralAngle) * r + (rng.next() - 0.5) * 20;
           types[i] = armIndex % typesCount;
         }
       }
@@ -230,8 +235,8 @@ export const spawnFromRecipe = (
         for (let i = 0; i < particleCount; i++) {
           const gx = i % gridSize;
           const gy = Math.floor(i / gridSize);
-          positions[i * 2] = startX + gx * spacing + (Math.random() - 0.5) * 5;
-          positions[i * 2 + 1] = startY + gy * spacing + (Math.random() - 0.5) * 5;
+          positions[i * 2] = startX + gx * spacing + (rng.next() - 0.5) * 5;
+          positions[i * 2 + 1] = startY + gy * spacing + (rng.next() - 0.5) * 5;
           types[i] = ((gx + gy) % typesCount);
         }
       }
@@ -246,8 +251,8 @@ export const spawnFromRecipe = (
         for (let i = 0; i < particleCount; i++) {
           const isLeft = i < halfCount;
           const clusterX = cx + (isLeft ? -separation / 2 : separation / 2);
-          const angle = Math.random() * Math.PI * 2;
-          const r = Math.sqrt(Math.random()) * radius;
+          const angle = rng.next() * Math.PI * 2;
+          const r = Math.sqrt(rng.next()) * radius;
           positions[i * 2] = clusterX + Math.cos(angle) * r;
           positions[i * 2 + 1] = cy + Math.sin(angle) * r;
           types[i] = isLeft ? 0 : (typesCount > 1 ? 1 : 0);
@@ -259,19 +264,19 @@ export const spawnFromRecipe = (
       {
         const margin = (recipe.params?.margin || 0.05) * scale;
         for (let i = 0; i < particleCount; i++) {
-          const side = Math.floor(Math.random() * 4);
+          const side = rng.int(0, 3);
           if (side === 0) { // Top
-            positions[i * 2] = Math.random() * worldWidth;
+            positions[i * 2] = rng.next() * worldWidth;
             positions[i * 2 + 1] = margin;
           } else if (side === 1) { // Right
             positions[i * 2] = worldWidth - margin;
-            positions[i * 2 + 1] = Math.random() * worldHeight;
+            positions[i * 2 + 1] = rng.next() * worldHeight;
           } else if (side === 2) { // Bottom
-            positions[i * 2] = Math.random() * worldWidth;
+            positions[i * 2] = rng.next() * worldWidth;
             positions[i * 2 + 1] = worldHeight - margin;
           } else { // Left
             positions[i * 2] = margin;
-            positions[i * 2 + 1] = Math.random() * worldHeight;
+            positions[i * 2 + 1] = rng.next() * worldHeight;
           }
           types[i] = side % typesCount;
         }
@@ -283,9 +288,9 @@ export const spawnFromRecipe = (
         const bands = recipe.params?.bands || 5;
         const bandWidth = worldWidth / bands;
         for (let i = 0; i < particleCount; i++) {
-          const band = Math.floor(Math.random() * bands);
-          positions[i * 2] = band * bandWidth + Math.random() * bandWidth;
-          positions[i * 2 + 1] = Math.random() * worldHeight;
+          const band = rng.int(0, bands - 1);
+          positions[i * 2] = band * bandWidth + rng.next() * bandWidth;
+          positions[i * 2 + 1] = rng.next() * worldHeight;
           types[i] = band % typesCount;
         }
       }
@@ -296,9 +301,9 @@ export const spawnFromRecipe = (
         const bands = recipe.params?.bands || 5;
         const bandHeight = worldHeight / bands;
         for (let i = 0; i < particleCount; i++) {
-          const band = Math.floor(Math.random() * bands);
-          positions[i * 2] = Math.random() * worldWidth;
-          positions[i * 2 + 1] = band * bandHeight + Math.random() * bandHeight;
+          const band = rng.int(0, bands - 1);
+          positions[i * 2] = rng.next() * worldWidth;
+          positions[i * 2 + 1] = band * bandHeight + rng.next() * bandHeight;
           types[i] = band % typesCount;
         }
       }
@@ -311,10 +316,10 @@ export const spawnFromRecipe = (
         const cellHeight = worldHeight / cells;
         
         for (let i = 0; i < particleCount; i++) {
-          const cellX = Math.floor(Math.random() * cells);
-          const cellY = Math.floor(Math.random() * cells);
-          positions[i * 2] = cellX * cellWidth + Math.random() * cellWidth;
-          positions[i * 2 + 1] = cellY * cellHeight + Math.random() * cellHeight;
+          const cellX = rng.int(0, cells - 1);
+          const cellY = rng.int(0, cells - 1);
+          positions[i * 2] = cellX * cellWidth + rng.next() * cellWidth;
+          positions[i * 2 + 1] = cellY * cellHeight + rng.next() * cellHeight;
           types[i] = ((cellX + cellY) % 2) % typesCount;
         }
       }
@@ -324,8 +329,8 @@ export const spawnFromRecipe = (
       {
         const size = (recipe.params?.size || 0.6) * scale;
         for (let i = 0; i < particleCount; i++) {
-          let u = Math.random();
-          let v = Math.random();
+          let u = rng.next();
+          let v = rng.next();
           if (u + v > 1) {
             u = 1 - u;
             v = 1 - v;
@@ -351,12 +356,12 @@ export const spawnFromRecipe = (
         ];
         
         for (let i = 0; i < particleCount; i++) {
-          const corner = corners[Math.floor(Math.random() * 4)];
-          const angle = Math.random() * Math.PI * 2;
-          const r = Math.sqrt(Math.random()) * radius;
+          const corner = corners[rng.int(0, 3)];
+          const angle = rng.next() * Math.PI * 2;
+          const r = Math.sqrt(rng.next()) * radius;
           positions[i * 2] = corner.x + Math.cos(angle) * r;
           positions[i * 2 + 1] = corner.y + Math.sin(angle) * r;
-          types[i] = Math.floor(Math.random() * typesCount);
+          types[i] = rng.int(0, typesCount - 1);
         }
       }
       break;
@@ -367,13 +372,13 @@ export const spawnFromRecipe = (
         const length = (recipe.params?.length || 0.7) * scale;
         
         for (let i = 0; i < particleCount; i++) {
-          const isVertical = Math.random() < 0.5;
+          const isVertical = rng.next() < 0.5;
           if (isVertical) {
-            positions[i * 2] = cx + (Math.random() - 0.5) * width;
-            positions[i * 2 + 1] = cy + (Math.random() - 0.5) * length;
+            positions[i * 2] = cx + (rng.next() - 0.5) * width;
+            positions[i * 2 + 1] = cy + (rng.next() - 0.5) * length;
           } else {
-            positions[i * 2] = cx + (Math.random() - 0.5) * length;
-            positions[i * 2 + 1] = cy + (Math.random() - 0.5) * width;
+            positions[i * 2] = cx + (rng.next() - 0.5) * length;
+            positions[i * 2 + 1] = cy + (rng.next() - 0.5) * width;
           }
           types[i] = isVertical ? 0 : (typesCount > 1 ? 1 : 0);
         }
@@ -404,11 +409,11 @@ export const spawnFromRecipe = (
         const length = (recipe.params?.length || 0.4) * scale;
         
         for (let i = 0; i < particleCount; i++) {
-          const ray = Math.floor(Math.random() * rays);
+          const ray = rng.int(0, rays - 1);
           const angle = (ray / rays) * Math.PI * 2;
-          const r = Math.random() * length;
-          positions[i * 2] = cx + Math.cos(angle) * r + (Math.random() - 0.5) * 10;
-          positions[i * 2 + 1] = cy + Math.sin(angle) * r + (Math.random() - 0.5) * 10;
+          const r = rng.next() * length;
+          positions[i * 2] = cx + Math.cos(angle) * r + (rng.next() - 0.5) * 10;
+          positions[i * 2 + 1] = cy + Math.sin(angle) * r + (rng.next() - 0.5) * 10;
           types[i] = ray % typesCount;
         }
       }
@@ -420,9 +425,9 @@ export const spawnFromRecipe = (
         const spacing = (recipe.params?.spacing || 0.12) * scale;
         
         for (let i = 0; i < particleCount; i++) {
-          const ring = Math.floor(Math.random() * rings);
+          const ring = rng.int(0, rings - 1);
           const radius = (ring + 1) * spacing;
-          const angle = Math.random() * Math.PI * 2;
+          const angle = rng.next() * Math.PI * 2;
           positions[i * 2] = cx + Math.cos(angle) * radius;
           positions[i * 2 + 1] = cy + Math.sin(angle) * radius;
           types[i] = ring % typesCount;
@@ -436,9 +441,9 @@ export const spawnFromRecipe = (
         const amplitude = (recipe.params?.amplitude || 0.3) * scale;
         
         for (let i = 0; i < particleCount; i++) {
-          const x = Math.random() * worldWidth;
+          const x = rng.next() * worldWidth;
           const phase = (x / worldWidth) * Math.PI * 2 * frequency;
-          const y = cy + Math.sin(phase) * amplitude + (Math.random() - 0.5) * 20;
+          const y = cy + Math.sin(phase) * amplitude + (rng.next() - 0.5) * 20;
           positions[i * 2] = x;
           positions[i * 2 + 1] = y;
           types[i] = Math.floor((x / worldWidth) * typesCount) % typesCount;
@@ -468,18 +473,18 @@ export const spawnFromRecipe = (
         const clusterSize = (recipe.params?.clusterSize || 0.08) * scale;
         
         for (let i = 0; i < particleCount; i++) {
-          let x = Math.random() * worldWidth;
-          let y = Math.random() * worldHeight;
+          let x = rng.next() * worldWidth;
+          let y = rng.next() * worldHeight;
           
           // Apply multiple levels of clustering
           for (let j = 0; j < iterations; j++) {
-            x += (Math.random() - 0.5) * clusterSize / (j + 1);
-            y += (Math.random() - 0.5) * clusterSize / (j + 1);
+            x += (rng.next() - 0.5) * clusterSize / (j + 1);
+            y += (rng.next() - 0.5) * clusterSize / (j + 1);
           }
           
           positions[i * 2] = Math.max(0, Math.min(worldWidth, x));
           positions[i * 2 + 1] = Math.max(0, Math.min(worldHeight, y));
-          types[i] = Math.floor(Math.random() * typesCount);
+          types[i] = rng.int(0, typesCount - 1);
         }
       }
       break;
@@ -489,9 +494,9 @@ export const spawnFromRecipe = (
         const radius = (recipe.params?.radius || 0.35) * scale;
         
         for (let i = 0; i < particleCount; i++) {
-          const isYin = Math.random() < 0.5;
-          const angle = Math.random() * Math.PI * 2;
-          const r = Math.sqrt(Math.random()) * radius;
+          const isYin = rng.next() < 0.5;
+          const angle = rng.next() * Math.PI * 2;
+          const r = Math.sqrt(rng.next()) * radius;
           
           if (isYin) {
             // Left half circle
@@ -513,9 +518,9 @@ export const spawnFromRecipe = (
     default:
       // Fallback to random
       for (let i = 0; i < particleCount; i++) {
-        positions[i * 2] = Math.random() * worldWidth;
-        positions[i * 2 + 1] = Math.random() * worldHeight;
-        types[i] = Math.floor(Math.random() * typesCount);
+        positions[i * 2] = rng.next() * worldWidth;
+        positions[i * 2 + 1] = rng.next() * worldHeight;
+        types[i] = rng.int(0, typesCount - 1);
       }
   }
   

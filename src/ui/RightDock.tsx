@@ -75,6 +75,10 @@ interface RightDockProps {
   fadeFactor?: number;
   glowIntensity?: number;
   paletteIndex?: number;
+  colorByLineage?: boolean;
+  onColorByLineageChange?: (value: boolean) => void;
+  clusterEmphasis?: boolean;
+  onClusterEmphasisChange?: (value: boolean) => void;
   onPointSizeChange?: (value: number) => void;
   onFadeFactorChange?: (value: number) => void;
   onGlowIntensityChange?: (value: number) => void;
@@ -356,6 +360,10 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
                 fadeFactor={props.fadeFactor}
                 glowIntensity={props.glowIntensity}
                 paletteIndex={props.paletteIndex}
+                colorByLineage={props.colorByLineage}
+                onColorByLineageChange={props.onColorByLineageChange}
+                clusterEmphasis={props.clusterEmphasis}
+                onClusterEmphasisChange={props.onClusterEmphasisChange}
                 onPointSizeChange={props.onPointSizeChange}
                 onFadeFactorChange={props.onFadeFactorChange}
                 onGlowIntensityChange={props.onGlowIntensityChange}
@@ -522,7 +530,7 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
 
                     <HUDSlider label="Raio" value={props.brushRadius} min={20} max={220} step={5}
                       onChange={props.onBrushRadiusChange} unit="px" />
-                    <HUDSlider label="Força" value={props.brushStrength} min={0} max={100} step={1}
+                    <HUDSlider label="Força" value={props.brushStrength} min={0} max={150} step={1}
                       onChange={props.onBrushStrengthChange} />
                     <HUDSlider label="Taxa Semeadura" value={props.seedRate} min={0} max={200} step={5}
                       onChange={props.onSeedRateChange} unit="/s" />
@@ -730,6 +738,10 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
                 fadeFactor={props.fadeFactor}
                 glowIntensity={props.glowIntensity}
                 paletteIndex={props.paletteIndex}
+                colorByLineage={props.colorByLineage}
+                onColorByLineageChange={props.onColorByLineageChange}
+                clusterEmphasis={props.clusterEmphasis}
+                onClusterEmphasisChange={props.onClusterEmphasisChange}
                 onPointSizeChange={props.onPointSizeChange}
                 onFadeFactorChange={props.onFadeFactorChange}
                 onGlowIntensityChange={props.onGlowIntensityChange}
@@ -898,7 +910,7 @@ export const RightDock: React.FC<RightDockProps> = (props) => {
 
                     <HUDSlider label="Raio" value={props.brushRadius} min={20} max={220} step={5}
                       onChange={props.onBrushRadiusChange} unit="px" />
-                    <HUDSlider label="Forca" value={props.brushStrength} min={0} max={100} step={1}
+                    <HUDSlider label="Forca" value={props.brushStrength} min={0} max={150} step={1}
                       onChange={props.onBrushStrengthChange} />
                     <HUDSlider label="Taxa Semeadura" value={props.seedRate} min={0} max={200} step={5}
                       onChange={props.onSeedRateChange} unit="/s" />

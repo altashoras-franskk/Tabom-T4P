@@ -6,18 +6,21 @@ in vec2 a_position;
 in float a_type;
 in float a_size; // Per-particle size multiplier
 in float a_mutationGlow; // Mutation potential glow (0-1)
+in float a_alpha; // Per-particle alpha (e.g. 1.0 or lower for fast particles when "cluster emphasis" on)
 
 uniform float u_pointSize;
 uniform float u_typeCount;
 
 out float v_type;
 out float v_mutationGlow;
+out float v_alpha;
 
 void main() {
   gl_Position = vec4(a_position, 0.0, 1.0);
   gl_PointSize = u_pointSize * a_size; // Scale by particle size
   v_type = a_type;
   v_mutationGlow = a_mutationGlow;
+  v_alpha = a_alpha;
 }
 `;
 
@@ -26,6 +29,7 @@ precision highp float;
 
 in float v_type;
 in float v_mutationGlow;
+in float v_alpha;
 uniform float u_typeCount;
 uniform float u_glow; // G) Glow intensity
 uniform vec3 u_palette[16]; // G) Color palette (max 16 types)
@@ -44,7 +48,7 @@ void main() {
   
   // Radial gradient (soft center)
   float gradient = 1.0 - (dist * dist * 0.5);
-  float alpha = edge * gradient * 0.85;
+  float alpha = edge * gradient * 0.85 * v_alpha;
   
   // Get color from palette
   int typeIndex = int(v_type);

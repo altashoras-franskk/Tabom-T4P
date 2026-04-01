@@ -34,6 +34,10 @@ interface PatchboardProps {
   onFadeFactorChange?: (value: number) => void;
   onGlowIntensityChange?: (value: number) => void;
   onPaletteIndexChange?: (value: number) => void;
+  colorByLineage?: boolean;
+  onColorByLineageChange?: (value: boolean) => void;
+  clusterEmphasis?: boolean;
+  onClusterEmphasisChange?: (value: boolean) => void;
   onBackgroundClick?: () => void;
   // Visual toggles
   trails?: boolean;
@@ -160,10 +164,14 @@ export const Patchboard: React.FC<PatchboardProps> = ({
   fadeFactor = 0.92,
   glowIntensity = 0.5,
   paletteIndex = 0,
+  colorByLineage = true,
+  clusterEmphasis = false,
   onPointSizeChange,
   onFadeFactorChange,
   onGlowIntensityChange,
   onPaletteIndexChange,
+  onColorByLineageChange,
+  onClusterEmphasisChange,
   trails = true,
   fieldHeatmap = false,
   onToggleTrails,
@@ -893,6 +901,18 @@ export const Patchboard: React.FC<PatchboardProps> = ({
               <label className="text-white/40 text-[9px] tracking-wide uppercase font-light">Paleta de Cores</label>
               <span className="text-white/80 text-[11px] font-mono font-semibold">{PALETTES[paletteIndex % PALETTES.length]?.name || `#${paletteIndex}`}</span>
             </div>
+            {onColorByLineageChange != null && (
+              <label className="flex items-center gap-2 cursor-pointer" title="Cor por linhagem: mutações mantêm a mesma família de cor">
+                <input type="checkbox" checked={colorByLineage !== false} onChange={(e) => onColorByLineageChange(e.target.checked)} className="rounded border-white/20" />
+                <span className="text-white/60 text-[9px] uppercase tracking-wide">Cor por linhagem</span>
+              </label>
+            )}
+            {onClusterEmphasisChange != null && (
+              <label className="flex items-center gap-2 cursor-pointer" title="Partículas rápidas ficam mais transparentes; clusters (lentas) se destacam. Clusters parados = equilíbrio de forças; aumente Entropia ou Velocidade para mais movimento.">
+                <input type="checkbox" checked={clusterEmphasis === true} onChange={(e) => onClusterEmphasisChange(e.target.checked)} className="rounded border-white/20" />
+                <span className="text-white/60 text-[9px] uppercase tracking-wide">Destacar clusters</span>
+              </label>
+            )}
             <button
               type="button"
               onClick={(e) => {

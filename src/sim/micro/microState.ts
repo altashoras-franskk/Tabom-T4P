@@ -68,6 +68,13 @@ export interface MicroConfig {
   typeStability: number; // Resistance to mutation (0-1)
   /** PATCH R1: Sigil Bond/Rift causal forces (low impact). */
   enableSigilForces?: boolean;
+  /** Gravidade global (unidades/s²). Diferencia universos: sedimentação, pressão, direção. */
+  gravityX: number;
+  gravityY: number;
+  /** Colisão partícula–partícula: exclusão espacial (empurrar quando dist < radius). 0 = desligado. */
+  collisionEnabled: boolean;
+  collisionRadius: number;   // distância mínima; quando menor, repulsão (ex.: 0.012)
+  collisionStiffness: number; // intensidade da repulsão (ex.: 0.6)
 }
 
 // Food type is always 255 (reserved)
@@ -152,6 +159,11 @@ export const createMicroConfig = (): MicroConfig => ({
   mutationRate: 0.0008,
   typeStability: 0.985,
   enableSigilForces: true,
+  gravityX: 0,
+  gravityY: 0,
+  collisionEnabled: true,
+  collisionRadius: 0.012,
+  collisionStiffness: 0.6,
 });
 
 export const spawnParticles = (

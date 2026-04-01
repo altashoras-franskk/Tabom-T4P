@@ -70,6 +70,14 @@ let feedingSpatialHash: SpatialHash | null = null;
 let lastFeedRadius = 0;
 let lastMaxCount = 0;
 
+// Buffer pré-alocado para vizinhos (evita alocação por frame no feed loop)
+const MAX_FEED_NEIGHBORS = 28;
+const feedNeighborsBuffer = new Uint16Array(MAX_FEED_NEIGHBORS);
+
+// Buffer reutilizável para filhos a adicionar (max 14 por frame; evita new Array por frame)
+type ChildToAdd = { x: number; y: number; vx: number; vy: number; type: number; energy: number; parentIdx: number };
+const childrenToAddBuffer: ChildToAdd[] = [];
+
 /** Fases do ciclo celular: 0=G1 (crescimento), 1=S (síntese), 2=G2/M (pronto para dividir) */
 export const CELL_PHASE_G1 = 0;
 export const CELL_PHASE_S = 1;
@@ -99,6 +107,12 @@ export const stepCellCycle = (
   }
 };
 
+/** Opções de LOD (budget mode): subsample de agentes no feed para escalar. */
+export interface EnergyLODOptions {
+  /** 1 = todos, 2 = cada 2º, 4 = cada 4º (reduz custo quando over budget). */
+  lodFeedSubsample?: number;
+}
+
 /**
  * Atualiza sistema de energia: alimentação, reprodução, morte
  * Retorna número de nascimentos e mortes neste frame
@@ -108,7 +122,8 @@ export const updateEnergy = (
   matrix: InteractionMatrix,
   config: EnergyConfig,
   rng: { next: () => number; int: (min: number, max: number) => number },
-  maxCapacity: number
+  maxCapacity: number,
+  options?: EnergyLODOptions
 ): { births: number; deaths: number; mutations: number } => {
   if (!config.enabled) return { births: 0, deaths: 0, mutations: 0 };
   
@@ -159,23 +174,23 @@ export const updateEnergy = (
   
   const feedRadiusSq = config.feedRadius * config.feedRadius;
   const matrixSize = matrix.attract.length;
-  const neighbors: number[] = [];
-  // Evita O(N²) quando partículas se agrupam: processar no máximo N vizinhos por partícula
-  const MAX_FEED_NEIGHBORS = 28;
-  // Com muitas partículas, alimentar só uma parte por frame (alternada) para manter fps
-  const feedStep = state.count > 900 ? 2 : 1;
-  const feedStart = feedStep === 2 ? (state.count % 2) : 0;
+  // Com muitas partículas ou LOD ativo: subsample feed para manter fps (budget mode)
+  const lodStep = options?.lodFeedSubsample ? Math.min(8, Math.max(1, options.lodFeedSubsample)) : 0;
+  const countStep = state.count > 900 ? 2 : 1;
+  const feedStep = lodStep > 0 ? lodStep : countStep;
+  const feedStart = feedStep > 1 ? (state.count % feedStep) : 0;
 
   for (let i = feedStart; i < state.count; i += feedStep) {
     const ti = state.type[i];
     if (ti >= matrixSize) continue;
 
-    neighbors.length = 0;
+    let neighborCount = 0;
     queryNeighbors(feedingSpatialHash, state.x[i], state.y[i], (idx: number) => {
-      if (neighbors.length < MAX_FEED_NEIGHBORS) neighbors.push(idx);
+      if (neighborCount < MAX_FEED_NEIGHBORS) feedNeighborsBuffer[neighborCount++] = idx;
     }, MAX_FEED_NEIGHBORS);
 
-    for (const j of neighbors) {
+    for (let k = 0; k < neighborCount; k++) {
+      const j = feedNeighborsBuffer[k];
       if (j <= i) continue; // Evita duplicatas
       
       const dx = state.x[j] - state.x[i];
@@ -214,8 +229,9 @@ export const updateEnergy = (
   };
   // Limite por frame para não explodir população e travar (evita runaways)
   const maxReproductions = Math.min(14, Math.max(1, Math.floor(state.count * 0.03)));
-  const childrenToAdd: Array<{ x: number; y: number; vx: number; vy: number; type: number; energy: number; parentIdx: number }> = [];
-  
+  childrenToAddBuffer.length = 0;
+  const childrenToAdd = childrenToAddBuffer;
+
   for (let i = 0; i < state.count && childrenToAdd.length < maxReproductions; i++) {
     if (state.energy[i] >= config.reproductionThreshold && state.count + childrenToAdd.length < maxCapacity && canReproduce(i)) {
       // Pai perde energia

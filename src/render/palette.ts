@@ -550,6 +550,16 @@ export const PALETTES: Palette[] = [
     ],
   },
   
+  // Species: 4 famílias × 4 tons — menos arco-íris; mutações fazem sentido (tipos da mesma família parecem relacionados)
+  {
+    name: 'Species',
+    colors: [
+      hex('#d98c72'), hex('#eb9e6b'), hex('#c76b59'), hex('#f2b894'), // warm
+      hex('#598ee0'), hex('#73adeb'), hex('#477ad1'), hex('#8cbff2'), // cool
+      hex('#6b8561'), hex('#8c9e73'), hex('#597a52'), hex('#9eb385'), // earth
+      hex('#9e6bb8'), hex('#b885d1'), hex('#85599e'), hex('#c79ee0'), // accent
+    ],
+  },
   {
     name: 'Random (Color Theory)',
     colors: [], // Will be generated dynamically based on seed

@@ -162,11 +162,20 @@ export const updateParticleLife = (
       r = r * (1 + scarcity * 0.20);
 
       const rSq = r * r;
-      if (distSq >= rSq) return;
-
-      // Now compute dist only when inside interaction radius
       const dist = Math.sqrt(distSq);
       if (dist < 0.0001) return;
+
+      // Colisão partícula–partícula: repulsão quando mais perto que collisionRadius (exclusão espacial)
+      const colR = config.collisionRadius ?? 0;
+      const colK = config.collisionStiffness ?? 0.6;
+      if (config.collisionEnabled && colR > 0 && dist < colR) {
+        const overlap = 1 - dist / colR;
+        const invDistSoft = 1.0 / (dist + config.softening);
+        fx[i] -= dx * invDistSoft * overlap * colK;
+        fy[i] -= dy * invDistSoft * overlap * colK;
+      }
+
+      if (distSq >= rSq) return;
 
       const attract = matrix.attract[ti][tj];
       let forceMag = 0;
@@ -250,6 +259,14 @@ export const updateParticleLife = (
       state.vx[i] += fx[i] * config.force * config.dt;
       state.vy[i] += fy[i] * config.force * config.dt;
 
+      // Gravidade global (diferencia universos: sedimentação, pressão, direção)
+      const gx = config.gravityX ?? 0;
+      const gy = config.gravityY ?? 0;
+      if (gx !== 0 || gy !== 0) {
+        state.vx[i] += gx * config.dt;
+        state.vy[i] += gy * config.dt;
+      }
+
       // C) Entropy with seeded RNG (not Math.random!)
       if (config.entropy > 0) {
         state.vx[i] += (rngMicro.next() - 0.5) * config.entropy;
@@ -278,10 +295,10 @@ export const updateParticleLife = (
         state.vx[i] = (state.vx[i] / speed) * config.speedClamp;
         state.vy[i] = (state.vy[i] / speed) * config.speedClamp;
       } else if (speedSq < 1e-10) {
-        // Thermal nudge: evita partículas congeladas quando forças se cancelam (ex. em aglomerados).
-        // Velocidade nunca fica exatamente zero para sempre.
+        // Thermal nudge: evita clusters totalmente parados quando forças se cancelam (equilíbrio).
+        // Valor um pouco maior para clusters lentamente se mexerem em vez de congelar.
         const angle = rngMicro.next() * Math.PI * 2;
-        const thermal = 0.0012 * (0.5 + rngMicro.next());
+        const thermal = 0.0025 * (0.5 + rngMicro.next());
         state.vx[i] = Math.cos(angle) * thermal;
         state.vy[i] = Math.sin(angle) * thermal;
       }
@@ -481,9 +498,11 @@ export const applyFreeze = (
 };
 
 // Chaos – injects random velocity perturbations (thermal noise)
+// DETERMINISTIC: rng required for reproducible replays (same seed = same chaos effect).
 export const applyChaos = (
   state: MicroState, x: number, y: number,
-  radius: number, strength: number
+  radius: number, strength: number,
+  rng: { next: () => number }
 ): void => {
   for (let i = 0; i < state.count; i++) {
     const dx = state.x[i] - x;
@@ -492,7 +511,7 @@ export const applyChaos = (
     if (distSq < radius * radius) {
       const dist = Math.sqrt(distSq);
       const falloff = 1.0 - dist / radius;
-      const angle = Math.random() * Math.PI * 2;
+      const angle = rng.next() * Math.PI * 2;
       state.vx[i] += Math.cos(angle) * strength * falloff;
       state.vy[i] += Math.sin(angle) * strength * falloff;
     }
@@ -539,9 +558,11 @@ export const applyNova = (
 };
 
 // Magnetize – probabilistically converts nearby particles to targetType
+// DETERMINISTIC: rng required for reproducible replays (same seed = same conversions).
 export const applyMagnetize = (
   state: MicroState, x: number, y: number,
-  radius: number, strength: number, targetType: number
+  radius: number, strength: number, targetType: number,
+  rng: { next: () => number }
 ): void => {
   for (let i = 0; i < state.count; i++) {
     if (state.type[i] === 255) continue; // skip food
@@ -551,7 +572,7 @@ export const applyMagnetize = (
     if (distSq < radius * radius) {
       const dist = Math.sqrt(distSq);
       const prob = strength * (1.0 - dist / radius);
-      if (Math.random() < prob) state.type[i] = targetType;
+      if (rng.next() < prob) state.type[i] = targetType;
     }
   }
 };

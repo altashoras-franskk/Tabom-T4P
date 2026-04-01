@@ -101,6 +101,12 @@ export const createFeedbackState = (): FeedbackState => ({
 const GRID = 16;         // 16×16 spatial grid for entropy
 const MAX_SAMPLE = 500;  // max agents sampled for performance
 
+// Buffers reutilizáveis para computeRawMetrics (evita new Uint16Array/Float32Array por frame)
+let _gridTypeCount: Uint16Array | null = null;
+let _gridTotal: Uint16Array | null = null;
+let _typePop: Float32Array | null = null;
+let _cachedMetricsTypesCount = 0;
+
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
@@ -124,14 +130,22 @@ function computeRawMetrics(state: MicroState, config: MicroConfig): FeedbackMetr
   const sampleStep = Math.max(1, Math.floor(n / MAX_SAMPLE));
   let sampledN = 0;
 
-  // ── Grid for entropy + clustering ─────────────────────────────────────────
-  // Each cell stores type counts
-  const gridTypeCount = new Uint16Array(GRID * GRID * typesCount);
-  const gridTotal = new Uint16Array(GRID * GRID);
+  // ── Grid for entropy + clustering (buffers reutilizáveis, realloc só quando typesCount muda) ──
+  if (typesCount !== _cachedMetricsTypesCount || !_gridTypeCount) {
+    _gridTypeCount = new Uint16Array(GRID * GRID * typesCount);
+    _gridTotal = new Uint16Array(GRID * GRID);
+    _typePop = new Float32Array(typesCount);
+    _cachedMetricsTypesCount = typesCount;
+  }
+  const gridTypeCount = _gridTypeCount;
+  const gridTotal = _gridTotal;
+  const typePop = _typePop;
+  gridTypeCount.fill(0);
+  gridTotal.fill(0);
+  typePop.fill(0);
 
   let totalSpeed = 0;
   let highConflictCount = 0;
-  const typePop = new Float32Array(typesCount);
 
   for (let i = 0; i < n; i += sampleStep) {
     const t = state.type[i];

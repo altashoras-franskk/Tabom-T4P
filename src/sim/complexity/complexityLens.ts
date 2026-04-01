@@ -46,27 +46,45 @@ export type ModuleId =
   | 'feedbackLens'
   | 'render';
 
+const TELEMETRY_HISTORY_LENGTH = 120;
+
 export interface ModuleTelemetry {
   ms: number;       // custo médio por frame (exponential moving average)
-  active: boolean;  // módulo está ativo?
+  active: boolean;   // módulo está ativo?
+  /** Ring buffer dos últimos N frames (para avg/max/percentOfFrame). Reutilizado, sem alocação por frame. */
+  history: number[];
+  historyIndex: number;
+  historySize: number;
 }
 
 // Uma amostra pontual (não acumula alocações — é um objeto estático reutilizado)
 export type ModuleTelemetryMap = Record<ModuleId, ModuleTelemetry>;
 
+function createSingleModuleTelemetry(): ModuleTelemetry {
+  return {
+    ms: 0,
+    active: true,
+    history: new Array(TELEMETRY_HISTORY_LENGTH).fill(0),
+    historyIndex: 0,
+    historySize: 0,
+  };
+}
+
+/** Ordem dos módulos para exibição quando telemetria está vazia ou inicializando. */
+export const MODULE_IDS: ModuleId[] = [
+  'particleLife', 'energy', 'field', 'genes', 'metamorphosis',
+  'reconfig', 'mitosis', 'archetypes', 'feedbackLens', 'render',
+];
+
 export function createModuleTelemetry(): ModuleTelemetryMap {
-  const ids: ModuleId[] = [
-    'particleLife', 'energy', 'field', 'genes', 'metamorphosis',
-    'reconfig', 'mitosis', 'archetypes', 'feedbackLens', 'render',
-  ];
   const map = {} as ModuleTelemetryMap;
-  for (const id of ids) {
-    map[id] = { ms: 0, active: true };
+  for (const id of MODULE_IDS) {
+    map[id] = createSingleModuleTelemetry();
   }
   return map;
 }
 
-/** Registra custo de um módulo usando EMA (alpha=0.1 → ~10 frames de suavização) */
+/** Registra custo de um módulo: atualiza EMA e anexa ao histórico (ring buffer 120 frames). */
 const EMA_ALPHA = 0.12;
 export function recordModuleMs(
   telem: ModuleTelemetryMap,
@@ -74,7 +92,44 @@ export function recordModuleMs(
   ms: number,
 ): void {
   const t = telem[id];
+  if (!t) return;
   t.ms = t.ms + EMA_ALPHA * (ms - t.ms);
+  // Ring buffer: reutiliza array, zero alocação por frame (skip if restored snapshot has no history)
+  if (t.history && t.historyIndex !== undefined) {
+    t.history[t.historyIndex] = ms;
+    t.historyIndex = (t.historyIndex + 1) % TELEMETRY_HISTORY_LENGTH;
+    if (t.historySize < TELEMETRY_HISTORY_LENGTH) t.historySize++;
+  }
+}
+
+/** Estatísticas dos últimos 120 frames para um módulo (avgMs, maxMs, percentOfFrame). */
+export interface ModuleStats {
+  module: ModuleId;
+  avgMs: number;
+  maxMs: number;
+  percentOfFrame: number;
+  historySize: number;
+}
+
+const FRAME_BUDGET_MS = 1000 / 60;
+
+export function getModuleStats(telem: ModuleTelemetryMap, id: ModuleId): ModuleStats {
+  const t = telem[id];
+  const len = t?.historySize ?? 0;
+  const hist = t?.history;
+  if (len === 0 || !hist) {
+    return { module: id, avgMs: t?.ms ?? 0, maxMs: 0, percentOfFrame: 0, historySize: 0 };
+  }
+  let sum = 0;
+  let max = 0;
+  for (let i = 0; i < len; i++) {
+    const v = hist[i];
+    sum += v;
+    if (v > max) max = v;
+  }
+  const avgMs = sum / len;
+  const percentOfFrame = (avgMs / FRAME_BUDGET_MS) * 100;
+  return { module: id, avgMs, maxMs: max, percentOfFrame, historySize: len };
 }
 
 /** Retorna os N módulos mais custosos, ordenados por ms desc */
@@ -86,6 +141,11 @@ export function topModules(
     .map(id => ({ id, ms: telem[id].ms }))
     .sort((a, b) => b.ms - a.ms);
   return entries.slice(0, n);
+}
+
+/** Retorna estatísticas de todos os módulos (para painel Performance completo). */
+export function getAllModuleStats(telem: ModuleTelemetryMap): ModuleStats[] {
+  return MODULE_IDS.map((id) => getModuleStats(telem, id));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

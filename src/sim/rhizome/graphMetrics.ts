@@ -9,12 +9,18 @@ import type { RhizomeNode } from './rhizomeTypes';
 
 // ── Graph Utilities ───────────────────────────────────────────────────────────
 
+/** Safe read of node.connections (avoids crash when restored from JSON or stale ref) */
+function safeConn(node: RhizomeNode): Map<number, number> {
+  return node.connections instanceof Map ? node.connections : new Map<number, number>();
+}
+
 /** Build adjacency list from nodes */
 function buildAdjacencyList(nodes: RhizomeNode[]): Map<number, Set<number>> {
   const adj = new Map<number, Set<number>>();
   for (const node of nodes) {
     if (!adj.has(node.id)) adj.set(node.id, new Set());
-    for (const [targetId] of node.connections) {
+    const conn = safeConn(node);
+    for (const [targetId] of conn) {
       adj.get(node.id)!.add(targetId);
     }
   }
@@ -169,7 +175,7 @@ export function detectCommunities(nodes: RhizomeNode[]): Map<number, number> {
       
       for (const nId of neighbors) {
         const nComm = community.get(nId)!;
-        const weight = node.connections.get(nId) || 1;
+        const weight = safeConn(node).get(nId) || 1;
         communityScores.set(nComm, (communityScores.get(nComm) || 0) + weight);
       }
       
@@ -224,7 +230,7 @@ export function semanticDistance(
     const neighbors = adj.get(u) || new Set();
     for (const v of neighbors) {
       if (visited.has(v)) continue;
-      const weight = node.connections.get(v) || 0.1;
+      const weight = safeConn(node).get(v) || 0.1;
       const edgeCost = 1 / (weight + 0.1); // stronger = cheaper
       const newDist = d + edgeCost;
       
@@ -242,11 +248,11 @@ export function semanticDistance(
 // Identifies nodes with high degree centrality (many connections)
 
 export function findHubs(nodes: RhizomeNode[], threshold = 0.7): RhizomeNode[] {
-  const degrees = nodes.map(n => n.connections.size);
+  const degrees = nodes.map(n => safeConn(n).size);
   const maxDeg = Math.max(...degrees, 1);
   
   return nodes.filter(n => {
-    const normalized = n.connections.size / maxDeg;
+    const normalized = safeConn(n).size / maxDeg;
     return normalized >= threshold;
   });
 }
@@ -267,7 +273,8 @@ export function findBridges(nodes: RhizomeNode[]): RhizomeNode[] {
     
     // Check if neighbors belong to different communities
     const neighborComms = new Set<number>();
-    for (const [nId] of node.connections) {
+    const conn = safeConn(node);
+    for (const [nId] of conn) {
       const comm = communities.get(nId);
       if (comm !== undefined) neighborComms.add(comm);
     }
@@ -305,11 +312,11 @@ export function scoreNodes(nodes: RhizomeNode[]): Map<number, NodeScore> {
   for (const node of nodes) {
     const bet = betweenness.get(node.id) || 0;
     const clo = closeness.get(node.id) || 0;
-    const deg = node.connections.size;
+    const deg = safeConn(node).size;
     const rel = node.relevance || 0.5;
     
     // Normalize degree
-    const maxDeg = Math.max(...nodes.map(n => n.connections.size), 1);
+    const maxDeg = Math.max(...nodes.map(n => safeConn(n).size), 1);
     const degNorm = deg / maxDeg;
     
     // Weighted combination: relevance + bridge quality + centrality

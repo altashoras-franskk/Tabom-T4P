@@ -998,7 +998,8 @@ export const SociogenesisStudyMode: React.FC<Props> = ({ onLeave }) => {
 
   return (
     <div
-      className="fixed left-0 right-0 bottom-0 z-20 flex flex-col overflow-hidden select-none"
+      className="fixed left-0 right-0 bottom-0 z-20 flex flex-col overflow-hidden select-none notranslate"
+      translate="no"
       style={{ top: TOP_HUD_HEIGHT, background: '#000', fontFamily: MONO }}
     >
 

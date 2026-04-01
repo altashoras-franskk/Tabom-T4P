@@ -921,6 +921,7 @@ export const PsycheLab: React.FC<PsycheLabProps> = ({
       {/* ── TELEMETRY HUD (única telemetria; cor = fase / barrinha) ───────────── */}
       <TelemetryHUD
         corner="br"
+        rightOffset={220}
         accentColor={PHASE_COLORS[phase]}
         getLines={() => {
           const s   = stateRef.current;

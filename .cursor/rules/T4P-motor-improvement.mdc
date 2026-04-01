@@ -1,0 +1,98 @@
+---
+description: T4P motor — audit, determinism, performance, formalization. Sprint order and agent rules.
+alwaysApply: true
+---
+
+# TOOLS FOR PERCEPTION — Motor Improvement (guia vivo)
+
+## IDENTIDADE DO PROJETO
+
+Motor do *Tools for Perception (T4P)*: framework de vida artificial (ALife) multiescalar com retroalimentação de segunda ordem. 3 camadas:
+
+- *MICRO*: Particle Life (matriz tipo×tipo, energia, genes A-D, ciclo celular, mutação, plasticidade)
+- *FIELD*: Grid escalar 5 canais (tensão, coesão, escassez, novidade, mítico) + difusão + decaimento
+- *RECONFIG*: Detectores de métricas → operadores que modificam as regras do sistema
+
+Gramática: CAMPO ← → AGENTES ← → INTERAÇÕES → RECONFIGURAÇÃO ↺
+
+## FASE ATUAL: AUDITORIA E ROBUSTECIMENTO
+
+Objetivo: **consolidar o que existe**, não adicionar features. Padrões inconsistentes, bugs silenciosos, dívida técnica, não-determinismo potencial.
+
+---
+
+## TAREFAS PRIORITÁRIAS (ordem)
+
+### 1. DETERMINISMO E REPRODUTIBILIDADE
+- Auditar todas as chamadas a `Math.random()`; substituir por PRNG com seed (ex: SeededRNG já em `src/engine/rng.ts`).
+- SeededRNG global passado como dependência a todos os módulos que precisam de aleatoriedade.
+- Mesmo seed + mesmos parâmetros = mesma evolução frame a frame.
+- Verificar dependências de timing (requestAnimationFrame, Date.now(), performance.now()) na lógica da simulação.
+- Teste: rodar 2x com mesmo seed, comparar estado no frame 1000.
+- **Critério**: snapshot(run1, frame1000) === snapshot(run2, frame1000).
+
+### 2. TIMERS POR MÓDULO (telemetria)
+- PerformanceProfiler leve: tempo por módulo no tick loop.
+- Módulos: particleLife, energy, field, genes, metamorphosis, reconfig, feedbackEngine, render.
+- Expor no Stats panel (RightDock → Stats); histórico 120 frames.
+- Formato: `{ module, avgMs, maxMs, percentOfFrame }`.
+- **Critério**: saber % do frame budget por módulo para N=100, 300, 600.
+
+### 3. AUDITORIA DE ALOCAÇÕES POR FRAME
+- Buscar `new Array`, `new Float32Array`, `.map()`, `.filter()`, `.slice()`, `[...]` em funções chamadas a cada tick.
+- Gargalos conhecidos: energy.ts (neighbors), mitosis detectClusters, feedbackEngine (Uint16Array).
+- Padrão: buffers pré-alocados reutilizados entre frames.
+- **Regra**: ZERO alocações de arrays/typed arrays dentro do tick loop.
+- **Critério**: Memory DevTools sem sawtooth de GC.
+
+### 4. CONSISTÊNCIA DE PADRÕES
+- Naming: camelCase funções, PascalCase types, UPPER_SNAKE_CASE constantes; arquivos camelCase.ts / PascalCase.tsx.
+- Interface padrão: `ModuleState`, `ModuleConfig`, `stepModule(state, config, dt)`.
+- Remover código morto; catalogar TODO/HACK/FIXME em docs/TODO.md.
+
+### 5. FORMALIZAÇÃO (docs/formal_model.md)
+- Espaço de estados S = (micro, field, reconfig); T: S × Params → S.
+- Equações de força, difusão, decaimento, detecção e operação; referência à linha de código.
+- Notação LaTeX-compatible; tabela de parâmetros. **Extrair do código, não inventar.**
+
+### 6. ANÁLISE DE SENSIBILIDADE (após 1–5)
+- SensitivityRunner: preset base, variar um parâmetro (±10%, ±25%, ±50%), N frames, métricas, export CSV.
+- **Critério**: tabela δ(métrica)/δ(parâmetro).
+
+### 7. BENCHMARK COMPARATIVO (após 1–6)
+- Cenário canônico replicável; comparar com NetLogo, Mesa, Particle Life vanilla; documentar diferenças.
+
+---
+
+## REGRAS PARA O AGENTE
+
+**NUNCA**: adicionar features sem pedido; refatorar fora do escopo; mudar semântica de parâmetros; deps pesadas sem discutir; `any`; alocar no tick loop; usar `Math.random()` direto.
+
+**SEMPRE**: antes de modificar, listar o que o módulo faz e dependentes; ao corrigir bug, comentar O QUE e POR QUÊ; manter compatibilidade save/load (SnapshotV1); preservar PT-BR; medir ANTES/DEPOIS em mudanças de performance.
+
+**Commit**: `tipo(módulo): descrição` — tipos: fix, refactor, perf, docs, test, feat; módulos: micro, field, reconfig, energy, render, ui, engine, docs.
+
+---
+
+## SEQUÊNCIA RECOMENDADA
+
+- **SPRINT 1**: (1) PRNG/seed → determinismo; (2) Timers por módulo; (3) Audit alocações → zero GC no loop.
+- **SPRINT 2**: (4) Consistência de código; (5) docs/formal_model.md.
+- **SPRINT 3**: (6) Sensibilidade; (7) Benchmark.
+
+---
+
+## MÉTRICAS DE SAÚDE (após 1–4)
+
+| Métrica | Target |
+|---------|--------|
+| Determinismo | 100% reprodutível com mesmo seed |
+| FPS (N=300) | ≥ 55 |
+| FPS (N=600) | ≥ 30 |
+| GC pauses | < 5ms p99 |
+| Alocações/frame | 0 typed arrays no tick loop |
+| TODOs | catalogados em docs/TODO.md |
+| Timers | 100% dos módulos do tick |
+| Equações | 100% documentadas |
+
+Última atualização: Março 2026.

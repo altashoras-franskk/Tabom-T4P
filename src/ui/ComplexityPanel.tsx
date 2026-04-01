@@ -23,7 +23,10 @@ import {
   SYSTEM_PHASE_HINT,
   VitalRates,
   ModuleTelemetryMap,
+  MODULE_IDS,
   topModules,
+  getModuleStats,
+  getAllModuleStats,
   type MorinIndices,
 } from '../sim/complexity/complexityLens';
 import type { FeedbackConfig } from '../sim/micro/feedbackEngine';
@@ -208,6 +211,9 @@ export interface ComplexityPanelProps {
   advancedSimulationMode?: boolean;
   onAdvancedSimulationModeChange?: (v: boolean) => void;
 
+  /** Budget mode: quando over budget, LOD sobe e max steps é reduzido (escalabilidade). */
+  budgetState?: { lodLevel: number; recommendedMaxSteps: number };
+
   /** When true, panel is inside a DraggablePanel — no absolute positioning */
   embedded?: boolean;
 }
@@ -226,6 +232,7 @@ export function ComplexityPanel({
   targetParticleCount, onTargetParticleCountChange,
   advancedSimulationMode = false,
   onAdvancedSimulationModeChange,
+  budgetState,
   embedded = false,
 }: ComplexityPanelProps) {
   const { t } = useI18n();
@@ -248,6 +255,7 @@ export function ComplexityPanel({
   const [secFeedback,  setSecFb]    = useState(true);
   const [secField,     setSecFld]   = useState(false);
   const [secMorin,     setSecMorin] = useState(true);
+  const [secPerf,      setSecPerf]  = useState(false);
 
   // Guard: avoid crash if lensState is stale/undefined (e.g. during rapid updates)
   if (!lensState?.feedback?.config) {
@@ -266,7 +274,8 @@ export function ComplexityPanel({
   const phaseColor = SYSTEM_PHASE_COLORS[safePhase as keyof typeof SYSTEM_PHASE_COLORS];
   const phaseSigil = SYSTEM_PHASE_SIGILS[safePhase as keyof typeof SYSTEM_PHASE_SIGILS];
   const phaseHint  = SYSTEM_PHASE_HINT[safePhase as keyof typeof SYSTEM_PHASE_HINT];
-  const top3       = topModules(moduleTelemetry ?? {}, 3);
+  const telem      = moduleTelemetry ?? lensState?.moduleTelemetry ?? {};
+  const top3       = topModules(telem, 3);
 
   const FPS_COLOR = fps >= 50 ? '#60ff90' : fps >= 30 ? '#ffc840' : '#ff6050';
   const bal = vitalRates.birthsPerSec - vitalRates.deathsPerSec;
@@ -435,6 +444,14 @@ export function ComplexityPanel({
                     {t('cl_effectiveParams')}
                   </div>
                 )}
+                {!life.energyEnabled && (
+                  <div style={{ fontFamily: MONO, fontSize: 8, color: '#ffa050', marginBottom: 6, letterSpacing: '0.02em' }}>
+                    ⚡ Energia desligada — ative em Metabolismo para nasc./mortes
+                  </div>
+                )}
+                <div style={{ fontFamily: MONO, fontSize: 7.5, color: DIM, marginBottom: 6, lineHeight: 1.35 }}>
+                  Clusters parados = equilíbrio (forças balanceadas). Use &quot;Destacar clusters&quot; no painel direito para vê-los; aumente Entropia ou Limite de velocidade para mais movimento.
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', marginBottom: 4 }}>
                   <TelRow label={t('cl_fps')} value={Math.round(fps)} color={FPS_COLOR} />
                   <TelRow label={t('cl_agents')} value={agentCount} />
@@ -461,15 +478,66 @@ export function ComplexityPanel({
                   <div style={{ fontFamily: DOTO, fontSize: 8, color: 'rgba(255,255,255,0.14)', marginBottom: 3, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
                     {t('cl_modules')}
                   </div>
-                  {top3.map(({ id, ms }) => (
-                    <div key={id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2.5 }}>
-                      <span style={{ fontFamily: MONO, fontSize: 9, color: DIM }}>{id}</span>
-                      <span style={{ fontFamily: MONO, fontSize: 9, color: ms > 5 ? '#ff7060' : ms > 2 ? '#ffc840' : `${TEAL}99` }}>
-                        {ms.toFixed(2)} ms
-                      </span>
-                    </div>
-                  ))}
+                  {top3.length > 0
+                    ? top3.map(({ id, ms }) => {
+                        const st = getModuleStats(telem, id);
+                        return (
+                          <div key={id} style={{ marginBottom: 2.5 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ fontFamily: MONO, fontSize: 9, color: DIM }}>{id}</span>
+                              <span style={{ fontFamily: MONO, fontSize: 9, color: ms > 5 ? '#ff7060' : ms > 2 ? '#ffc840' : `${TEAL}99` }}>
+                                {ms.toFixed(2)} ms
+                              </span>
+                            </div>
+                            {st.historySize > 0 && (
+                              <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.2)', marginLeft: 2 }}>
+                                avg {st.avgMs.toFixed(1)} · max {st.maxMs.toFixed(1)} · {st.percentOfFrame.toFixed(0)}% frame
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    : (
+                      <>
+                        <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>
+                          Aguardando telemetria (atualiza a cada 20 quadros)…
+                        </div>
+                        {MODULE_IDS.slice(0, 5).map((id) => (
+                          <div key={id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1.5 }}>
+                            <span style={{ fontFamily: MONO, fontSize: 9, color: DIM }}>{id}</span>
+                            <span style={{ fontFamily: MONO, fontSize: 9, color: DIM }}>— ms</span>
+                          </div>
+                        ))}
+                        {MODULE_IDS.length > 5 && (
+                          <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.2)' }}>
+                            +{MODULE_IDS.length - 5} módulos
+                          </div>
+                        )}
+                      </>
+                    )}
                 </div>
+                {/* Performance completa: todos os módulos (para otimização e claims de escalabilidade) */}
+                <SectionHeader label="Performance (todos os módulos)" open={secPerf} onToggle={() => setSecPerf(v => !v)} />
+                {secPerf && (
+                  <div style={{ marginTop: 6 }}>
+                    <div style={{ fontFamily: MONO, fontSize: 7.5, color: DIM, marginBottom: 4 }}>
+                      avg · max (ms) · % do frame (60fps). Histórico 120 frames.
+                    </div>
+                    {getAllModuleStats(telem).map((st) => (
+                      <div key={st.module} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2, fontFamily: MONO, fontSize: 8.5 }}>
+                        <span style={{ color: DIM }}>{st.module}</span>
+                        <span style={{ color: st.percentOfFrame > 80 ? '#ff7060' : st.percentOfFrame > 40 ? '#ffc840' : 'rgba(255,255,255,0.5)' }}>
+                          {st.avgMs.toFixed(2)} · {st.maxMs.toFixed(2)} ms · {st.percentOfFrame.toFixed(0)}%
+                        </span>
+                      </div>
+                    ))}
+                    {budgetState && budgetState.lodLevel > 0 && (
+                      <div style={{ marginTop: 6, fontFamily: MONO, fontSize: 8, color: '#ffc840' }}>
+                        Budget ativo: LOD {budgetState.lodLevel} · max steps → {budgetState.recommendedMaxSteps}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -596,6 +664,18 @@ export function ComplexityPanel({
                   onChange={(v) => onMicroChange({ wrap: v })}
                 />
                 <CtrlSlider
+                  icon="↓" label={t('cl_gravity')}
+                  hint="Gravidade global (unidades/s²). Diferencia universos: sedimentação, pressão. Y negativo = para baixo."
+                  value={microConfig.gravityY ?? 0} min={-1.2} max={1.2} step={0.05}
+                  onChange={v => onMicroChange({ gravityY: v })}
+                />
+                <CtrlSlider
+                  icon="→" label={t('cl_gravityX')}
+                  hint="Gravidade horizontal. X positivo = puxa para a direita."
+                  value={microConfig.gravityX ?? 0} min={-1.2} max={1.2} step={0.05}
+                  onChange={v => onMicroChange({ gravityX: v })}
+                />
+                <CtrlSlider
                   icon="🔗" label={t('cl_coupling')}
                   hint="Raio de interação entre agentes. Alto acoplamento = mais interconexões. (rmax)"
                   value={microConfig.rmax} min={0.04} max={0.50} step={0.01}
@@ -638,6 +718,24 @@ export function ComplexityPanel({
                   hint="Intensidade da repulsão no núcleo (coreRepel). Alto = evita colapso; baixo = favorece aglomeração."
                   value={microConfig.coreRepel} min={0.2} max={2.0} step={0.05}
                   onChange={v => onMicroChange({ coreRepel: v })}
+                />
+                <ToggleRow
+                  label={t('cl_particleCollision')}
+                  hint="Colisão partícula–partícula: exclusão espacial (empurrar quando muito perto)."
+                  checked={microConfig.collisionEnabled !== false}
+                  onChange={(v) => onMicroChange({ collisionEnabled: v })}
+                />
+                <CtrlSlider
+                  icon="◎" label={t('cl_collisionRadius')}
+                  hint="Distância mínima entre partículas; abaixo disso repulsão (collisionRadius)."
+                  value={microConfig.collisionRadius ?? 0.012} min={0} max={0.04} step={0.002}
+                  onChange={v => onMicroChange({ collisionRadius: v })}
+                />
+                <CtrlSlider
+                  icon="⚡" label={t('cl_collisionStiffness')}
+                  hint="Rigidez da repulsão de colisão (collisionStiffness)."
+                  value={microConfig.collisionStiffness ?? 0.6} min={0.1} max={1.5} step={0.05}
+                  onChange={v => onMicroChange({ collisionStiffness: v })}
                 />
                 <CtrlSlider
                   icon="🔥" label={t('cl_entropy')}

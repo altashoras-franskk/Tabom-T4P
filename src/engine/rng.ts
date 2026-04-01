@@ -1,4 +1,7 @@
-// Seedable RNG for reproducibility
+// Seedable RNG for reproducibility (same seed = same sequence).
+/** Default seed when no preset is loaded; enables reproducible cold start. */
+export const DEFAULT_SEED = 12345;
+
 export class SeededRNG {
   private seed: number;
 

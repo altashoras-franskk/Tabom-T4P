@@ -18,6 +18,10 @@ interface Props {
   interval?: number;
   /** Optional bottom offset in px — useful when a docked panel sits above */
   bottomOffset?: number;
+  /** When corner is *r, extra px added to `right` so the box clears a side panel (e.g. Psyche archetypes). */
+  rightOffset?: number;
+  /** When corner is *l, extra px added to `left` (mirror of rightOffset). */
+  leftOffset?: number;
   /** When false the overlay is hidden (default true) */
   visible?: boolean;
   /** Accent color for dot and LIVE label (e.g. phase color to match bar/ball) */
@@ -36,6 +40,8 @@ export const TelemetryHUD: React.FC<Props> = ({
   corner       = 'br',
   interval     = 500,
   bottomOffset = 0,
+  rightOffset  = 0,
+  leftOffset   = 0,
   visible      = true,
   accentColor  = DEFAULT_ACCENT,
   embedded     = false,
@@ -60,8 +66,8 @@ export const TelemetryHUD: React.FC<Props> = ({
     : {
         position:  'fixed',
         zIndex:    29,
-        right:     isRight  ? 16      : undefined,
-        left:      !isRight ? 16      : undefined,
+        right:     isRight  ? 16 + rightOffset : undefined,
+        left:      !isRight ? 16 + leftOffset  : undefined,
         bottom:    isBottom ? 16 + bottomOffset : undefined,
         top:       !isBottom ? 16     : undefined,
         pointerEvents: 'none',
